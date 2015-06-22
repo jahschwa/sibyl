@@ -37,7 +37,7 @@ def main():
   """instantiate bot and run forever"""
   
   bot = GrandBot(USERNAME,PASSWORD,only_direct=True)
-  bot.log.setLevel(logging.DEBUG)
+  #bot.log.setLevel(logging.DEBUG)
   bot.join_room(CHATROOM,NICKNAME,password=ROOMPASS)
   bot.serve_forever()
 
