@@ -47,7 +47,7 @@ By default, sibyl logs to `/var/log/sibyl.log`. To enable debug logging, simply 
  - Sibyl will randomly crash without logging a stacktrace (please report this so I can figure it out!)
 
 ## Contact Me
-If you have a bug report or feature request, 
+If you have a bug report or feature request, use github's issue tracker. For other stuff, you can contact me at [haas.josh.a@gmail.com][7].
 
  [1]: https://thp.io/2007/python-jabberbot/
  [2]: http://docs.python-requests.org/en/latest/
@@ -55,3 +55,4 @@ If you have a bug report or feature request,
  [4]: http://libcec.pulse-eight.com/
  [5]: https://github.com/antont/pythonjabberbot/tree/master/examples
  [6]: http://kodi.wiki/view/Webserver#Enabling_the_webserver
+ [7]: mailto:haas.josh.a@gmail.com
