@@ -4,15 +4,16 @@ an XMPP bot for controlling XBMC/Kodi on the Raspberry PI
 ## Dependencies
 You'll need the following installed in order to use sibyl:
  - [jabberbot][1] - extensible XMPP bot using xmpppy - `pip install jabberbot` or `sudo apt-get install python-jabberbot`
- - [smbc][2] - python bindings for smbclient - `pip install pysmbc` or `sudo apt-get install python-smbc`
+ - [requests][2] - HTTP request and wrapper library - `pip install requests` or `sudo apt-get install python-requests`
+ - [smbc][3] - python bindings for smbclient - `pip install pysmbc` or `sudo apt-get install python-smbc`
 
 ## JabberBot
-By default sibyl is setup to join an XMPP MUC (i.e. group chat) but you can change that if you want. Refer to the [examples directory][3] for JabberBot. Adding additional commands is easy as well. Simply define a new method inside the `GrandBot` class and preface it with `@botcmd` to register the command.
+By default sibyl is setup to join an XMPP MUC (i.e. group chat) but you can change that if you want. Refer to the [examples directory][4] for JabberBot. Adding additional commands is easy as well. Simply define a new method inside the `GrandBot` class and preface it with `@botcmd` to register the command.
 
 Note that there is currently a bug in JabberBot. It does not correctly ignore message from itself when in a MUC. This is fixed naievly in sibyl by simply searching for `NICKNAME` in the from field of XMPP replies. Therefore, as currently implemented, any user whose name contains sibyl's `NICKNAME` will be ignored.
 
 ## XBMC/Kodi
-Sibyl interfaces with XBMC using its JSON-RPC web interface. In order to use it, you must enable the web server in XBMC as described [here][4].
+Sibyl interfaces with XBMC using its JSON-RPC web interface. In order to use it, you must enable the web server in XBMC as described [here][5].
 
 ## CEC
 Sibyl uses the `cec-client` bash script to give commands over HDMI-CEC to an attached TV. This should be installed on most Pi distros by default. If not, debian derivatives can install with `sudo apt-get install cec-client`.
@@ -34,6 +35,7 @@ By default, sibyl logs to `/var/log/sibyl.log`. To enable debug logging, simply 
  - Sibyl will randomly crash without logging a stacktrace (please report this so I can figure it out!)
 
  [1]: https://thp.io/2007/python-jabberbot/
- [2]: http://cyberelk.net/tim/software/pysmbc/
- [3]: https://github.com/antont/pythonjabberbot/tree/master/examples
- [4]: http://kodi.wiki/view/Webserver#Enabling_the_webserver
+ 
+ [3]: http://cyberelk.net/tim/software/pysmbc/
+ [4]: https://github.com/antont/pythonjabberbot/tree/master/examples
+ [5]: http://kodi.wiki/view/Webserver#Enabling_the_webserver
