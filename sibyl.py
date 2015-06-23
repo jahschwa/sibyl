@@ -51,6 +51,7 @@ class GrandBot(JabberBot):
     
     self.born = time.time()
     
+    # add an additional kwarg for enabling only direct messages
     self.only_direct = kwargs.get('only_direct',False)
     try:
       del kwargs['only_direct']
@@ -62,17 +63,22 @@ class GrandBot(JabberBot):
   def callback_message(self,conn,mess):
     """override to only answer direct msgs"""
     
+    # wait 5 seconds before executing commands to account for XMPP MUC history
+    # playback since JabberBot and XMPPpy don't give a way to disable it
     now = time.time()
     if now<self.born+5:
       return
     
+    # discard blank messages
     msg = mess.getBody()
     if not msg:
       return
-
+    
+    # don't respond to messages from myself
     if NICKNAME.lower() in str(mess.getFrom()).lower():
       return
-
+    
+    # only respond to direct messages (i.e. those containing NICKNAME)
     if NICKNAME.lower() in msg.lower():
       mess.setBody(' '.join(msg.split(' ',1)[1:]))
       return super(GrandBot,self).callback_message(conn,mess)
@@ -101,26 +107,32 @@ class GrandBot(JabberBot):
     cmd = ['echo',args+' 0']
     cec = ['cec-client','-s']
     
+    # execute echo command and pipe output to PIPE
     p = subprocess.Popen(cmd,stdout=subprocess.PIPE)
+    
+    # execute cec-client using PIPE as input and sending output to /dev/null
     DEVNULL = open(os.devnull,'wb')
     subprocess.call(cec,stdin=p.stdout,stdout=DEVNULL,close_fds=True)
-    return None
   
   @botcmd
   def info(self,mess,args):
     """display info about currently playing file"""
     
+    # abort if nothing is playing
     pid = xbmc_active_player()
     if pid is None:
       return 'Nothing playing'
     
+    # get file name
     result = xbmc('Player.GetItem',{'playerid':pid})
     name = result['result']['item']['label']
     
+    # get speed, current time, and total time
     result = xbmc('Player.GetProperties',{'playerid':pid,'properties':['speed','time','totaltime']})
     current = result['result']['time']
     total = result['result']['totaltime']
     
+    # translate speed: 0 = 'paused', 1 = 'playing'
     speed = result['result']['speed']
     status = 'playing'
     if speed==0:
@@ -134,19 +146,18 @@ class GrandBot(JabberBot):
     """if xbmc is paused, begin playing again"""
     
     self.playpause(0)
-    return None
   
   @botcmd
   def pause(self,mess,args):
     """if xbmc is playing, pause it"""
     
     self.playpause(1)
-    return None
   
   @botcmd
   def stop(self,mess,args):
     """if xbmc is playing, stop it"""
     
+    # abort if nothing is playing
     pid = xbmc_active_player()
     if pid is None:
       return None
@@ -157,10 +168,12 @@ class GrandBot(JabberBot):
   def prev(self,mess,args):
     """if xbmc is playing, go to previous in the playlist"""
     
+    # abort if nothing is playing
     pid = xbmc_active_player()
     if pid is None:
       return None
     
+    # the first call goes to 0:00, the second actually goes back in playlist
     xbmc('Player.GoTo',{'playerid':pid,'to':'previous'})
     xbmc('Player.GoTo',{'playerid':pid,'to':'previous'})
 
@@ -168,6 +181,7 @@ class GrandBot(JabberBot):
   def next(self,mess,args):
     """if xbmc is playing, go to next in the playlist"""
     
+    # abort if nothing is playing
     pid = xbmc_active_player()
     if pid is None:
       return None
@@ -178,10 +192,12 @@ class GrandBot(JabberBot):
   def jump(self,mess,args):
     """jump to a specific number in the playlist"""
     
+    # abort if nothing is playing
     pid = xbmc_active_player()
     if pid is None:
       return None
     
+    # try to parse the arg to an int
     try:
       num = int(args.split(' ')[-1])-1
       xbmc('Player.GoTo',{'playerid':pid,'to':num})
@@ -193,10 +209,12 @@ class GrandBot(JabberBot):
   def seek(self,mess,args):
     """go to a specific time in the playing file"""
     
+    # abort if nothing is playing
     pid = xbmc_active_player()
     if pid is None:
       return None
-
+    
+    # try to parse the arg as a time
     try:
       t = args.split(' ')[-1]
       c1 = t.find(':')
@@ -216,6 +234,7 @@ class GrandBot(JabberBot):
   def restart(self,mess,args):
     """start playing again from the beginning"""
     
+    # abort if nothing is playing
     pid = xbmc_active_player()
     if pid is None:
       return None
@@ -226,16 +245,19 @@ class GrandBot(JabberBot):
   def hop(self,mess,args):
     """sibyl hop [small|big] [back|forward]"""
     
+    # abort if nothing is playing
     pid = xbmc_active_player()
     if pid is None:
       return None
     
+    # check for 'small' (default) and 'big'
     s = ''
     if 'big' in args:
       s += 'big'
     else:
       s += 'small'
     
+    # check for 'back' (default) and 'forward'
     if 'forward' in args:
       s += 'forward'
     else:
@@ -259,17 +281,7 @@ class GrandBot(JabberBot):
       return 'Detected: Live Twitch, Result: '+response['result']
     else:
       return 'Unsupported URL'
-  
-  @botcmd
-  def allmusic(self,mess,args):
-    """play all music on the SCHWA 16G (orange) flash drive"""
-    
-    xbmc('Playlist.Clear',{'playlistid':0})
-    xbmc('Playlist.Add',{'playlistid':0,'item':{'directory':'/media/SCHWA 16G/MUSIC'}})
-    xbmc('Player.Open',{'item':{'playlistid':0}})
-    xbmc('GUI.SetFullscreen',{'fullscreen':True})
-    return None
-  
+
   @botcmd
   def videos(self,mess,args):
     """open a folder as a playlist - videos [name] [episode]"""
@@ -299,7 +311,6 @@ class GrandBot(JabberBot):
     """toggle fullscreen"""
     
     xbmc('GUI.SetFullscreen',{'fullscreen':'toggle'})
-    return None
 
   def playpause(self,target):
     """helper function for play() and pause()"""
@@ -316,25 +327,29 @@ class GrandBot(JabberBot):
   def files(self,args,dirs,pid):
     """helper function for videos() and audios()"""
     
+    # check for item# as last arg
     args = args.split(' ')
     num = None
     try:
       num = int(args[-1])-1
     except ValueError:
       pass
-
+    
+    # default is 0 if not specified
     if num is None:
       num = 0
       name = args
     else:
       name = args[:-1]
     
+    # find matches and respond if len(matches)!=1
     matches = self.find('dir',dirs,name)
     if len(matches)==0:
       return 'No matches found'
     elif len(matches)>1:
       return 'Multiple matches: '+str(matches)
     
+    # if there was only 1 match, add the whole directory to a playlist
     xbmc('Playlist.Clear',{'playlistid':pid})
     xbmc('Playlist.Add',{'playlistid':pid,'item':{'directory':matches[0]}})
     xbmc('Player.Open',{'item':{'playlistid':pid,'position':num}})
@@ -347,12 +362,14 @@ class GrandBot(JabberBot):
     
     name = args.split(' ')
     
+    # find matches and respond if len(matches)!=1
     matches = self.find('file',dirs,name)
     if len(matches)==0:
       return 'No matches found'
     elif len(matches)>1:
       return 'Multiple matches: '+str(matches)
-
+    
+    # if there was only 1 match, play the file
     xbmc('Player.Open',{'item':{'file':matches[0]}})
     xbmc('GUI.SetFullscreen',{'fullscreen':True})
 
@@ -364,6 +381,7 @@ class GrandBot(JabberBot):
     paths = []
     smbpaths = []
     
+    # sort paths into local and samba based on whether they're tuples
     for path in dirs:
       if isinstance(path,tuple):
         smbpaths.append(path)
@@ -372,6 +390,7 @@ class GrandBot(JabberBot):
     
     matches = []
     
+    # find all matching directories or files depending on fd parameter
     for path in paths:
       try:
         if fd=='dir':
@@ -387,6 +406,7 @@ class GrandBot(JabberBot):
       except OSError:
         self.log.error('Unable to traverse "'+path+'"')
     
+    # same as above but for samba shares
     for path in smbpaths:
       try:
         ctx = smbc.Context(auth_fn=path[1])
@@ -415,7 +435,9 @@ def time2str(t):
   
   if t['hours']>0:
     s += (hr+':')
-  s+= (mi.zfill(2)+':')
+    s+= (mi.zfill(2)+':')
+  else:
+    s+= (mi+':')
   s+= sec.zfill(2)
   
   return s
@@ -448,7 +470,7 @@ def rsambafiles(ctx,path):
   return allfiles
 
 def xbmc(method,params=None):
-  """make a JSON-RPC request to xbmc and return the result"""
+  """make a JSON-RPC request to xbmc and return the resulti as a dict"""
   
   p = {'jsonrpc':'2.0','id':1,'method':method}
   if params is not None:
@@ -481,7 +503,7 @@ def rlistfiles(path):
   return allfiles
 
 def checkall(l,s):
-  """make sure all strings in l are in s unless they start with -"""
+  """make sure all strings in l are in s unless they start with '-' """
   
   for x in l:
     if (x[0]!='-') and (x.lower() not in s.lower()):
