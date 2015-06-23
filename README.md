@@ -25,6 +25,8 @@ You can add folders to `VIDEODIRS` and `AUDIODIRS` in order to search them using
 
 Samba shares protected by passowrd require an authentication function. An example is given in `sibyl.py`.
 
+Also be aware that root cannot read `sshfs` mounts from other users by default. If this is a problem with your setup (e.g. I run sibyl as `root` via the init script, but the `sshfs` mount requires the `pi` user's pubkey), you have to specify `sshfs -o allow_root ...` when you mount the share as a non-root user.
+
 ## Init Script
 For Debian and derivates I include an init script, `sibyl.init` and the actual execution script `sibyl`. Note that if you want to use these you may have to change the `DAEMON` variable in `sibyl.init`. In my setup, `sibyl.init` is in `/etc/init.d/`, `sibyl` is in `/home/pi/bin`, and `sibyl.py` is in `/home/pi/bin`.
 
