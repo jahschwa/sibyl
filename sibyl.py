@@ -2,9 +2,14 @@
 #
 # XBMC JSON-RPC XMPP MUC bot
 
-import requests,json,time,os,smbc,time,subprocess
+# built-ins
+import json,time,os,subprocess
+
+# dependencies
+import requests,smbc
 from jabberbot import JabberBot,botcmd
 
+# initialize logging
 import logging
 logging.basicConfig(filename='/var/log/sibyl.log',format='%(asctime)-15s | %(message)s')
 
@@ -27,10 +32,7 @@ def do_auth_theschwa(svr,shr,wg,un,pw):
 
 AUDIODIRS = (['/media/SCHWA 16G/MUSIC'])
 
-VIDEODIRS = (['/home/pi/mnt/area11/SCHWA 500G/Anime/Series',
-              '/home/pi/mnt/area11/SCHWA 500G/Anime/Movies',
-              '/home/pi/mnt/area11/SCHWA 500G/Anime/One Piece',
-              '/home/pi/mnt/tardis',
+VIDEODIRS = (['/home/pi/mnt/tardis',
               ('smb://THESCHWA/videos',do_auth_theschwa)])
 
 def main():
