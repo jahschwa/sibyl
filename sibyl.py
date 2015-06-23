@@ -81,6 +81,12 @@ class GrandBot(JabberBot):
     return 'Unknown command "'+cmd+'"'
 
   @botcmd
+  def git(self,mess,args):
+    """return a link to the github page"""
+  
+  return 'https://github.com/TheSchwa/sibyl'
+
+  @botcmd
   def hello(self,mess,args):
     """(basic test) reply if someone says hello"""
     
