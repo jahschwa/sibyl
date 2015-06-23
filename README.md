@@ -2,7 +2,7 @@
 an XMPP bot for controlling XBMC/Kodi on the Raspberry Pi
 
 ## Intro
-This is my personal XMPP bot made mostly for controlling XBMC on my Raspberry Pi. I find the `videos`, `seek`, and `info` commands to be very handy. This is tested on RaspBMC, but should work on anything if you resolve the dependencies and setup python correctly.
+This is my personal XMPP bot made mostly for controlling XBMC on my Raspberry Pi. I find the `videos`, `seek`, and `info` commands to be very handy. This is tested on RaspBMC, but should work on anything if you resolve the dependencies and setup python correctly. For command explanations and other info check out the wiki.
 
 ## Dependencies
 You'll need the following installed in order to use sibyl:
