@@ -10,17 +10,18 @@ You'll need the following installed in order to use sibyl:
  - [requests][2] - HTTP request and wrapper library - `pip install requests` or `sudo apt-get install python-requests`
  - [smbc][3] - python bindings for smbclient - `pip install pysmbc` or `sudo apt-get install python-smbc`
  - [cec-client][4] - HDMI CEC client - `sudo apt-get install libcec`
+ - [JSON-RPC][5] - enable the web server in XBMC
 
 ## Setup
 First set the global variables in `sibyl.py`. Enter the IP of the Raspberry Pi (an internal LAN IP should be fine) in `RPI_IP`. The XMPP login info for the bot should go in `USERNAME` and `PASSWORD`. The XMPP MUC info goes in `NICKNAME`, `CHATROOM`, and `ROOMPASS`. If the room doesn't have a password you can just set `ROOMPASS` to `None`. If you want to use the `video(s)` or `audio(s)` commands, remove the examples and add paths to `VIDEODIRS` and `AUDIODIRS`. If any of those paths are samba shares, you'll need to make auth functions for them. See the "Search Directories" section for an example.
 
 ## JabberBot
-By default sibyl is setup to join an XMPP MUC (i.e. group chat) but you can change that if you want. Refer to the [examples directory][5] for JabberBot. Adding additional commands is easy as well. Simply define a new method inside the `GrandBot` class and preface it with `@botcmd` to register the command.
+By default sibyl is setup to join an XMPP MUC (i.e. group chat) but you can change that if you want. Refer to the [examples directory][6] for JabberBot. Adding additional commands is easy as well. Simply define a new method inside the `GrandBot` class and preface it with `@botcmd` to register the command.
 
 Note that there is currently a bug in JabberBot. It does not correctly ignore message from itself when in a MUC. This is fixed naievly in sibyl by simply searching for `NICKNAME` in the from field of XMPP replies. Therefore, as currently implemented, any user whose name contains sibyl's `NICKNAME` will be ignored.
 
 ## XBMC/Kodi
-Sibyl interfaces with XBMC using its JSON-RPC web interface. In order to use it, you must enable the web server in XBMC as described [here][6]. Therefore, for these commands, the bot does not actually have to be running on the Pi. It just needs to be able to reach the Pi's HTTP interface..
+Sibyl interfaces with XBMC using its JSON-RPC web interface. In order to use it, you must enable the web server in XBMC (see the link in the Dependencies section). Therefore, for these commands, the bot does not actually have to be running on the Pi. It just needs to be able to reach the Pi's HTTP interface..
 
 ## CEC
 Sibyl uses the `cec-client` bash script to give commands over HDMI-CEC to an attached TV. This should be installed on most Pi distros by default. If not, debian derivatives can install with `sudo apt-get install cec-client`. For the CEC commands to work, the bot must be running on the Pi.
@@ -53,6 +54,6 @@ If you have a bug report or feature request, use github's issue tracker. For oth
  [2]: http://docs.python-requests.org/en/latest/
  [3]: http://cyberelk.net/tim/software/pysmbc/
  [4]: http://libcec.pulse-eight.com/
- [5]: https://github.com/antont/pythonjabberbot/tree/master/examples
- [6]: http://kodi.wiki/view/Webserver#Enabling_the_webserver
+ [5]: http://kodi.wiki/view/Webserver#Enabling_the_webserver
+ [6]: https://github.com/antont/pythonjabberbot/tree/master/examples
  [7]: mailto:haas.josh.a@gmail.com
