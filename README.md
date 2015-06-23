@@ -4,15 +4,15 @@ an XMPP bot for controlling XBMC/Kodi on the Raspberry Pi
 ## Intro
 This is my personal XMPP bot made mostly for controlling XBMC on my Raspberry Pi. I find the `videos`, `seek`, and `info` commands to be very handy. This is tested on RaspBMC, but should work on anything if you resolve the dependencies and setup python correctly.
 
-## Setup
-First set the global variables in `sibyl.py`. Enter the IP of the Raspberry Pi (an internal LAN IP should be fine) in `RPI_IP`. The XMPP login info for the bot should go in `USERNAME` and `PASSWORD`. The XMPP MUC info goes in `NICKNAME`, `CHATROOM`, and `ROOMPASS`. If you want to use the `video(s)` or `audio(s)` commands, remove the examples and add paths to `VIDEODIRS` and `AUDIODIRS`. If any of those paths are samba shares, you'll need to make auth functions for them. See the "Search Directories" section for an example.
-
 ## Dependencies
 You'll need the following installed in order to use sibyl:
  - [jabberbot][1] - XMPP bot using xmpppy - `pip install jabberbot` or `sudo apt-get install python-jabberbot`
  - [requests][2] - HTTP request and wrapper library - `pip install requests` or `sudo apt-get install python-requests`
  - [smbc][3] - python bindings for smbclient - `pip install pysmbc` or `sudo apt-get install python-smbc`
  - [cec-client][4] - HDMI CEC client - `sudo apt-get install libcec`
+
+## Setup
+First set the global variables in `sibyl.py`. Enter the IP of the Raspberry Pi (an internal LAN IP should be fine) in `RPI_IP`. The XMPP login info for the bot should go in `USERNAME` and `PASSWORD`. The XMPP MUC info goes in `NICKNAME`, `CHATROOM`, and `ROOMPASS`. If the room doesn't have a password you can just set `ROOMPASS` to `None`. If you want to use the `video(s)` or `audio(s)` commands, remove the examples and add paths to `VIDEODIRS` and `AUDIODIRS`. If any of those paths are samba shares, you'll need to make auth functions for them. See the "Search Directories" section for an example.
 
 ## JabberBot
 By default sibyl is setup to join an XMPP MUC (i.e. group chat) but you can change that if you want. Refer to the [examples directory][5] for JabberBot. Adding additional commands is easy as well. Simply define a new method inside the `GrandBot` class and preface it with `@botcmd` to register the command.
