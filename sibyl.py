@@ -271,14 +271,40 @@ class GrandBot(JabberBot):
     """stream a video from [YouTube, Twitch (Live)]"""
     
     msg = mess.getBody()
+    
     if 'youtube' in msg:
+      
       vid = msg[msg.find('watch?v=')+8:]
+      html = requests.get('http://youtube.com/watch?v='+vid).text
+      title = html[html.find('<title>')+7:html.find(' - YouTube</title>')]
+      
+      channel = html.find('class="yt-user-info"')
+      start = html.find('>',channel+1)
+      start = html.find('>',start+1)+1
+      stop = html.find('<',start+1)
+      channel = html[start:stop]
+      
       response = xbmc('Player.Open',{'item':{'file':'plugin://plugin.video.youtube/play/?video_id='+vid}})
-      return 'Detected: YouTube, Result: '+response['result']
+      return 'Streaming "'+title+'" by "'+channel+'" from YouTube'
+      
     elif 'twitch' in msg:
+      
       vid = msg[msg.find('twitch.tv/')+10:]
+      html = requests.get('http://twitch.tv/'+vid).text
+      
+      stream = html.find("property='og:title'")
+      stop = html.rfind("'",0,stream)
+      start = html.rfind("'",0,stop)+1
+      stream = html[start:stop]
+      
+      title = html.find("property='og:description'")
+      stop = html.rfind("'",0,title)
+      start = html.rfind("'",0,stop)+1
+      title = html[start:stop]
+      
       response = xbmc('Player.Open',{'item':{'file':'plugin://plugin.video.twitch/playLive/'+vid}})
-      return 'Detected: Live Twitch, Result: '+response['result']
+      return 'Streaming "'+title+'" by "'+stream+'" from Twitch Live'
+      
     else:
       return 'Unsupported URL'
 
