@@ -23,6 +23,13 @@ class SibylBot(JabberBot):
     self.audio_dirs = kwargs.get('audio_dirs',[])
     self.video_dirs = kwargs.get('video_dirs',[])
     
+    # delete kwargs before calling super init
+    for a in ['rpi_ip','nick_name','audio_dirs','video_dirs']:
+      try:
+        del kwargs[a]
+      except KeyError:
+        pass
+    
     # configure logging to use a file
     self.log_file = kwargs.get('log_file','/var/log/sibyl.log')
     logging.basicConfig(filename=self.log_file,format='%(asctime)-15s | %(message)s')
