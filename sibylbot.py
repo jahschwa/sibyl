@@ -327,12 +327,12 @@ class SibylBot(JabberBot):
   def xbmc(self,method,params=None):
     """wrapper method to always provide IP to static method"""
     
-    xbmc(self.rpi_ip,method,params)
+    return xbmc(self.rpi_ip,method,params)
   
   def xbmc_active_player(self):
     """wrapper method to always provide IP to static method"""
     
-    xbmc_active_player(self.rpi_ip)
+    return xbmc_active_player(self.rpi_ip)
   
   def playpause(self,target):
     """helper function for play() and pause()"""
