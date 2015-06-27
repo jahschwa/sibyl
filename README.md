@@ -2,21 +2,21 @@
 an XMPP bot for controlling XBMC/Kodi on the Raspberry Pi
 
 ## Intro
-This is my personal XMPP bot made mostly for controlling XBMC on my Raspberry Pi. I find the `videos`, `seek`, and `info` commands to be very handy. This is tested on RaspBMC, but should work on anything if you resolve the dependencies and setup python correctly. The code is in the `sibylbot.py` as a library, and an example script `sibyl.py` is shown for running the bot. For command explanations and other info check out the wiki.
+This is my personal XMPP bot made mostly for controlling XBMC on my Raspberry Pi. I find the `videos`, `seek`, and `info` commands to be very handy. This is tested on RaspBMC, but should work on anything if you resolve the dependencies and setup python correctly. The code is in the `sibylbot.py` as a library, and an example script `sibyl.py` is shown for running the bot. For command explanations and other info check out [the wiki][1].
 
 ## Dependencies
 You'll need the following installed in order to use sibyl:
- - [jabberbot][1] - XMPP bot using xmpppy - `pip install jabberbot` or `sudo apt-get install python-jabberbot`
- - [requests][2] - HTTP request and wrapper library - `pip install requests` or `sudo apt-get install python-requests`
- - [smbc][3] - python bindings for smbclient - `pip install pysmbc` or `sudo apt-get install python-smbc`
- - [cec-client][4] - HDMI CEC client - `sudo apt-get install libcec`
- - [JSON-RPC][5] - enable the web server in XBMC
+ - [jabberbot][2] - XMPP bot using xmpppy - `pip install jabberbot` or `sudo apt-get install python-jabberbot`
+ - [requests][3] - HTTP request and wrapper library - `pip install requests` or `sudo apt-get install python-requests`
+ - [smbc][4] - python bindings for smbclient - `pip install pysmbc` or `sudo apt-get install python-smbc`
+ - [cec-client][5] - HDMI CEC client - `sudo apt-get install libcec`
+ - [JSON-RPC][6] - enable the web server in XBMC
 
 ## Setup
 First set the global variables in `sibyl.py`. Enter the IP of the Raspberry Pi (an internal LAN IP should be fine) in `RPI_IP`. The XMPP login info for the bot should go in `USERNAME` and `PASSWORD`. The XMPP MUC info goes in `NICKNAME`, `CHATROOM`, and `ROOMPASS`. If the room doesn't have a password you can just set `ROOMPASS` to `None`. If you want to use the `video(s)` or `audio(s)` commands, remove the examples and add paths to `VIDEODIRS` and `AUDIODIRS`. If any of those paths are samba shares, you'll need to make auth functions for them. See the "Search Directories" section for an example.
 
 ## JabberBot
-By default sibyl is setup to join an XMPP MUC (i.e. group chat) but you can change that if you want. Refer to the [examples directory][6] for JabberBot. Adding additional commands is easy as well. Simply define a new method inside the `SibylBot` class and preface it with `@botcmd` to register the command.
+By default sibyl is setup to join an XMPP MUC (i.e. group chat) but you can change that if you want. Refer to the [examples directory][7] for JabberBot. Adding additional commands is easy as well. Simply define a new method inside the `SibylBot` class and preface it with `@botcmd` to register the command.
 
 Note that there is currently a bug in JabberBot. It does not correctly ignore message from itself when in a MUC. This is fixed naievly in sibyl by simply searching for `NICKNAME` in the from field of XMPP replies. Therefore, as currently implemented, any user whose name contains sibyl's `NICKNAME` will be ignored.
 
@@ -48,12 +48,13 @@ By default, sibyl logs to `/var/log/sibyl.log`. To enable debug logging, simply 
  - Older versions of the `python-smbc` and underlying samba packages result in `/home/pi/.xbmc-current/xbmc-bin/bin/cec-client`. Sibyl will crash on the creation of a second `smbc.Context`.
 
 ## Contact Me
-If you have a bug report or feature request, use github's issue tracker. For other stuff, you can contact me at [haas.josh.a@gmail.com][7].
+If you have a bug report or feature request, use github's issue tracker. For other stuff, you can contact me at [haas.josh.a@gmail.com][8].
 
- [1]: https://thp.io/2007/python-jabberbot/
- [2]: http://docs.python-requests.org/en/latest/
- [3]: http://cyberelk.net/tim/software/pysmbc/
- [4]: http://libcec.pulse-eight.com/
- [5]: http://kodi.wiki/view/Webserver#Enabling_the_webserver
- [6]: https://github.com/antont/pythonjabberbot/tree/master/examples
- [7]: mailto:haas.josh.a@gmail.com
+ [1]: https://github.com/TheSchwa/sibyl/wiki
+ [2]: https://thp.io/2007/python-jabberbot/
+ [3]: http://docs.python-requests.org/en/latest/
+ [4]: http://cyberelk.net/tim/software/pysmbc/
+ [5]: http://libcec.pulse-eight.com/
+ [6]: http://kodi.wiki/view/Webserver#Enabling_the_webserver
+ [7]: https://github.com/antont/pythonjabberbot/tree/master/examples
+ [8]: mailto:haas.josh.a@gmail.com
