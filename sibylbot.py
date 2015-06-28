@@ -6,8 +6,9 @@
 import json,time,os,subprocess,logging
 
 # dependencies
-import requests,smbc
+import requests
 from jabberbot import JabberBot,botcmd
+from smbclient import SambaClient
 
 class SibylBot(JabberBot):
   """Sibyl is mostly an XBMC bot for friends"""
@@ -405,7 +406,7 @@ class SibylBot(JabberBot):
     
     # sort paths into local and samba based on whether they're tuples
     for path in dirs:
-      if isinstance(path,tuple):
+      if isinstance(path,dict):
         smbpaths.append(path)
       else:
         paths.append(path)
@@ -431,11 +432,12 @@ class SibylBot(JabberBot):
     # same as above but for samba shares
     for path in smbpaths:
       try:
-        ctx = smbc.Context(auth_fn=path[1])
+        smb = SambaClient(**path)
         if fd=='dir':
-          contents = rsambadir(ctx,path[0])
+          contents = rsambadir(smb,'/')
         else:
-          contents = rsambafiles(ctx,path[0])
+          contents = rsambafiles(smb,'/')
+        smb.close()
         for entry in contents:
           try:
             if checkall(name,entry):
@@ -505,31 +507,29 @@ def rlistfiles(path):
       allfiles.append(os.path.join(cur_path,filename))
   return allfiles
 
-def rsambadir(ctx,path):
+def rsambadir(smb,path):
   """recursively list directories"""
   
   alldirs = []
-  d = ctx.opendir(path)
-  contents = d.getdents()
-  for c in contents:
-    if '(Dir)' in str(c) and c.name!='.' and c.name!='..':
-      cur_path = path+'/'+c.name
-      alldirs.append(cur_path)
-      alldirs.extend(rsambadir(ctx,cur_path))
+  items = smb.listdir(path)
+  for item in items:
+    if smb.isdir(item):
+      cur_path = os.path.join(path,item)
+      alldirs.append(os.path.join('smb:'+smb.path),cur_path)
+      alldirs.extend(rsambadir(smb,cur_path))
   return alldirs
 
-def rsambafiles(ctx,path):
+def rsambafiles(smb,path):
   """recursively list files"""
   
   allfiles = []
-  d = ctx.opendir(path)
-  contents = d.getdents()
-  for c in contents:
-    cur_path = path+'/'+c.name
-    if '(File)' in str(c):
-      allfiles.append(cur_path)
-    elif '(Dir)' in str(c) and c.name!='.' and c.name!='..':
-      allfiles.extend(rsambafiles(ctx,cur_path))
+  items = smb.listdir(path)
+  for item in items:
+    cur_path = os.path.join(path,item)
+    if smb.isfile(item):
+      allfiles.append(os.path.join('smb:'+smb.path),cur_path)
+    elif smb.isdir(item):
+      allfiles.extend(rsambafiles(smb,cur_path))
   return allfiles
 
 def checkall(l,s):
