@@ -515,7 +515,7 @@ def rsambadir(smb,path):
   for item in items:
     if smb.isdir(item):
       cur_path = os.path.join(path,item)
-      alldirs.append(os.path.join('smb:'+smb.path),cur_path)
+      alldirs.append(os.path.join('smb:'+smb.path,cur_path))
       alldirs.extend(rsambadir(smb,cur_path))
   return alldirs
 
@@ -527,7 +527,7 @@ def rsambafiles(smb,path):
   for item in items:
     cur_path = os.path.join(path,item)
     if smb.isfile(item):
-      allfiles.append(os.path.join('smb:'+smb.path),cur_path)
+      allfiles.append(os.path.join('smb:'+smb.path,cur_path))
     elif smb.isdir(item):
       allfiles.extend(rsambafiles(smb,cur_path))
   return allfiles
