@@ -44,6 +44,13 @@ class SibylBot(JabberBot):
     except KeyError:
       pass
     
+    # build libraries
+    self.lib_audio_dir = None
+    self.lib_audio_file = None
+    self.lib_video_dir = None
+    self.lib_video_file = None
+    self.library()
+    
     super(SibylBot,self).__init__(*args,**kwargs)
 
   def callback_message(self,conn,mess):
@@ -294,36 +301,62 @@ class SibylBot(JabberBot):
       
     else:
       return 'Unsupported URL'
+  
+  @botcmd
+  def search(self,mess,args):
+    """search through everything and return results"""
+    
+    name = args.split(' ')
+    matches = []
+    
+    dirs = [self.lib_video_dir,self.lib_video_file,self.lib_audio_dir,self.lib_audio_file]
+    for d in dirs:
+      matches.extend(self.matches(d,name))
+    
+    if len(matches)==0:
+      return 'No matches found'
+    return 'Matches: '+str(matches)
 
   @botcmd
   def videos(self,mess,args):
     """open a folder as a playlist - videos [name] [episode]"""
     
-    return self.files(args,self.video_dirs,1)
+    return self.files(args,self.lib_video_dir,1)
 
   @botcmd
   def video(self,mess,args):
     """search for and play a single video"""
 
-    return self.file(args,self.video_dirs)
+    return self.file(args,self.lib_video_file)
 
   @botcmd
   def audios(self,mess,args):
     """open a folder as a playlist - audios [name] [track#]"""
     
-    return self.files(args,self.audio_dirs,0)
+    return self.files(args,self.lib_audio_dir,0)
   
   @botcmd
   def audio(self,mess,args):
     """search for and play a single audio file"""
     
-    return self.file(args,self.audio_dirs)
+    return self.file(args,self.lib_audio_file)
 
   @botcmd
   def fullscreen(self,mess,args):
     """toggle fullscreen"""
     
     self.xbmc('GUI.SetFullscreen',{'fullscreen':'toggle'})
+  
+  @botcmd
+  def library(self,mess,args):
+    """rebuild search libraries"""
+    
+    self.lib_video_dir = self.find('dir',self.video_dirs)
+    self.lib_video_file = self.find('file',self.video_dirs)
+    self.lib_audio_dir = self.find('dir',self.audio_dirs)
+    self.lib_audio_file = self.find('file',self.audio_dirs)
+    
+    return 'Library rebuilt.'
   
   def xbmc(self,method,params=None):
     """wrapper method to always provide IP to static method"""
@@ -366,7 +399,7 @@ class SibylBot(JabberBot):
       name = args[:-1]
     
     # find matches and respond if len(matches)!=1
-    matches = self.find('dir',dirs,name)
+    matches = self.matches(dirs,name)
     if len(matches)==0:
       return 'No matches found'
     elif len(matches)>1:
@@ -386,7 +419,7 @@ class SibylBot(JabberBot):
     name = args.split(' ')
     
     # find matches and respond if len(matches)!=1
-    matches = self.find('file',dirs,name)
+    matches = self.matches(dirs,name)
     if len(matches)==0:
       return 'No matches found'
     elif len(matches)>1:
@@ -398,8 +431,17 @@ class SibylBot(JabberBot):
 
     return 'Playing "'+matches[0]+'"'
   
-  def find(self,fd,dirs,name):
-    """helper function for file() and files()"""
+  def matches(self,lib,name):
+    """helper function for files() and file()"""
+      
+      matches = []
+      for entry in lib:
+        if checkall(name,entry):
+          matches.append(entry)
+      return matches
+
+  def find(self,fd,dirs):
+    """helper function for library()"""
     
     paths = []
     smbpaths = []
@@ -411,7 +453,7 @@ class SibylBot(JabberBot):
       else:
         paths.append(path)
     
-    matches = []
+    result = []
     
     # find all matching directories or files depending on fd parameter
     for path in paths:
@@ -422,8 +464,7 @@ class SibylBot(JabberBot):
           contents = rlistfiles(path)
         for entry in contents:
           try:
-            if checkall(name,entry):
-              matches.append(entry)
+            result.append(str(entry))
           except UnicodeError:
             self.log.error('Unicode error parsing path "'+entry+'"')
       except OSError:
@@ -440,14 +481,13 @@ class SibylBot(JabberBot):
         smb.close()
         for entry in contents:
           try:
-            if checkall(name,entry):
-              matches.append(entry)
+            result.append(str(entry))
           except UnicodeError:
             self.log.error('Unicode error parsing path "'+entry+'"')
       except RuntimeError:
         self.log.error('Unable to traverse "'+path+'"')
     
-    return matches
+    return result
 
 def xbmc(ip,method,params=None):
   """make a JSON-RPC request to xbmc and return the resulti as a dict"""
@@ -515,7 +555,7 @@ def rsambadir(smb,path):
   for item in items:
     cur_path = os.path.join(path,item)
     if smb.isdir(cur_path):
-      alldirs.append(os.path.join('smb:'+smb.path,cur_path))
+      alldirs.append(str('smb:'+smb.path+cur_path))
       alldirs.extend(rsambadir(smb,cur_path))
   return alldirs
 
@@ -527,7 +567,7 @@ def rsambafiles(smb,path):
   for item in items:
     cur_path = os.path.join(path,item)
     if smb.isfile(cur_path):
-      allfiles.append(os.path.join('smb:'+smb.path,cur_path))
+      allfiles.append(str('smb:'+smb.path+cur_path))
     elif smb.isdir(cur_path):
       allfiles.extend(rsambafiles(smb,cur_path))
   return allfiles
