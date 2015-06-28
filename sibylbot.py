@@ -3,7 +3,7 @@
 # XBMC JSON-RPC XMPP MUC bot
 
 # built-ins
-import json,time,os,subprocess,logging
+import json,time,os,subprocess,logging,pickle
 
 # dependencies
 import requests
@@ -23,13 +23,14 @@ class SibylBot(JabberBot):
     self.nick_name = kwargs.get('nick_name','Sibyl')
     self.audio_dirs = kwargs.get('audio_dirs',[])
     self.video_dirs = kwargs.get('video_dirs',[])
+    self.lib_file = kwargs.get('lib_file','sibyl.pickle')
     
     # configure logging
     self.log_file = kwargs.get('log_file','/var/log/sibyl.log')
     logging.basicConfig(filename=self.log_file,format='%(asctime)-15s | %(message)s')
     
     # delete kwargs before calling super init
-    for a in ['rpi_ip','nick_name','audio_dirs','video_dirs','log_file']:
+    for a in ['rpi_ip','nick_name','audio_dirs','video_dirs','log_file','lib_file']:
       try:
         del kwargs[a]
       except KeyError:
@@ -44,13 +45,16 @@ class SibylBot(JabberBot):
     except KeyError:
       pass
     
-    # build libraries
-    self.lib_last_rebuild = time.time()
-    self.lib_audio_dir = None
-    self.lib_audio_file = None
-    self.lib_video_dir = None
-    self.lib_video_file = None
-    self.library('','rebuild')
+    # create libraries
+    if os.path.isfile(self.lib_file):
+      self.library('','load')
+    else:
+      self.lib_last_rebuilt = time.asctime()
+      self.lib_audio_dir = None
+      self.lib_audio_file = None
+      self.lib_video_dir = None
+      self.lib_video_file = None
+      self.library('','rebuild')
     
     super(SibylBot,self).__init__(*args,**kwargs)
 
@@ -352,14 +356,36 @@ class SibylBot(JabberBot):
   def library(self,mess,args):
     """rebuild search libraries"""
     
-    if args=='rebuild':
+    if args=='load':
+      with open(self.lib_file,'r') as f:
+        d = pickle.load(f)
+      self.lib_last_rebuilt = d['lib_last_rebuilt']
+      self.lib_video_dir = d['lib_video_dir']
+      self.lib_video_file = d['lib_video_file']
+      self.lib_audio_dir = d['lib_audio_dir']
+      self.lib_audio_file = d['lib_audio_file']
+      return 'Library loaded from: "'+self.lib_file+'"'
+      
+    elif args=='save':
+      d = ({'lib_last_rebuilt':self.lib_last_rebuilt,
+            'lib_video_dir':self.lib_video_dir,
+            'lib_video_file':self.lib_video_file,
+            'lib_audio_dir':self.lib_audio_dir,
+            'lib_audio_file':self.lib_audio_file})
+      with open(self.lib_file,'w') as f:
+        pickle.dump(d,f,-1)
+      return 'Library saved to: "'+self.lib_file+'"'
+      
+    elif args=='rebuild':
+      self.lib_last_rebuilt = time.asctime()
       self.lib_video_dir = self.find('dir',self.video_dirs)
       self.lib_video_file = self.find('file',self.video_dirs)
       self.lib_audio_dir = self.find('dir',self.audio_dirs)
       self.lib_audio_file = self.find('file',self.audio_dirs)
-      return 'Library rebuilt.'
+      result = self.library('','save')
+      return 'Library rebuilt and'+result[7:]
       
-    return 'Last rebuilt: '+time.localtime(self.lib_last_rebuilt)
+    return 'Last rebuilt: '+self.lib_last_rebuilt
   
   def xbmc(self,method,params=None):
     """wrapper method to always provide IP to static method"""
