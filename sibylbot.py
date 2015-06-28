@@ -45,11 +45,12 @@ class SibylBot(JabberBot):
       pass
     
     # build libraries
+    self.lib_last_rebuild = time.time()
     self.lib_audio_dir = None
     self.lib_audio_file = None
     self.lib_video_dir = None
     self.lib_video_file = None
-    self.library()
+    self.library('','rebuild')
     
     super(SibylBot,self).__init__(*args,**kwargs)
 
@@ -351,12 +352,14 @@ class SibylBot(JabberBot):
   def library(self,mess,args):
     """rebuild search libraries"""
     
-    self.lib_video_dir = self.find('dir',self.video_dirs)
-    self.lib_video_file = self.find('file',self.video_dirs)
-    self.lib_audio_dir = self.find('dir',self.audio_dirs)
-    self.lib_audio_file = self.find('file',self.audio_dirs)
-    
-    return 'Library rebuilt.'
+    if args=='rebuild':
+      self.lib_video_dir = self.find('dir',self.video_dirs)
+      self.lib_video_file = self.find('file',self.video_dirs)
+      self.lib_audio_dir = self.find('dir',self.audio_dirs)
+      self.lib_audio_file = self.find('file',self.audio_dirs)
+      return 'Library rebuilt.'
+      
+    return 'Last rebuilt: '+time.localtime(self.lib_last_rebuilt)
   
   def xbmc(self,method,params=None):
     """wrapper method to always provide IP to static method"""
@@ -432,13 +435,16 @@ class SibylBot(JabberBot):
     return 'Playing "'+matches[0]+'"'
   
   def matches(self,lib,name):
-    """helper function for files() and file()"""
-      
-      matches = []
-      for entry in lib:
+    """helper function for search(), files(), and file()"""
+    
+    matches = []
+    for entry in lib:
+      try:
         if checkall(name,entry):
           matches.append(entry)
-      return matches
+      except:
+        pass
+    return matches
 
   def find(self,fd,dirs):
     """helper function for library()"""
