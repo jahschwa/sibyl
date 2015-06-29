@@ -90,6 +90,10 @@ class SibylBot(JabberBot):
     
     return 'Unknown command "'+cmd+'"'
 
+  ######################################################################
+  # General Commands                                                   #
+  ######################################################################
+  
   @botcmd
   def git(self,mess,args):
     """return a link to the github page"""
@@ -115,6 +119,47 @@ class SibylBot(JabberBot):
     # execute cec-client using PIPE as input and sending output to /dev/null
     DEVNULL = open(os.devnull,'wb')
     subprocess.call(cec,stdin=p.stdout,stdout=DEVNULL,close_fds=True)
+
+  @botcmd
+  def ups(self,mess,args):
+    
+    try:
+      url = ('http://wwwapps.ups.com/WebTracking/track?track=yes&trackNums='
+          + args + '&loc=en_us')
+      page = requests.get(url).text
+      
+      start = page.find('Activity')
+      (location,start) = getcell(start+1,page)
+      (newdate,start) = getcell(start+1,page)
+      (newtime,start) = getcell(start+1,page)
+      (activity,start) = getcell(start+1,page)
+      timestamp = newdate + ' ' + newtime
+      return timestamp+' - '+location+' - '+activity
+      
+    except:
+      return 'Invalid tracking number'
+
+  @botcmd
+  def wiki(self,mess,args):
+    """return a link and breif summary from wikipedia"""
+    
+    url = ('http://en.wikipedia.org/w/api.php?action=opensearch&search='
+        + args + '&format=json')
+    response = requests.get(url)
+    result = json.loads(response.text)
+    title = result[1][0]
+    text = result[2]
+    try:
+      text.remove(u'')
+      text = '\n'.join(text)
+    except ValueError:
+      pass
+    url = result[3][0]
+    return unicode(title)+' - '+unicode(url)+'\n'+unicode(text)
+  
+  ######################################################################
+  # XBMC Commands                                                      #
+  ######################################################################
   
   @botcmd
   def info(self,mess,args):
@@ -392,6 +437,10 @@ class SibylBot(JabberBot):
       
     return 'Last rebuilt: '+self.lib_last_rebuilt
   
+  ######################################################################
+  # Helper Functions                                                   #
+  ######################################################################
+  
   def xbmc(self,method,params=None):
     """wrapper method to always provide IP to static method"""
     
@@ -622,3 +671,13 @@ def checkall(l,s):
     if (x[0]=='-') and (x[1:].lower() in s.lower()):
       return False
   return True
+
+def getcell(start,page):
+  """return the formatted contents of the next table cell and its end index"""
+  
+  start = page.find('<td',start+1)                                                                                                                                                   
+  start = page.find('>',start+1)                                                                                                                                                     
+  stop = page.find('</td>',start+1)                                                                                                                                                  
+  s = page[start+1:stop].strip()
+  s = s.replace('\n',' ').replace('\t',' ')
+  return (' '.join(s.split()),stop)
