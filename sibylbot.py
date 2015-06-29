@@ -25,6 +25,8 @@ class SibylBot(JabberBot):
     self.video_dirs = kwargs.get('video_dirs',[])
     self.lib_file = kwargs.get('lib_file','sibyl.pickle')
     self.max_matches = kwargs.get('max_matches',10)
+    self.xbmc_user = kwargs.get('xbmc_user',None)
+    self.xbmc_pass = kwargs.get('xbmc_pass',None)
     
     # configure logging
     self.log_file = kwargs.get('log_file','/var/log/sibyl.log')
@@ -32,7 +34,7 @@ class SibylBot(JabberBot):
     
     # delete kwargs before calling super init
     words = (['rpi_ip','nick_name','audio_dirs','video_dirs','log_file',
-        'lib_file','max_matches'])
+        'lib_file','max_matches','xbmc_user','xbmc_pass'])
     for w in words:
       try:
         del kwargs[w]
@@ -444,12 +446,12 @@ class SibylBot(JabberBot):
   def xbmc(self,method,params=None):
     """wrapper method to always provide IP to static method"""
     
-    return xbmc(self.rpi_ip,method,params)
+    return xbmc(self.rpi_ip,method,params,self.xbmc_user,self.xbmc_pass)
   
   def xbmc_active_player(self):
     """wrapper method to always provide IP to static method"""
     
-    return xbmc_active_player(self.rpi_ip)
+    return xbmc_active_player(self.rpi_ip,self.xbmc_user,self.xbmc_pass)
   
   def playpause(self,target):
     """helper function for play() and pause()"""
@@ -579,7 +581,7 @@ class SibylBot(JabberBot):
     
     return result
 
-def xbmc(ip,method,params=None):
+def xbmc(ip,method,params=None,user=None,pword=None):
   """make a JSON-RPC request to xbmc and return the resulti as a dict"""
   
   p = {'jsonrpc':'2.0','id':1,'method':method}
@@ -590,14 +592,15 @@ def xbmc(ip,method,params=None):
   headers = {'content-type':'application/json'}
   payload = p
   params = {'request':json.dumps(payload)}
-  r = requests.get(url,params=params,headers=headers)
+  
+  r = requests.get(url,params=params,headers=headers,auth=(user,pword))
   
   return json.loads(r.text)
 
-def xbmc_active_player(ip):
+def xbmc_active_player(ip,user=None,pword=None):
   """return the id of the currently active player or None"""
   
-  j = xbmc(ip,'Player.GetActivePlayers')
+  j = xbmc(ip,'Player.GetActivePlayers',user=user,pword=pword)
   if len(j['result'])==0:
     return None
   return j['result'][0]['playerid']
