@@ -8,7 +8,7 @@ This is my personal XMPP bot made mostly for controlling XBMC on my Raspberry Pi
 You'll need the following installed in order to use sibyl:
  - [jabberbot][2] - XMPP bot using xmpppy - `pip install jabberbot` or `sudo apt-get install python-jabberbot`
  - [requests][3] - HTTP request and wrapper library - `pip install requests` or `sudo apt-get install python-requests`
- - [smbc][4] - python bindings for smbclient - `pip install pysmbc` or `sudo apt-get install python-smbc`
+ - [pysmbclient][4] - crude `smbclint` wrapper - add the source to your python path
  - [cec-client][5] - HDMI CEC client - `sudo apt-get install libcec`
  - [JSON-RPC][6] - enable the web server in XBMC
 
@@ -27,14 +27,11 @@ Sibyl interfaces with XBMC using its JSON-RPC web interface. In order to use it,
 Sibyl uses the `cec-client` bash script to give commands over HDMI-CEC to an attached TV. This should be installed on most Pi distros by default. If not, debian derivatives can install with `sudo apt-get install cec-client`. For the CEC commands to work, the bot must be running on the Pi itself. Also note that `cec-client` may not be found depending on your environment. On my Pi it's located at `/home/pi/.xbmc-current/xbmc-bin/bin/cec-client`.
 
 ## Search Directories
-You can add folders to `VIDEODIRS` and `AUDIODIRS` in order to search them using the `audio`, `audios`, `video`, and `videos` commands. You can add the following as list items:
+You can add folders to `VIDEODIRS` and `AUDIODIRS` in order to search them using the `search`, `audio`, `audios`, `video`, and `videos` commands. You can add the following as list items:
   - local directory, example: `'/media/flashdrive/videos'`
-  - samba share, example: `('smb://HOSTNAME/videos',do_auth_hostname)`
+  - samba share, example: `{'server':'THESCHWA','share':'videos','username':'user','password':'pass'}`
 
-Samba shares protected by passowrd require an authentication function. Here's the format:
-
-    def do_auth(svr,shr,wg,un,pw):
-      return ('WORKGROUP','username','password')
+For samba shares not protected by a passowrd, you can exclude the `'username'` and `'password'` keys in the above example.
 
 Also be aware that root cannot read `sshfs` mounts from other users by default. If this is a problem with your setup (e.g. I run sibyl as `root` via the init script, but the `sshfs` mount requires the `pi` user's pubkey), you have to specify `sshfs -o allow_root ...` when you mount the share as a non-root user.
 
@@ -45,7 +42,7 @@ For Debian and derivates I include an init script, `sibyl.init` and the actual e
 By default, sibyl logs to `/var/log/sibyl.log`. To enable debug logging, simply uncomment the debug line in `sibyl.py`. This log file requires sibyl be run as root. If that is undesirable, you can specify a different log file when initializing the bot with the `log_file` kwarg.
 
 ## Known Bugs
- - Older versions of the `python-smbc` and underlying samba packages result in `/home/pi/.xbmc-current/xbmc-bin/bin/cec-client`. Sibyl will crash on the creation of a second `smbc.Context`.
+ - Very large media libraries may cause smaller devices like the Pi to run out of RAM.
 
 ## Contact Me
 If you have a bug report or feature request, use github's issue tracker. For other stuff, you can contact me at [haas.josh.a@gmail.com][8].
@@ -53,7 +50,7 @@ If you have a bug report or feature request, use github's issue tracker. For oth
  [1]: https://github.com/TheSchwa/sibyl/wiki
  [2]: https://thp.io/2007/python-jabberbot/
  [3]: http://docs.python-requests.org/en/latest/
- [4]: http://cyberelk.net/tim/software/pysmbc/
+ [4]: https://bitbucket.org/nosklo/pysmbclient/src/057512c24175?at=default
  [5]: http://libcec.pulse-eight.com/
  [6]: http://kodi.wiki/view/Webserver#Enabling_the_webserver
  [7]: https://github.com/antont/pythonjabberbot/tree/master/examples
