@@ -24,15 +24,18 @@ class SibylBot(JabberBot):
     self.audio_dirs = kwargs.get('audio_dirs',[])
     self.video_dirs = kwargs.get('video_dirs',[])
     self.lib_file = kwargs.get('lib_file','sibyl.pickle')
+    self.max_matches = kwargs.get('max_matches',10)
     
     # configure logging
     self.log_file = kwargs.get('log_file','/var/log/sibyl.log')
     logging.basicConfig(filename=self.log_file,format='%(asctime)-15s | %(message)s')
     
     # delete kwargs before calling super init
-    for a in ['rpi_ip','nick_name','audio_dirs','video_dirs','log_file','lib_file']:
+    words = (['rpi_ip','nick_name','audio_dirs','video_dirs','log_file',
+        'lib_file','max_matches'])
+    for w in words:
       try:
-        del kwargs[a]
+        del kwargs[w]
       except KeyError:
         pass
     
@@ -320,6 +323,8 @@ class SibylBot(JabberBot):
     
     if len(matches)==0:
       return 'No matches found'
+    elif len(matches)>self.max_matches:
+      return 'Found '+str(len(matches))+' matches'
     return 'Matches: '+str(matches)
 
   @botcmd
@@ -431,6 +436,8 @@ class SibylBot(JabberBot):
     matches = self.matches(dirs,name)
     if len(matches)==0:
       return 'No matches found'
+    elif len(matches)>self.max_matches:
+      return 'Found '+str(len(matches))+' matches'
     elif len(matches)>1:
       return 'Multiple matches: '+str(matches)
     
@@ -451,6 +458,8 @@ class SibylBot(JabberBot):
     matches = self.matches(dirs,name)
     if len(matches)==0:
       return 'No matches found'
+    elif len(matches)>self.max_matches:
+      return 'Found '+str(len(matches))+' matches'
     elif len(matches)>1:
       return 'Multiple matches: '+str(matches)
     
@@ -567,7 +576,7 @@ def rlistdir(path):
   alldirs = []
   for (cur_path,dirnames,filenames) in os.walk(path):
     for dirname in dirnames:
-      alldirs.append(os.path.join(cur_path,dirname))
+      alldirs.append(os.path.join(cur_path,dirname)+'/')
   return alldirs
 
 def rlistfiles(path):
@@ -587,7 +596,7 @@ def rsambadir(smb,path):
   for item in items:
     cur_path = os.path.join(path,item)
     if smb.isdir(cur_path):
-      alldirs.append(str('smb:'+smb.path+cur_path))
+      alldirs.append(str('smb:'+smb.path+cur_path)+'/')
       alldirs.extend(rsambadir(smb,cur_path))
   return alldirs
 
