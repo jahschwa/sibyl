@@ -12,7 +12,11 @@ from smbclient import SambaClient
 
 class SibylBot(JabberBot):
   """Sibyl is mostly an XBMC bot for friends"""
-
+  
+  ######################################################################
+  # Setup                                                              #
+  ######################################################################
+  
   def __init__(self,*args,**kwargs):
     """override to only answer direct msgs"""
     
@@ -52,14 +56,14 @@ class SibylBot(JabberBot):
     
     # create libraries
     if os.path.isfile(self.lib_file):
-      self.library('','load')
+      self.library(None,'load')
     else:
       self.lib_last_rebuilt = time.asctime()
       self.lib_audio_dir = None
       self.lib_audio_file = None
       self.lib_video_dir = None
       self.lib_video_file = None
-      self.library('','rebuild')
+      self.library(None,'rebuild')
     
     super(SibylBot,self).__init__(*args,**kwargs)
 
@@ -429,12 +433,14 @@ class SibylBot(JabberBot):
       return 'Library saved to: "'+self.lib_file+'"'
       
     elif args=='rebuild':
+      if mess is not None:
+        self.send_simple_reply(mess,'Working...')
       self.lib_last_rebuilt = time.asctime()
       self.lib_video_dir = self.find('dir',self.video_dirs)
       self.lib_video_file = self.find('file',self.video_dirs)
       self.lib_audio_dir = self.find('dir',self.audio_dirs)
       self.lib_audio_file = self.find('file',self.audio_dirs)
-      result = self.library('','save')
+      result = self.library(None,'save')
       return 'Library rebuilt and'+result[7:]
       
     return 'Last rebuilt: '+self.lib_last_rebuilt
@@ -581,6 +587,10 @@ class SibylBot(JabberBot):
     
     return result
 
+########################################################################
+# Static Functions                                                     #
+########################################################################
+
 def xbmc(ip,method,params=None,user=None,pword=None):
   """make a JSON-RPC request to xbmc and return the resulti as a dict"""
   
@@ -676,7 +686,7 @@ def checkall(l,s):
   return True
 
 def getcell(start,page):
-  """return the formatted contents of the next table cell and its end index"""
+  """return the contents of the next table cell and its end index"""
   
   start = page.find('<td',start+1)                                                                                                                                                   
   start = page.find('>',start+1)                                                                                                                                                     
