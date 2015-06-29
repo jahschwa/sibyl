@@ -322,10 +322,10 @@ class SibylBot(JabberBot):
       matches.extend(self.matches(d,name))
     
     if len(matches)==0:
-      return 'No matches found'
+      return 'Found 0 matches'
     elif len(matches)>self.max_matches:
       return 'Found '+str(len(matches))+' matches'
-    return 'Matches: '+str(matches)
+    return 'Found '+str(len(matches))+' matches: '+str(matches)
 
   @botcmd
   def videos(self,mess,args):
@@ -435,11 +435,11 @@ class SibylBot(JabberBot):
     # find matches and respond if len(matches)!=1
     matches = self.matches(dirs,name)
     if len(matches)==0:
-      return 'No matches found'
+      return 'Found 0 matches'
     elif len(matches)>self.max_matches:
       return 'Found '+str(len(matches))+' matches'
     elif len(matches)>1:
-      return 'Multiple matches: '+str(matches)
+      return 'Found '+str(len(matches))+' matches: '+str(matches)
     
     # if there was only 1 match, add the whole directory to a playlist
     self.xbmc('Playlist.Clear',{'playlistid':pid})
@@ -457,11 +457,11 @@ class SibylBot(JabberBot):
     # find matches and respond if len(matches)!=1
     matches = self.matches(dirs,name)
     if len(matches)==0:
-      return 'No matches found'
+      return 'Found 0 matches'
     elif len(matches)>self.max_matches:
       return 'Found '+str(len(matches))+' matches'
     elif len(matches)>1:
-      return 'Multiple matches: '+str(matches)
+      return 'Found '+str(len(matches))+' matches: '+str(matches)
     
     # if there was only 1 match, play the file
     self.xbmc('Player.Open',{'item':{'file':matches[0]}})
