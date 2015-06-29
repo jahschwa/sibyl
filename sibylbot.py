@@ -81,7 +81,7 @@ class SibylBot(JabberBot):
       return
     
     # only respond to direct messages (i.e. those containing NICKNAME)
-    if self.only_direct and self.nick_name.lower() in msg.lower():
+    if not self.only_direct or msg.lower().startswith(self.nick_name.lower()):
       mess.setBody(' '.join(msg.split(' ',1)[1:]))
       return super(SibylBot,self).callback_message(conn,mess)
 
