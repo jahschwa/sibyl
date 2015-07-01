@@ -374,9 +374,14 @@ class SibylBot(JabberBot):
     
     if len(matches)==0:
       return 'Found 0 matches'
-    elif len(matches)>self.max_matches:
-      return 'Found '+str(len(matches))+' matches'
-    return 'Found '+str(len(matches))+' matches: '+str(matches)
+    
+    if len(matches)>1:
+      if self.max_matches<1 or len(matches)<=self.max_matches:
+        return 'Found '+str(len(matches))+' matches: '+str(matches)
+      else:
+        return 'Found '+str(len(matches))+' matches'
+    
+    return 'Found '+str(len(matches))+' matche: '+str(matches[0])
 
   @botcmd
   def videos(self,mess,args):
@@ -491,14 +496,17 @@ class SibylBot(JabberBot):
     
     # find matches and respond if len(matches)!=1
     matches = self.matches(dirs,name)
+    
     if len(matches)==0:
       return 'Found 0 matches'
-    elif len(matches)>self.max_matches:
-      return 'Found '+str(len(matches))+' matches'
-    elif len(matches)>1:
-      return 'Found '+str(len(matches))+' matches: '+str(matches)
     
-    # if there was only 1 match, add the whole directory to a playlist
+    if len(matches)>1:
+      if self.max_matches<1 or len(matches)<=self.max_matches:
+        return 'Found '+str(len(matches))+' matches: '+str(matches)
+      else:
+        return 'Found '+str(len(matches))+' matches'
+    
+    # if there was 1 match, add the whole directory to a playlist
     self.xbmc('Playlist.Clear',{'playlistid':pid})
     self.xbmc('Playlist.Add',{'playlistid':pid,'item':{'directory':matches[0]}})
     self.xbmc('Player.Open',{'item':{'playlistid':pid,'position':num}})
@@ -513,14 +521,17 @@ class SibylBot(JabberBot):
     
     # find matches and respond if len(matches)!=1
     matches = self.matches(dirs,name)
+    
     if len(matches)==0:
       return 'Found 0 matches'
-    elif len(matches)>self.max_matches:
-      return 'Found '+str(len(matches))+' matches'
-    elif len(matches)>1:
-      return 'Found '+str(len(matches))+' matches: '+str(matches)
     
-    # if there was only 1 match, play the file
+    if len(matches)>1:
+      if self.max_matches<1 or len(matches)<=self.max_matches:
+        return 'Found '+str(len(matches))+' matches: '+str(matches)
+      else:
+        return 'Found '+str(len(matches))+' matches'
+    
+    # if there was 1 match, play the file
     self.xbmc('Player.Open',{'item':{'file':matches[0]}})
     self.xbmc('GUI.SetFullscreen',{'fullscreen':True})
 
