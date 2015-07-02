@@ -11,7 +11,7 @@ from jabberbot import JabberBot,botcmd
 from smbclient import SambaClient
 
 class SibylBot(JabberBot):
-  """Sibyl is mostly an XBMC bot for friends"""
+  """More details: https://github.com/TheSchwa/sibyl/wiki/Commands"""
   
   ######################################################################
   # Setup                                                              #
@@ -108,13 +108,13 @@ class SibylBot(JabberBot):
 
   @botcmd
   def hello(self,mess,args):
-    """(basic test) reply if someone says hello"""
+    """reply if someone says hello"""
     
     return 'Hello world!'
   
   @botcmd
   def tv(self,mess,args):
-    """pass command to cec-client"""
+    """pass command to cec-client - tv (on|standby|as)"""
     
     cmd = ['echo',args+' 0']
     cec = ['cec-client','-s']
@@ -128,6 +128,7 @@ class SibylBot(JabberBot):
 
   @botcmd
   def ups(self,mess,args):
+    """get latest UPS tracking status - sibyl ups number"""
     
     try:
       url = ('http://wwwapps.ups.com/WebTracking/track?track=yes&trackNums='
@@ -147,7 +148,7 @@ class SibylBot(JabberBot):
 
   @botcmd
   def wiki(self,mess,args):
-    """return a link and breif summary from wikipedia"""
+    """return a link and brief from wikipedia - wiki title"""
     
     url = ('http://en.wikipedia.org/w/api.php?action=opensearch&search='
         + args + '&format=json')
@@ -196,19 +197,19 @@ class SibylBot(JabberBot):
   
   @botcmd
   def play(self,mess,args):
-    """if xbmc is paused, begin playing again"""
+    """if xbmc is paused, resume playing"""
     
     self.playpause(0)
   
   @botcmd
   def pause(self,mess,args):
-    """if xbmc is playing, pause it"""
+    """if xbmc is playing, pause"""
     
     self.playpause(1)
   
   @botcmd
   def stop(self,mess,args):
-    """if xbmc is playing, stop it"""
+    """if xbmc is playing, stop"""
     
     # abort if nothing is playing
     pid = self.xbmc_active_player()
@@ -219,7 +220,7 @@ class SibylBot(JabberBot):
   
   @botcmd
   def prev(self,mess,args):
-    """if xbmc is playing, go to previous in the playlist"""
+    """go to previous playlist item"""
     
     # abort if nothing is playing
     pid = self.xbmc_active_player()
@@ -232,7 +233,7 @@ class SibylBot(JabberBot):
 
   @botcmd
   def next(self,mess,args):
-    """if xbmc is playing, go to next in the playlist"""
+    """go to next playlist item"""
     
     # abort if nothing is playing
     pid = self.xbmc_active_player()
@@ -243,7 +244,7 @@ class SibylBot(JabberBot):
 
   @botcmd
   def jump(self,mess,args):
-    """jump to a specific number in the playlist"""
+    """jump to an item# in the playlist - jump #"""
     
     # abort if nothing is playing
     pid = self.xbmc_active_player()
@@ -260,7 +261,7 @@ class SibylBot(JabberBot):
   
   @botcmd
   def seek(self,mess,args):
-    """go to a specific time in the playing file"""
+    """go to a specific time - seek [hh:]mm:ss"""
     
     # abort if nothing is playing
     pid = self.xbmc_active_player()
@@ -285,7 +286,7 @@ class SibylBot(JabberBot):
 
   @botcmd
   def restart(self,mess,args):
-    """start playing again from the beginning"""
+    """start playing again from 0:00"""
     
     # abort if nothing is playing
     pid = self.xbmc_active_player()
@@ -296,7 +297,7 @@ class SibylBot(JabberBot):
 
   @botcmd
   def hop(self,mess,args):
-    """sibyl hop [small|big] [back|forward]"""
+    """move forward or back - hop [small|big] [back|forward]"""
     
     # abort if nothing is playing
     pid = self.xbmc_active_player()
@@ -321,7 +322,7 @@ class SibylBot(JabberBot):
 
   @botcmd
   def stream(self,mess,args):
-    """stream a video from [YouTube, Twitch (Live)]"""
+    """stream from [YouTube, Twitch (Live)] - stream url"""
     
     msg = mess.getBody()
     
@@ -363,7 +364,7 @@ class SibylBot(JabberBot):
   
   @botcmd
   def search(self,mess,args):
-    """search through everything and return results"""
+    """search all paths for matches - search [include -exclude]"""
     
     name = args.split(' ')
     matches = []
@@ -385,25 +386,25 @@ class SibylBot(JabberBot):
 
   @botcmd
   def videos(self,mess,args):
-    """open a folder as a playlist - videos [name] [episode]"""
+    """search and open a folder as a playlist - videos [include -exclude] [track#]"""
     
     return self.files(args,self.lib_video_dir,1)
 
   @botcmd
   def video(self,mess,args):
-    """search for and play a single video"""
+    """search and play a single video - video [include -exclude]"""
 
     return self.file(args,self.lib_video_file)
 
   @botcmd
   def audios(self,mess,args):
-    """open a folder as a playlist - audios [name] [track#]"""
+    """search and open a folder as a playlist - audios [include -exclude] [track#]"""
     
     return self.files(args,self.lib_audio_dir,0)
   
   @botcmd
   def audio(self,mess,args):
-    """search for and play a single audio file"""
+    """search and play a single audio file - audio [include -exclude]"""
     
     return self.file(args,self.lib_audio_file)
 
@@ -415,7 +416,7 @@ class SibylBot(JabberBot):
   
   @botcmd
   def library(self,mess,args):
-    """rebuild search libraries"""
+    """control media library - library (info|load|rebuild|save)"""
     
     if args=='load':
       with open(self.lib_file,'r') as f:
