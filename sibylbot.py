@@ -59,6 +59,7 @@ class SibylBot(JabberBot):
       self.library(None,'load')
     else:
       self.lib_last_rebuilt = time.asctime()
+      self.lib_last_elapsed = 0
       self.lib_audio_dir = None
       self.lib_audio_file = None
       self.lib_video_dir = None
@@ -422,6 +423,7 @@ class SibylBot(JabberBot):
       with open(self.lib_file,'r') as f:
         d = pickle.load(f)
       self.lib_last_rebuilt = d['lib_last_rebuilt']
+      self.lib_last_elapsed = d['lib_last_elapsed']
       self.lib_video_dir = d['lib_video_dir']
       self.lib_video_file = d['lib_video_file']
       self.lib_audio_dir = d['lib_audio_dir']
@@ -430,6 +432,7 @@ class SibylBot(JabberBot):
       
     elif args=='save':
       d = ({'lib_last_rebuilt':self.lib_last_rebuilt,
+            'lib_last_elapsed':self.lib_last_elapsed,
             'lib_video_dir':self.lib_video_dir,
             'lib_video_file':self.lib_video_file,
             'lib_audio_dir':self.lib_audio_dir,
@@ -440,16 +443,26 @@ class SibylBot(JabberBot):
       
     elif args=='rebuild':
       if mess is not None:
-        self.send_simple_reply(mess,'Working...')
+        t = self.lib_last_elapsed
+        s = str(int(t/60))+':'
+        s += str(int(t-60*int(t/60))).zfill(2)
+        self.send_simple_reply(mess,'Working... (last rebuild took '+s+')')
+      start = time.time()
       self.lib_last_rebuilt = time.asctime()
       self.lib_video_dir = self.find('dir',self.video_dirs)
       self.lib_video_file = self.find('file',self.video_dirs)
       self.lib_audio_dir = self.find('dir',self.audio_dirs)
       self.lib_audio_file = self.find('file',self.audio_dirs)
       result = self.library(None,'save')
+      self.lib_last_elapsed = time.time()-start
+      if mess is not None:
+        self.log.debug('Library rebuilt in '+str(self.lib_last_elapsed))
       return 'Library rebuilt and'+result[7:]
-      
-    return 'Last rebuilt: '+self.lib_last_rebuilt
+    
+    t = self.lib_last_elapsed
+    s = str(int(t/60))+':'
+    s += str(int(t-60*int(t/60))).zfill(2)
+    return 'Last rebuilt on '+self.lib_last_rebuilt+' in '+s
   
   ######################################################################
   # Helper Functions                                                   #
