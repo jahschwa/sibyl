@@ -6,7 +6,7 @@
 import json,time,os,subprocess,logging,pickle
 
 # dependencies
-import requests
+import requests,socket
 from jabberbot import JabberBot,botcmd
 from smbclient import SambaClient
 
@@ -100,7 +100,7 @@ class SibylBot(JabberBot):
   ######################################################################
   # General Commands                                                   #
   ######################################################################
-  
+
   @botcmd
   def git(self,mess,args):
     """return a link to the github page"""
@@ -113,6 +113,20 @@ class SibylBot(JabberBot):
     
     return 'Hello world!'
   
+  @botcmd
+  def network(self,mess,args):
+    """reply with some network info"""
+    
+    s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+    s.connect(('8.8.8.8',80))
+    myip = s.getsockname()[0]
+    s.close()
+    
+    piip = self.rpi_ip
+    exip = requests.get('http://ipecho.net/plain').text.strip()
+    
+    return 'My IP: '+myip+' - RPi IP: '+piip+' - External IP: '+exip
+
   @botcmd
   def tv(self,mess,args):
     """pass command to cec-client - tv (on|standby|as)"""
