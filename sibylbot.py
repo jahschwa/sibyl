@@ -31,6 +31,7 @@ class SibylBot(JabberBot):
     self.max_matches = kwargs.get('max_matches',10)
     self.xbmc_user = kwargs.get('xbmc_user',None)
     self.xbmc_pass = kwargs.get('xbmc_pass',None)
+    self.chat_ctrl = kwargs.get('chat_ctrl',False)
     
     # configure logging
     self.log_file = kwargs.get('log_file','/var/log/sibyl.log')
@@ -131,11 +132,17 @@ class SibylBot(JabberBot):
   def die(self,mess,args):
     """kill sibyl"""
     
+    if not self.chat_ctrl:
+      return 'chat_ctrl disabled'
+    
     sys.exit()
 
   @botcmd
   def reboot(self,mess,args):
     """restart sibyl"""
+    
+    if not self.chat_ctrl:
+      return 'chat_ctrl disabled'
     
     DEVNULL = open(os.devnull,'wb')
     subprocess.Popen(['service','sibyl','restart'],
