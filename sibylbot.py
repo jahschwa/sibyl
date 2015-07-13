@@ -3,10 +3,10 @@
 # XBMC JSON-RPC XMPP MUC bot
 
 # built-ins
-import json,time,os,subprocess,logging,pickle
+import sys,json,time,os,subprocess,logging,pickle,socket
 
 # dependencies
-import requests,socket
+import requests
 from jabberbot import JabberBot,botcmd
 from smbclient import SambaClient
 
@@ -125,7 +125,22 @@ class SibylBot(JabberBot):
     piip = self.rpi_ip
     exip = requests.get('http://ipecho.net/plain').text.strip()
     
-    return 'My IP: '+myip+' - RPi IP: '+piip+' - External IP: '+exip
+    return 'My IP - '+myip+' --- RPi IP - '+piip+' --- External IP - '+exip
+
+  @botcmd
+  def die(self,mess,args):
+    """kill sibyl"""
+    
+    sys.exit()
+
+  @botcmd
+  def reboot(self,mess,args):
+    """restart sibyl"""
+    
+    DEVNULL = open(os.devnull,'wb')
+    subprocess.Popen(['service','sibyl','restart'],
+        stdout=DEVNULL,stderr=DEVNULL,close_fds=True)
+    sys.exit()
 
   @botcmd
   def tv(self,mess,args):
