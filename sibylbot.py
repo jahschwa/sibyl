@@ -8,7 +8,7 @@ import sys,json,time,os,subprocess,logging,pickle,socket
 # dependencies
 import requests
 from jabberbot import JabberBot,botcmd
-from smbclient import SambaClient
+from smbclient import SambaClient,SambaClientError
 
 class SibylBot(JabberBot):
   """More details: https://github.com/TheSchwa/sibyl/wiki/Commands"""
@@ -416,7 +416,7 @@ class SibylBot(JabberBot):
     
     if len(matches)>1:
       if self.max_matches<1 or len(matches)<=self.max_matches:
-        return 'Found '+str(len(matches))+' matches: '+str(matches)
+        return 'Found '+str(len(matches))+' matches: '+str(matches).replace("', '","',\n'")
       else:
         return 'Found '+str(len(matches))+' matches'
     
@@ -553,7 +553,7 @@ class SibylBot(JabberBot):
     
     if len(matches)>1:
       if self.max_matches<1 or len(matches)<=self.max_matches:
-        return 'Found '+str(len(matches))+' matches: '+str(matches)
+        return 'Found '+str(len(matches))+' matches: '+str(matches).replace("', '","',\n'")
       else:
         return 'Found '+str(len(matches))+' matches'
     
@@ -578,7 +578,7 @@ class SibylBot(JabberBot):
     
     if len(matches)>1:
       if self.max_matches<1 or len(matches)<=self.max_matches:
-        return 'Found '+str(len(matches))+' matches: '+str(matches)
+        return 'Found '+str(len(matches))+' matches: '+str(matches).replace("', '","',\n'")
       else:
         return 'Found '+str(len(matches))+' matches'
     
@@ -644,8 +644,8 @@ class SibylBot(JabberBot):
             result.append(str(entry))
           except UnicodeError:
             self.log.error('Unicode error parsing path "'+entry+'"')
-      except RuntimeError:
-        self.log.error('Unable to traverse "'+path+'"')
+      except SambaClientError:
+        self.log.error('Unable to traverse "smb://'+path['server']+'/'+path['share']+'"')
     
     return result
 
