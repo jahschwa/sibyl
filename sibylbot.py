@@ -490,8 +490,8 @@ class SibylBot(JabberBot):
       self.lib_video_file = self.find('file',self.video_dirs)
       self.lib_audio_dir = self.find('dir',self.audio_dirs)
       self.lib_audio_file = self.find('file',self.audio_dirs)
-      result = self.library(None,'save')
       self.lib_last_elapsed = time.time()-start
+      result = self.library(None,'save')
       if mess is not None:
         self.log.debug('Library rebuilt in '+str(self.lib_last_elapsed))
       return 'Library rebuilt and'+result[7:]
