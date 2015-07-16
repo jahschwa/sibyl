@@ -153,6 +153,9 @@ class SibylBot(JabberBot):
   def tv(self,mess,args):
     """pass command to cec-client - tv (on|standby|as)"""
     
+    # sanitize args
+    args = ''.join([s for s in args if s.isalpha()])
+    
     cmd = ['echo',args+' 0']
     cec = ['cec-client','-s']
     
