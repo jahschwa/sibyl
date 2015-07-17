@@ -192,6 +192,9 @@ class SibylBot(JabberBot):
           + args + '&loc=en_us')
       page = requests.get(url).text
       
+      if 'The number you entered is not a valid tracking number' in page:
+        return 'Invalid tracking number: "'+args+'"'
+      
       start = page.find('Activity')
       (location,start) = getcell(start+1,page)
       (newdate,start) = getcell(start+1,page)
@@ -201,7 +204,7 @@ class SibylBot(JabberBot):
       return timestamp+' - '+location+' - '+activity
       
     except:
-      return 'Invalid tracking number'
+      return 'Unknown error accessing UPS website'
 
   @botcmd
   def wiki(self,mess,args):
