@@ -55,6 +55,9 @@ class SibylBot(JabberBot):
     except KeyError:
       pass
     
+    # override some jabberbot defaults
+    kwargs['privatedomain'] = kwargs.get('privatedomain',True)
+    
     # create libraries
     if os.path.isfile(self.lib_file):
       self.library(None,'load')
