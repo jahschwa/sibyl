@@ -49,7 +49,7 @@ class SibylBot(JabberBot):
     self.__born = time.time()
     
     # add an additional kwarg for enabling only direct messages
-    self.only_direct = kwargs.get('only_direct',False)
+    self.only_direct = kwargs.get('only_direct',True)
     try:
       del kwargs['only_direct']
     except KeyError:
@@ -72,27 +72,34 @@ class SibylBot(JabberBot):
   def callback_message(self,conn,mess):
     """override to only answer direct msgs"""
     
-    # wait 5 seconds before executing commands to account for XMPP MUC history
-    # playback since JabberBot and XMPPpy don't let you disable it by
-    # modifying the presence stanza
-    now = time.time()
-    if now<self.__born+5:
-      return
-    
     # discard blank messages
     msg = mess.getBody()
     if not msg:
       return
     
-    # don't respond to messages from myself
-    if self.nick_name.lower() in str(mess.getFrom()).lower():
-      self.log.debug('Ignoring msg from myself (Sibylbot.py)')
-      return
+    if mess.getType()=='groupchat':
+      
+      # wait 5 seconds before executing commands to account for XMPP MUC
+      # history playback since JabberBot and XMPPpy don't let you
+      # disable it by modifying the presence stanza
+      now = time.time()
+      if now<self.__born+5:
+        return
     
-    # only respond to direct messages (i.e. those containing NICKNAME)
-    if not self.only_direct or msg.lower().startswith(self.nick_name.lower()):
-      mess.setBody(' '.join(msg.split(' ',1)[1:]))
-      return super(SibylBot,self).callback_message(conn,mess)
+      # don't respond to messages from myself
+      # note that the code in jabberbot.py does not work for MUC
+      if str(mess.getFrom()).endswith(self.nick_name):
+        return
+    
+      # if in a MUC, only respond to direct messages (i.e. those
+      # containing self.nick_name, case insensitive)
+      if self.only_direct:
+        if not msg.lower().startswith(self.nick_name.lower()):
+          return
+        else:
+          mess.setBody(' '.join(msg.split(' ',1)[1:]))
+    
+    return super(SibylBot,self).callback_message(conn,mess)
 
   def unknown_command(self,mess,cmd,args):
     """override unknown command callback"""
