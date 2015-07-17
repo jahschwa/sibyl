@@ -86,6 +86,7 @@ class SibylBot(JabberBot):
     
     # don't respond to messages from myself
     if self.nick_name.lower() in str(mess.getFrom()).lower():
+      self.log.debug('Ignoring msg from myself (Sibylbot.py)')
       return
     
     # only respond to direct messages (i.e. those containing NICKNAME)
@@ -113,7 +114,13 @@ class SibylBot(JabberBot):
     """reply if someone says hello"""
     
     return 'Hello world!'
-  
+
+  @botcmd
+  def echo(self,mess,args):
+    """echo some text"""
+    
+    return args
+
   @botcmd
   def network(self,mess,args):
     """reply with some network info"""
@@ -601,6 +608,7 @@ class SibylBot(JabberBot):
           matches.append(entry)
       except:
         pass
+    matches.sort()
     return matches
 
   def find(self,fd,dirs):
