@@ -443,7 +443,7 @@ class SibylBot(JabberBot):
       else:
         return 'Found '+str(len(matches))+' matches'
     
-    return 'Found '+str(len(matches))+' matche: '+str(matches[0])
+    return 'Found '+str(len(matches))+' match: '+str(matches[0])
 
   @botcmd
   def videos(self,mess,args):
@@ -611,9 +611,32 @@ class SibylBot(JabberBot):
 
     return 'Playing "'+matches[0]+'"'
   
-  def matches(self,lib,name):
+  def matches(self,lib,args):
     """helper function for search(), files(), and file()"""
     
+    # implement quote blocking
+    name = []
+    quote = False
+    s = ''
+    for arg in args:
+      if arg.startswith('"') and arg.endswith('"'):
+        name.append(arg[1:-1])
+      elif arg.startswith('"'):
+        quote = True
+        s += arg[1:]
+      elif arg.endswith('"'):
+        quote = False
+        s += (' '+arg[:-1])
+        name.append(s)
+        s = ''
+      elif quote:
+        s += (' '+arg)
+      else:
+        name.append(arg)
+    if quote:
+      name.append(s.replace('"',''))
+    
+    # find matches
     matches = []
     for entry in lib:
       try:
