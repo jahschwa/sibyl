@@ -37,7 +37,7 @@ class SibylBot(JabberBot):
     self.log_file = kwargs.get('log_file','/var/log/sibyl.log')
     
     # validate args
-    self.validate_args(self)
+    self.validate_args()
     
     # configure logging
     logging.basicConfig(filename=self.log_file,format='%(asctime)-15s | %(message)s')
