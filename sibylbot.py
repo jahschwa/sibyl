@@ -378,7 +378,6 @@ class SibylBot(JabberBot):
       s += 'backward'
     
     self.xbmc('Player.Seek',{'playerid':pid,'value':s})
-    return None
 
   @botcmd
   def stream(self,mess,args):
