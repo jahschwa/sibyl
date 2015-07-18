@@ -124,10 +124,14 @@ class SibylBot(JabberBot):
     try:
       f = open(self.log_file,'a')
       f.close()
+    except IOError as e:
+      raise
     
     try:
       f = open(self.lib_file,'a')
       f.close()
+    except IOError as e:
+      raise
     
     # whitelists and blacklists must be dicts of lists of strs (wooh!)
     try:
