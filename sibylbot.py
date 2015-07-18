@@ -121,10 +121,10 @@ class SibylBot(JabberBot):
       raise
     
     # must be able to write to files
-    if not os.access("test",os.W_OK):
+    if not os.access(self.log_file,os.W_OK):
       raise IOError('unable to write to log_file "'+self.log_file)
     
-    if not os.access("test",os.W_OK):
+    if not os.access(self.lib_file,os.W_OK):
       raise IOError('unable to write to lib_file "'+self.lib_file)
     
     # whitelists and blacklists must be dicts of lists of strs (wooh!)
