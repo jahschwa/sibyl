@@ -127,11 +127,18 @@ class SibylBot(JabberBot):
     except IOError as e:
       raise
     
+    # account for later logic that checks if the pickle exists
+    if os.path.isfile(self.lib_file):
+      delete = False
+    else:
+      delete = True
     try:
       f = open(self.lib_file,'a')
       f.close()
     except IOError as e:
       raise
+    if delete:
+      os.remove(self.lib_file)
     
     # whitelists and blacklists must be dicts of lists of strs (wooh!)
     try:
