@@ -32,14 +32,20 @@ class SibylBot(JabberBot):
     self.xbmc_user = kwargs.get('xbmc_user',None)
     self.xbmc_pass = kwargs.get('xbmc_pass',None)
     self.chat_ctrl = kwargs.get('chat_ctrl',False)
+    self.whitelist = kwargs.get('whitelist',{})
+    self.blacklist = kwargs.get('blacklist',{})
+    self.log_file = kwargs.get('log_file','/var/log/sibyl.log')
+    
+    # validate args
+    self.validate_args(self)
     
     # configure logging
-    self.log_file = kwargs.get('log_file','/var/log/sibyl.log')
     logging.basicConfig(filename=self.log_file,format='%(asctime)-15s | %(message)s')
     
     # delete kwargs before calling super init
     words = (['rpi_ip','nick_name','audio_dirs','video_dirs','log_file',
-        'lib_file','max_matches','xbmc_user','xbmc_pass','chat_ctrl'])
+        'lib_file','max_matches','xbmc_user','xbmc_pass','chat_ctrl',
+        'blacklist','whitelist'])
     for w in words:
       try:
         del kwargs[w]
@@ -71,6 +77,99 @@ class SibylBot(JabberBot):
       self.library(None,'rebuild')
     
     super(SibylBot,self).__init__(*args,**kwargs)
+
+  def validate_args(self):
+    """validate args to prevent errors popping up during run-time"""
+    
+    # type checking
+    if not isinstance(self.nick_name,str):
+      raise TypeError('param nick_name must be str')
+    if not isinstance(self.audio_dirs,list):
+      raise TypeError('param audio_dirs must be list')
+    if not isinstance(self.video_dirs,list):
+      raise TypeError('param video_dirs must be list')
+    if not isinstance(self.log_file,str):
+      raise TypeError('param log_file must be str')
+    if not isinstance(self.lib_file,str):
+      raise TypeError('param lib_file must be str')
+    if not isinstance(self.max_matches,int):
+      raise TypeError('param max_matches must be int')
+    if not isinstance(self.chat_ctrl,bool):
+      raise TypeError('param chat_ctrl must be bool')
+    if not isinstance(self.whitelist,dict):
+      raise TypeError('param whitelist must be dict')
+    if not isinstance(self.blacklist,dict):
+      raise TypeError('param blacklist must be dict')
+    
+    # these may also be None
+    if self.xbmc_user is not None and not isinstance(self.xbmc_user,str):
+      raise TypeError('param xbmc_user must be str')
+    if self.xbmc_pass is not None and not isinstance(self.xbmc_pass,str):
+      raise TypeError('param xbmc_pass must be str')
+    
+    # lib dir lists must contain either str or valid samba dict
+    try:
+      self.validate_lib(self.audio_dirs)
+    except Exception as e:
+      e.message += ' in param audio_dirs'
+      raise
+      
+    try:
+      self.validate_lib(self.video_dirs)
+    except Exception as e:
+      e.message += ' in param video_dirs'
+      raise
+    
+    # must be able to write to files
+    f = open(self.log_file,'w')
+    f.close()
+    
+    f = open(self.lib_file,'w')
+    f.close()
+    
+    # whitelists and blacklists must be dicts of lists of strs (wooh!)
+    try:
+      self.validate_bw(self.whitelist)
+    except Exception as e:
+      e.message += ' in param whitelist'
+      raise
+    
+    try:
+      self.validate_bw(self.blacklist)
+    except Exception as e:
+      e.message += ' in param blacklist'
+      raise
+  
+  def validate_lib(self,lib):
+    """check lib list for valid types and entries"""
+    
+    for (i,l) in enumerate(lib):
+      if isinstance(l,str):
+        if not os.path.isdir(l):
+          raise ValueError('path "'+l+'" is not a valid directory')
+      elif isinstance(l,dict):
+        if 'server' not in l.keys():
+          raise KeyError('key "server" missing from item '+str(i+1))
+        if 'share' not in l.keys():
+          raise KeyError('key "share" missing from item '+str(i+1))
+        for k in ['server','share','username','password']:
+          if not isinstance(l[k],str):
+            raise TypeError('value for key "'+k+'" must be of type str for item '+str(i+1))
+      else:
+        raise TypeError('invalid type '+type(l).__name__+' for item '+str(i+1))
+
+  def validate_bw(self,bw):
+    """bw is a dict with strings as keys and lists as values;
+    the lists must contains strings"""
+    
+    for k in bw.keys():
+      if not isinstance(k,str):
+        raise TypeError('invalid key "'+str(k)+'" of type '+type(k).__name__)
+      if not isinstance(bw[k],list):
+        raise TypeError('value for key "'+str(k)+'" must be of type list')
+      for (i,x) in enumerate(bw[k]):
+        if not isinstance(x,str):
+          raise TypeError('invalid type "'+type(x).__name__+'" for item '+str(i+1)+' from key "'+k+'"')
 
   def callback_message(self,conn,mess):
     """override to only answer direct msgs"""
