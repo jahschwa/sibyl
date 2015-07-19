@@ -32,11 +32,14 @@ class SibylBot(JabberBot):
     self.xbmc_user = kwargs.get('xbmc_user',None)
     self.xbmc_pass = kwargs.get('xbmc_pass',None)
     self.chat_ctrl = kwargs.get('chat_ctrl',False)
-    self.bw_list = kwargs.get('bw_list',{})
+    self.bw_list = kwargs.get('bw_list',[])
     self.log_file = kwargs.get('log_file','/var/log/sibyl.log')
     
     # validate args
     self.validate_args()
+    
+    # default bw_list behavior is to allow everything
+    self.bw_list.insert(0,('w','*','*'))
     
     # configure logging
     logging.basicConfig(filename=self.log_file,format='%(asctime)-15s | %(message)s')
@@ -196,6 +199,24 @@ class SibylBot(JabberBot):
           return
         else:
           mess.setBody(' '.join(msg.split(' ',1)[1:]))
+    
+    # check against bw_list
+    cmd = mess.getBody().split()[0]
+    usr = mess.getFrom()
+    
+    applied = None
+    for rule in self.bw_list:
+      if rule[1]!='*' and rule[1]!=cmd:
+        continue
+      if (rule[2]!='*') and (rule[2] not in usr):
+        continue
+      applied = rule
+    
+    if applied[0]=='w':
+      self.log.debug('Allowed "'+usr+'" to execute "'+cmd+'" with rule '+str(applied))
+    else:
+      self.log.debug('Denied "'+usr+'" from executing "'+cmd+'" with rule '+str(applied))
+      return
     
     return super(SibylBot,self).callback_message(conn,mess)
 
