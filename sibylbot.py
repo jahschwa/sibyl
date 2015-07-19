@@ -506,7 +506,7 @@ class SibylBot(JabberBot):
       vid = msg[msg.find('watch?v=')+8:]
       html = requests.get('http://youtube.com/watch?v='+vid).text
       title = html[html.find('<title>')+7:html.find(' - YouTube</title>')]
-      title = title.replace('&#39;',"'")
+      title = title.replace('&#39;',"'").replace('&amp;','&')
       
       channel = html.find('class="yt-user-info"')
       start = html.find('>',channel+1)
