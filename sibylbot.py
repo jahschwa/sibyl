@@ -32,8 +32,7 @@ class SibylBot(JabberBot):
     self.xbmc_user = kwargs.get('xbmc_user',None)
     self.xbmc_pass = kwargs.get('xbmc_pass',None)
     self.chat_ctrl = kwargs.get('chat_ctrl',False)
-    self.whitelist = kwargs.get('whitelist',{})
-    self.blacklist = kwargs.get('blacklist',{})
+    self.bw_list = kwargs.get('bw_list',{})
     self.log_file = kwargs.get('log_file','/var/log/sibyl.log')
     
     # validate args
@@ -45,7 +44,7 @@ class SibylBot(JabberBot):
     # delete kwargs before calling super init
     words = (['rpi_ip','nick_name','audio_dirs','video_dirs','log_file',
         'lib_file','max_matches','xbmc_user','xbmc_pass','chat_ctrl',
-        'blacklist','whitelist'])
+        'bw_list'])
     for w in words:
       try:
         del kwargs[w]
@@ -96,10 +95,8 @@ class SibylBot(JabberBot):
       raise TypeError('param max_matches must be int')
     if not isinstance(self.chat_ctrl,bool):
       raise TypeError('param chat_ctrl must be bool')
-    if not isinstance(self.whitelist,dict):
-      raise TypeError('param whitelist must be dict')
-    if not isinstance(self.blacklist,dict):
-      raise TypeError('param blacklist must be dict')
+    if not isinstance(self.bw_list,dict):
+      raise TypeError('param bw_list must be list')
     
     # these may also be None
     if self.xbmc_user is not None and not isinstance(self.xbmc_user,str):
@@ -140,18 +137,17 @@ class SibylBot(JabberBot):
     if delete:
       os.remove(self.lib_file)
     
-    # whitelists and blacklists must be dicts of lists of strs (wooh!)
-    try:
-      self.validate_bw(self.whitelist)
-    except Exception as e:
-      e.message += ' in param whitelist'
-      raise
-    
-    try:
-      self.validate_bw(self.blacklist)
-    except Exception as e:
-      e.message += ' in param blacklist'
-      raise
+    # bw_list must be list of tuples of 3 strings
+    for (i,l) in self.bw_list:
+      if not isinstance(l,tuple):
+        raise TypeError('invalid type '+type(l).__name__+' for item '+str(i+1)+' in param bw_list')
+      if len(l)!=3:
+        raise ValueError('length of tuple '+str(i+1)+' in param bw_list must be 3 not '+str(len(l)))
+      for x in l:
+        if not isinstance(x,str):
+          raise TypeError('invalid type '+type(l).__name__+' for tuple member of item '+str(i+1)+' in param bw_list')
+      if l[0]!='b' and l[0]!='w':
+        raise ValueError('first member of tuple '+str(i+1)+' in param bw_list must be "b" or "w"')
   
   def validate_lib(self,lib):
     """check lib list for valid types and entries"""
@@ -170,19 +166,6 @@ class SibylBot(JabberBot):
             raise TypeError('value for key "'+k+'" must be of type str for item '+str(i+1))
       else:
         raise TypeError('invalid type '+type(l).__name__+' for item '+str(i+1))
-
-  def validate_bw(self,bw):
-    """bw is a dict with strings as keys and lists as values;
-    the lists must contains strings"""
-    
-    for k in bw.keys():
-      if not isinstance(k,str):
-        raise TypeError('invalid key "'+str(k)+'" of type '+type(k).__name__)
-      if not isinstance(bw[k],list):
-        raise TypeError('value for key "'+str(k)+'" must be of type list')
-      for (i,x) in enumerate(bw[k]):
-        if not isinstance(x,str):
-          raise TypeError('invalid type "'+type(x).__name__+'" for item '+str(i+1)+' from key "'+k+'"')
 
   def callback_message(self,conn,mess):
     """override to only answer direct msgs"""
