@@ -202,7 +202,7 @@ class SibylBot(JabberBot):
     
     # check against bw_list
     cmd = mess.getBody().split()[0]
-    usr = mess.getFrom()
+    usr = str(mess.getFrom())
     
     for rule in self.bw_list:
       if (rule[1]!='*') and (rule[1] not in usr):
