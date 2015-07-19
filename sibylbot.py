@@ -215,7 +215,8 @@ class SibylBot(JabberBot):
       self.log.debug('Allowed "'+usr+'" to execute "'+cmd+'" with rule '+str(applied))
     else:
       self.log.debug('Denied "'+usr+'" from executing "'+cmd+'" with rule '+str(applied))
-      return 'You do not have permission to execute that command'
+      self.send_simple_reply(mess,'You do not have permission to execute that command')
+      return
     
     return super(SibylBot,self).callback_message(conn,mess)
 
