@@ -141,7 +141,7 @@ class SibylBot(JabberBot):
       os.remove(self.lib_file)
     
     # bw_list must be list of tuples of 3 strings
-    for (i,l) in self.bw_list:
+    for (i,l) in enumerate(self.bw_list):
       if not isinstance(l,tuple):
         raise TypeError('invalid type '+type(l).__name__+' for item '+str(i+1)+' in param bw_list')
       if len(l)!=3:
