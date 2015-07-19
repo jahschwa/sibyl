@@ -98,7 +98,7 @@ class SibylBot(JabberBot):
       raise TypeError('param max_matches must be int')
     if not isinstance(self.chat_ctrl,bool):
       raise TypeError('param chat_ctrl must be bool')
-    if not isinstance(self.bw_list,dict):
+    if not isinstance(self.bw_list,list):
       raise TypeError('param bw_list must be list')
     
     # these may also be None
@@ -206,9 +206,9 @@ class SibylBot(JabberBot):
     
     applied = None
     for rule in self.bw_list:
-      if rule[1]!='*' and rule[1]!=cmd:
+      if (rule[1]!='*') and (rule[1] not in usr):
         continue
-      if (rule[2]!='*') and (rule[2] not in usr):
+      if rule[2]!='*' and rule[2]!=cmd:
         continue
       applied = rule
     
