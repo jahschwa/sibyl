@@ -554,7 +554,7 @@ class SibylBot(JabberBot):
     
     if len(matches)>1:
       if self.max_matches<1 or len(matches)<=self.max_matches:
-        return 'Found '+str(len(matches))+' matches: '+str(matches).replace("', '","',\n'")
+        return 'Found '+str(len(matches))+' matches: '+list2str(matches)
       else:
         return 'Found '+str(len(matches))+' matches'
     
@@ -691,7 +691,7 @@ class SibylBot(JabberBot):
     
     if len(matches)>1:
       if self.max_matches<1 or len(matches)<=self.max_matches:
-        return 'Found '+str(len(matches))+' matches: '+str(matches).replace("', '","',\n'")
+        return 'Found '+str(len(matches))+' matches: '+list2str(matches)
       else:
         return 'Found '+str(len(matches))+' matches'
     
@@ -716,7 +716,7 @@ class SibylBot(JabberBot):
     
     if len(matches)>1:
       if self.max_matches<1 or len(matches)<=self.max_matches:
-        return 'Found '+str(len(matches))+' matches: '+str(matches).replace("', '","',\n'")
+        return 'Found '+str(len(matches))+' matches: '+list2str(matches)
       else:
         return 'Found '+str(len(matches))+' matches'
     
@@ -918,3 +918,11 @@ def getcell(start,page):
   s = page[start+1:stop].strip()
   s = s.replace('\n',' ').replace('\t',' ')
   return (' '.join(s.split()),stop)
+
+def list2str(l):
+  """return the list on separate lines"""
+  
+  s = '['
+  for x in l:
+    s += ('"'+x+'",\n')
+  return (s[:-2]+']')
