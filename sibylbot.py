@@ -3,7 +3,7 @@
 # XBMC JSON-RPC XMPP MUC bot
 
 # built-ins
-import sys,json,time,os,subprocess,logging,pickle,socket
+import sys,json,time,os,subprocess,logging,pickle,socket,random
 
 # dependencies
 import requests
