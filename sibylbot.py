@@ -644,7 +644,7 @@ class SibylBot(JabberBot):
     """play random song - random [include -exclude]"""
     
     name = args.split(' ')
-    if args.lower().strip().endswith('random'):
+    if args=='':
       matches = self.lib_audio_file
     else:
       matches = self.matches(self.lib_audio_file,name)
