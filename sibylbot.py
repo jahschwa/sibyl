@@ -639,6 +639,24 @@ class SibylBot(JabberBot):
     s += str(int(t-60*int(t/60))).zfill(2)
     return 'Last rebuilt on '+self.lib_last_rebuilt+' in '+s
   
+  def random(self,mess,args):
+    """play random song - random [include -exclude]"""
+    
+    name = args.split(' ')
+    if len(name>2):
+      matches = self.matches(self.lib_audio_file,name)
+    else:
+      matches = self.lib_audio_file
+    
+    if len(matches)==0:
+      return 'Found 0 matches'
+    
+    rand = random.randint(0,len(matches)-1)
+    self.xbmc('Player.Open',{'item':{'file':matches[rand]}})
+    self.xbmc('GUI.SetFullscreen',{'fullscreen':True})
+
+    return 'Playing "'+matches[rand]+'"'
+  
   ######################################################################
   # Helper Functions                                                   #
   ######################################################################
