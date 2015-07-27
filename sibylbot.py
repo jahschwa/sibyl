@@ -303,14 +303,17 @@ class SibylBot(JabberBot):
   def ups(self,mess,args):
     """get latest UPS tracking status - sibyl ups number"""
     
+    # account for connectivity issues
     try:
       url = ('http://wwwapps.ups.com/WebTracking/track?track=yes&trackNums='
           + args + '&loc=en_us')
       page = requests.get(url).text
       
+      # check for invalid tracking number
       if 'The number you entered is not a valid tracking number' in page:
         return 'Invalid tracking number: "'+args+'"'
       
+      # find and return some relevant info
       start = page.find('Activity')
       (location,start) = getcell(start+1,page)
       (newdate,start) = getcell(start+1,page)
@@ -326,17 +329,22 @@ class SibylBot(JabberBot):
   def wiki(self,mess,args):
     """return a link and brief from wikipedia - wiki title"""
     
+    # search using wikipedia's opensearch json api
     url = ('http://en.wikipedia.org/w/api.php?action=opensearch&search='
         + args + '&format=json')
     response = requests.get(url)
     result = json.loads(response.text)
     title = result[1][0]
     text = result[2]
+    
+    # don't send the unicode specifier in the reply message
     try:
       text.remove(u'')
       text = '\n'.join(text)
     except ValueError:
       pass
+    
+    # send a link and brief back to the user
     url = result[3][0]
     return unicode(title)+' - '+unicode(url)+'\n'+unicode(text)
   
@@ -545,6 +553,7 @@ class SibylBot(JabberBot):
     name = args.split(' ')
     matches = []
     
+    # search all library paths
     dirs = [self.lib_video_dir,self.lib_video_file,self.lib_audio_dir,self.lib_audio_file]
     for d in dirs:
       matches.extend(self.matches(d,name))
@@ -552,6 +561,7 @@ class SibylBot(JabberBot):
     if len(matches)==0:
       return 'Found 0 matches'
     
+    # reply with matches based on max_matches setting
     if len(matches)>1:
       if self.max_matches<1 or len(matches)<=self.max_matches:
         return 'Found '+str(len(matches))+' matches: '+list2str(matches)
@@ -594,6 +604,7 @@ class SibylBot(JabberBot):
   def library(self,mess,args):
     """control media library - library (info|load|rebuild|save)"""
     
+    # read the library from a pickle and load it into sibyl
     if args=='load':
       with open(self.lib_file,'r') as f:
         d = pickle.load(f)
@@ -604,7 +615,8 @@ class SibylBot(JabberBot):
       self.lib_audio_dir = d['lib_audio_dir']
       self.lib_audio_file = d['lib_audio_file']
       return 'Library loaded from: "'+self.lib_file+'"'
-      
+    
+    # save sibyl's library to a pickle
     elif args=='save':
       d = ({'lib_last_rebuilt':self.lib_last_rebuilt,
             'lib_last_elapsed':self.lib_last_elapsed,
@@ -615,7 +627,8 @@ class SibylBot(JabberBot):
       with open(self.lib_file,'w') as f:
         pickle.dump(d,f,-1)
       return 'Library saved to: "'+self.lib_file+'"'
-      
+    
+    # rebuild the library by traversing all paths then save it
     elif args=='rebuild':
       if mess is not None:
         t = self.lib_last_elapsed
@@ -634,15 +647,18 @@ class SibylBot(JabberBot):
         self.log.debug('Library rebuilt in '+str(self.lib_last_elapsed))
       return 'Library rebuilt and'+result[7:]
     
+    # default prints some info
     t = self.lib_last_elapsed
     s = str(int(t/60))+':'
     s += str(int(t-60*int(t/60))).zfill(2)
-    return 'Last rebuilt on '+self.lib_last_rebuilt+' in '+s
+    n = len(self.lib_audio_dir)+len(self.lib_video_dir)
+    return 'Rebuilt on '+self.lib_last_rebuilt+' in '+s+' with '+n' files'
   
   @botcmd
   def random(self,mess,args):
     """play random song - random [include -exclude]"""
     
+    # check if a search term was passed
     name = args.split(' ')
     if args=='':
       matches = self.lib_audio_file
@@ -652,6 +668,7 @@ class SibylBot(JabberBot):
     if len(matches)==0:
       return 'Found 0 matches'
     
+    # play a random audio file from the matches
     rand = random.randint(0,len(matches)-1)
     self.xbmc('Player.Open',{'item':{'file':matches[rand]}})
     self.xbmc('GUI.SetFullscreen',{'fullscreen':True})
@@ -675,10 +692,12 @@ class SibylBot(JabberBot):
   def playpause(self,target):
     """helper function for play() and pause()"""
     
+    # return None if nothing is playing
     pid = self.xbmc_active_player()
     if pid is None:
       return None
-
+    
+    # check player status before sending PlayPause command
     speed = self.xbmc('Player.GetProperties',{'playerid':pid,'properties':["speed"]})
     speed = speed['result']['speed']
     if speed==target:
@@ -837,6 +856,7 @@ class SibylBot(JabberBot):
 def xbmc(ip,method,params=None,user=None,pword=None):
   """make a JSON-RPC request to xbmc and return the resulti as a dict"""
   
+  # build a json call with the requests library
   p = {'jsonrpc':'2.0','id':1,'method':method}
   if params is not None:
     p['params'] = params
@@ -848,6 +868,7 @@ def xbmc(ip,method,params=None,user=None,pword=None):
   
   r = requests.get(url,params=params,headers=headers,auth=(user,pword))
   
+  # return the response from xbmc as a dict
   return json.loads(r.text)
 
 def xbmc_active_player(ip,user=None,pword=None):
@@ -861,11 +882,13 @@ def xbmc_active_player(ip,user=None,pword=None):
 def time2str(t):
   """change the time dict to a string"""
   
+  # based on the format returned by xbmc's json api
   s = ''
   hr = str(t['hours'])
   mi = str(t['minutes'])
   sec = str(t['seconds'])
   
+  # only include hours if they exist
   if t['hours']>0:
     s += (hr+':')
     s+= (mi.zfill(2)+':')
@@ -931,6 +954,7 @@ def checkall(l,s):
 def getcell(start,page):
   """return the contents of the next table cell and its end index"""
   
+  # used in the ups command to make life easier
   start = page.find('<td',start+1)                                                                                                                                                   
   start = page.find('>',start+1)                                                                                                                                                     
   stop = page.find('</td>',start+1)                                                                                                                                                  
@@ -941,6 +965,7 @@ def getcell(start,page):
 def list2str(l):
   """return the list on separate lines"""
   
+  # makes match lists look much better in chat or pastebin
   s = '['
   for x in l:
     s += ('"'+x+'",\n')
