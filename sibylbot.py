@@ -639,6 +639,7 @@ class SibylBot(JabberBot):
     s += str(int(t-60*int(t/60))).zfill(2)
     return 'Last rebuilt on '+self.lib_last_rebuilt+' in '+s
   
+  @botcmd
   def random(self,mess,args):
     """play random song - random [include -exclude]"""
     
