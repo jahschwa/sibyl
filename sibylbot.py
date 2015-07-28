@@ -83,7 +83,8 @@ class SibylBot(JabberBot):
     if os.path.isfile(self.bm_file):
       self.bm_store = self.bm_parse()
     else:
-      self.bm_store = {}
+      with open(self.bm_file,'w') as f:
+        self.bm_store = {}
     self.last_played = None
     
     # call JabberBot init
