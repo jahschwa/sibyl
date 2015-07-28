@@ -1011,7 +1011,7 @@ class SibylBot(JabberBot):
     
     # tab-separated, each line is: name path pid position time added
     for l in lines:
-      (name,props) = bm_unformat(l)
+      (name,props) = self.bm_unformat(l)
       d[name] = props
     
     self.log.info('Parsed '+str(len(d))+' bookmarks from "'+self.bm_file+'"')
