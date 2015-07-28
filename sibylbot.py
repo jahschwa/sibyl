@@ -27,13 +27,14 @@ class SibylBot(JabberBot):
     self.nick_name = kwargs.get('nick_name','Sibyl')
     self.audio_dirs = kwargs.get('audio_dirs',[])
     self.video_dirs = kwargs.get('video_dirs',[])
-    self.lib_file = kwargs.get('lib_file','sibyl.pickle')
+    self.lib_file = kwargs.get('lib_file','sibyl_lib.pickle')
     self.max_matches = kwargs.get('max_matches',10)
     self.xbmc_user = kwargs.get('xbmc_user',None)
     self.xbmc_pass = kwargs.get('xbmc_pass',None)
     self.chat_ctrl = kwargs.get('chat_ctrl',False)
     self.bw_list = kwargs.get('bw_list',[])
     self.log_file = kwargs.get('log_file','/var/log/sibyl.log')
+    self.bm_file = kwargs.get('bm_file','sibyl_bm.txt')
     
     # validate args
     self.validate_args()
@@ -78,6 +79,14 @@ class SibylBot(JabberBot):
       self.lib_video_file = None
       self.library(None,'rebuild')
     
+    # initialize bookmark dict and last played str for bookmarking
+    if os.path.isfile(self.bm_file):
+      self.bm_store = self.bm_parse()
+    else:
+      self.bm_store = {}
+    self.last_played = None
+    
+    # call JabberBot init
     super(SibylBot,self).__init__(*args,**kwargs)
 
   def validate_args(self):
@@ -201,7 +210,7 @@ class SibylBot(JabberBot):
           mess.setBody(' '.join(msg.split(' ',1)[1:]))
     
     # check against bw_list
-    cmd = mess.getBody().split()[0]
+    cmd = msg.split()[0]
     usr = str(mess.getFrom())
     
     for rule in self.bw_list:
@@ -631,7 +640,11 @@ class SibylBot(JabberBot):
       self.lib_video_file = d['lib_video_file']
       self.lib_audio_dir = d['lib_audio_dir']
       self.lib_audio_file = d['lib_audio_file']
-      return 'Library loaded from: "'+self.lib_file+'"'
+      
+      n = len(self.lib_audio_dir)+len(self.lib_video_dir)
+      s = 'Library loaded from "'+self.lib_file+'" with '+str(n)+' files'
+      self.log.info(s)
+      return s
     
     # save sibyl's library to a pickle
     elif args=='save':
@@ -643,7 +656,10 @@ class SibylBot(JabberBot):
             'lib_audio_file':self.lib_audio_file})
       with open(self.lib_file,'w') as f:
         pickle.dump(d,f,-1)
-      return 'Library saved to: "'+self.lib_file+'"'
+      
+      s = 'Library saved to "'+self.lib_file+'"'
+      self.log.info(s)
+      return s
     
     # rebuild the library by traversing all paths then save it
     elif args=='rebuild':
@@ -665,17 +681,16 @@ class SibylBot(JabberBot):
       self.lib_last_elapsed = time.time()-start
       result = self.library(None,'save')
       
-      # if called during init log, if called by user reply
-      if mess is not None:
-        self.log.debug('Library rebuilt in '+str(self.lib_last_elapsed))
-      return 'Library rebuilt and'+result[7:]
+      s = 'Library rebuilt in '+str(self.lib_last_elapsed)
+      self.log.info(s)
+      return s
     
     # default prints some info
     t = self.lib_last_elapsed
     s = str(int(t/60))+':'
     s += str(int(t-60*int(t/60))).zfill(2)
     n = len(self.lib_audio_dir)+len(self.lib_video_dir)
-    return 'Rebuilt on '+self.lib_last_rebuilt+' in '+s+' with '+n' files'
+    return 'Rebuilt on '+self.lib_last_rebuilt+' in '+s+' with '+str(n)+' files'
   
   @botcmd
   def random(self,mess,args):
@@ -697,6 +712,102 @@ class SibylBot(JabberBot):
     self.xbmc('GUI.SetFullscreen',{'fullscreen':True})
 
     return 'Playing "'+matches[rand]+'"'
+  
+  @botcmd
+  def bookmark(self,mess,args):
+    """remember current audios or videos playlist position - bookmark [name]"""
+    
+    # check if last_played is set
+    if last_played is None:
+      return 'No active audios or videos playlist to bookmark'
+    
+    # check if a name was passed
+    name = self.last_played
+    if len(args.strip())>0:
+      name = args
+    
+    # get info for bookmark
+    pid = self.last_played[0]
+    path = self.last_played[1]
+    result = self.xbmc('Player.GetProperties',{'playerid':pid,'properties':['position','time']})
+    pos = result['result']['position']
+    t = time2str(result['result']['time'])
+    add = time.time()
+    
+    # note that the position is stored 0-indexed
+    self.bm_store[name] = {'path':path,'add':add,'time':t,'pid':pid,'pos':pos}
+    self.bm_update(name,self.bm_store[name])
+    
+    return 'Bookmark added for "'+name+'" item '+str(pos+1)+' at '+t
+  
+  @botcmd
+  def resume(self,mess,args):
+    """resume playing a playlist - resume [name] [next]"""
+    
+    # if there are no bookmarks return
+    if len(self.bm_store)==0:
+      return 'No bookmarks'
+    
+    # check for "next" as last arg
+    opts = args.strip().split(' ')
+    start_next = (opts[-1]=='next')
+    if start_next:
+      opts = args[:-1]
+      args = ' '.join(opts)
+    
+    # check if a name was passed
+    name = bm_recent()
+    if len(args)>0:
+      name = args
+    
+    # get info from bookmark
+    item = self.bm_store[name]
+    path = item['path']
+    pid = item['pid']
+    pos = item['position']
+    t = item['time']
+    
+    # open the directory as a playlist
+    if start_next:
+      pos += 1
+    
+    # note that the user-facing functions assume 1-indexing
+    args = path+' '+str(pos+1)
+    if pid==0:
+      result = self.audios(None,args)
+    elif pid==1:
+      result = self.videos(None,args)
+    else:
+      return 'Error in bookmark for "'+name+'": invalid pid'+str(pid)
+    
+    if not start_next:
+      self.seek(None,t)
+    
+    return result
+  
+  @botcmd
+  def bookmarks(self,mess,args):
+    """show or remove bookmarks - bookmarks [show|remove] [name]"""
+    
+    args = args.split(' ')
+    if args[0]=='remove':
+      if len(args)==1:
+        return 'To remove all bookmarks use "bookmarks remove *"'
+      if not self.bm_remove(args[1]):
+        return 'Bookmark "'+name+'" not found'
+    elif args[0]=='show':
+      args = args[1:]
+    
+    # actual code for show function
+    matches = self.bm_store.keys()
+    if len(args)>0:
+      search = ' '.join(args[1:]).lower()
+      matches = [m for m in matches if search in m.lower()]
+    
+    matches = [{m:self.bm_store[m]} for m in matches]
+    if len(matches)==1:
+      return 'Bookmark: '+str(matches[0])
+    return 'Bookmarks: '+str(matches)
   
   ######################################################################
   # Helper Functions                                                   #
@@ -761,7 +872,10 @@ class SibylBot(JabberBot):
     self.xbmc('Playlist.Add',{'playlistid':pid,'item':{'directory':matches[0]}})
     self.xbmc('Player.Open',{'item':{'playlistid':pid,'position':num}})
     self.xbmc('GUI.SetFullscreen',{'fullscreen':True})
-
+    
+    # set last_played for bookmarking
+    self.last_played = (pid,matches[0])
+    
     return 'Playlist from "'+matches[0]+'" starting at #'+str(num+1)
   
   def file(self,args,dirs):
@@ -784,7 +898,10 @@ class SibylBot(JabberBot):
     # if there was 1 match, play the file
     self.xbmc('Player.Open',{'item':{'file':matches[0]}})
     self.xbmc('GUI.SetFullscreen',{'fullscreen':True})
-
+    
+    # clear last_played
+    self.last_played = None
+    
     return 'Playing "'+matches[0]+'"'
   
   def matches(self,lib,args):
@@ -871,6 +988,103 @@ class SibylBot(JabberBot):
         self.log.error('Unable to traverse "smb://'+path['server']+'/'+path['share']+'"')
     
     return result
+  
+  def bm_parse(self):
+    """read the bm_file into a dict"""
+    
+    d = {}
+    with open(self.bm_file,'r') as f:
+      lines = [l.strip() for l in f.readlines() if len(l)>0]
+    
+    # tab-separated, each line is: name path pid position time added
+    for l in lines:
+      (name,props) = bm_unformat(l)
+      d[name] = props
+    
+    self.log.info('Parsed '+len(d)+' bookmarks from "'+self.bm_file+'"')
+    self.bm_store = d
+    return d
+  
+  def bm_update(self,name,props):
+    """add or modify the entry for name with props in dict and file
+    returns True if name was modified or False if name was added"""
+    
+    result = self.bm_remove(name)
+    self.bm_add(name,props)
+    return result
+  
+  def bm_add(self,name,props):
+    """add the entry for name with props to dict and file. Note
+    that this function could add duplicates without proper checking"""
+    
+    self.bm_store[name] = props
+    
+    # the bookmark file should always end in a newline
+    with open(self.bm_file,'a') as f:
+      f.write(bm_format(name,props)+'\n')
+  
+  def bm_remove(self,name):
+    """remove the entry for name from dict and file if it exists
+    returns False if name was not found or True if name was removed"""
+    
+    # passing "*" removes all bookmarks
+    if name=='*':
+      self.bm_store = {}
+      with open(self.bm_file,'w') as f:
+        f.write('')
+      return True
+    
+    # return False if name does not exist
+    if name not in self.bm_Store.keys():
+      return False
+    
+    del self.bm_store[name]
+    
+    with open(self.bm_file,'r') as f:
+      lines = f.readlines()
+    
+    lines = [l for l in lines if l.split('\t')[0]!=name]
+    
+    with open(self.bm_file,'w') as f:
+      f.writelines(lines)
+    
+    # return True if name was removed
+    return True
+  
+  def bm_format(self,name,props):
+    """return props as a string formatted for the bm_file"""
+    
+    order = ['name','path','pid','pos','time','add']
+    for prop in order:
+      name += (str(props[prop])+'\t')
+    name[-1] = '\n'
+    return name
+  
+  def bm_unformat(self,line):
+    """return the name and props from the line as a tuple"""
+    
+    line = line.strip()
+    (name,path,pid,pos,t,add) = line.split('\t')
+    pid = int(pid)
+    pos = int(pos)
+    add = float(add)
+    props = {'path':path,'add':add,'time':t,'pid':pid,'pos':pos}
+    
+    # name is str, props is dict
+    return (name,props)
+  
+  def bm_recent(self):
+    """return the most recent bookmark from the dict"""
+    
+    name = None
+    add = 0
+    for k in self.bm_store.keys():
+      t = self.bm_store[k]['add']
+      if t > add:
+        name = k
+        add = t
+    
+    return name
 
 ########################################################################
 # Static Functions                                                     #
