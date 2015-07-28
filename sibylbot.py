@@ -358,7 +358,7 @@ class SibylBot(JabberBot):
     return unicode(title)+' - '+unicode(url)+'\n'+unicode(text)
   
   @botcmd
-  def log(self,mess,args):
+  def loglvl(self,mess,args):
     """set the log level - log (critical|error|warning|info|debug)"""
     
     levels = ({'critical' : logging.CRITICAL,
