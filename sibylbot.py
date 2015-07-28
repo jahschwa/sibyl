@@ -1032,7 +1032,7 @@ class SibylBot(JabberBot):
     
     # the bookmark file should always end in a newline
     with open(self.bm_file,'a') as f:
-      f.write(bm_format(name,props)+'\n')
+      f.write(self.bm_format(name,props)+'\n')
   
   def bm_remove(self,name):
     """remove the entry for name from dict and file if it exists
