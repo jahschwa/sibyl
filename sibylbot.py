@@ -643,7 +643,8 @@ class SibylBot(JabberBot):
       
       n = len(self.lib_audio_dir)+len(self.lib_video_dir)
       s = 'Library loaded from "'+self.lib_file+'" with '+str(n)+' files'
-      self.log.info(s)
+      if mess is not None:
+        self.log.info(s)
       return s
     
     # save sibyl's library to a pickle
