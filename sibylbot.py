@@ -1069,8 +1069,8 @@ class SibylBot(JabberBot):
     
     order = ['path','pid','pos','time','add']
     for prop in order:
-      name += (str(props[prop])+'\t')
-    return name[:-1]+'\n'
+      name += ('\t'+str(props[prop]))
+    return name+'\n'
   
   def bm_unformat(self,line):
     """return the name and props from the line as a tuple"""
