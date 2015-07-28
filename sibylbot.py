@@ -48,7 +48,7 @@ class SibylBot(JabberBot):
     # delete kwargs before calling super init
     words = (['rpi_ip','nick_name','audio_dirs','video_dirs','log_file',
         'lib_file','max_matches','xbmc_user','xbmc_pass','chat_ctrl',
-        'bw_list'])
+        'bw_list','bm_file'])
     for w in words:
       try:
         del kwargs[w]
