@@ -44,6 +44,7 @@ class SibylBot(JabberBot):
     
     # configure logging
     logging.basicConfig(filename=self.log_file,format='%(asctime)-15s | %(message)s')
+    self.log = logging.getLogger()
     
     # delete kwargs before calling super init
     words = (['rpi_ip','nick_name','audio_dirs','video_dirs','log_file',
@@ -648,8 +649,7 @@ class SibylBot(JabberBot):
       
       n = len(self.lib_audio_dir)+len(self.lib_video_dir)
       s = 'Library loaded from "'+self.lib_file+'" with '+str(n)+' files'
-      if mess is not None:
-        self.log.info(s)
+      self.log.info(s)
       return s
     
     # save sibyl's library to a pickle
@@ -664,8 +664,7 @@ class SibylBot(JabberBot):
         pickle.dump(d,f,-1)
       
       s = 'Library saved to "'+self.lib_file+'"'
-      if mess is not None:
-        self.log.info(s)
+      self.log.info(s)
       return s
     
     # rebuild the library by traversing all paths then save it
@@ -689,8 +688,7 @@ class SibylBot(JabberBot):
       result = self.library(None,'save')
       
       s = 'Library rebuilt in '+str(self.lib_last_elapsed)
-      if mess is not None:
-        self.log.info(s)
+      self.log.info(s)
       return s
     
     # default prints some info
