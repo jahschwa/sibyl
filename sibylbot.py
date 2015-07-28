@@ -758,7 +758,7 @@ class SibylBot(JabberBot):
     opts = args.strip().split(' ')
     start_next = (opts[-1]=='next')
     if start_next:
-      opts = args[:-1]
+      opts = opts[:-1]
       args = ' '.join(opts)
     
     # check if a name was passed
@@ -770,7 +770,7 @@ class SibylBot(JabberBot):
     item = self.bm_store[name]
     path = item['path']
     pid = item['pid']
-    pos = item['position']
+    pos = item['pos']
     t = item['time']
     
     # open the directory as a playlist
@@ -780,14 +780,15 @@ class SibylBot(JabberBot):
     # note that the user-facing functions assume 1-indexing
     args = path+' '+str(pos+1)
     if pid==0:
-      result = self.audios(None,args)
+      result = 'Audio '+self.audios(None,args)
     elif pid==1:
-      result = self.videos(None,args)
+      result = 'Video '+self.videos(None,args)
     else:
       return 'Error in bookmark for "'+name+'": invalid pid'+str(pid)
     
     if not start_next:
       self.seek(None,t)
+      result += ' at '+t
     
     return result
   
@@ -801,6 +802,7 @@ class SibylBot(JabberBot):
         return 'To remove all bookmarks use "bookmarks remove *"'
       if not self.bm_remove(args[1]):
         return 'Bookmark "'+name+'" not found'
+      return
     elif args[0]=='show':
       args = args[1:]
     
@@ -810,17 +812,17 @@ class SibylBot(JabberBot):
     
     matches = self.bm_store.keys()
     if len(args)>0:
-      search = ' '.join(args[1:]).lower()
+      search = ' '.join(args).lower()
       matches = [m for m in matches if search in m.lower()]
     
     entries = []
     for m in matches:
       pos = self.bm_store[m]['pos']
-      t = self.bm_stor[m]['time']
-      entried.append('"'+m+'" at item '+str(pos+1)+' and time '+t)
-    if len(matches)==1:
-      return 'Bookmark: '+str(matches[0])
-    return 'Bookmarks: '+str(matches)
+      t = self.bm_store[m]['time']
+      entries.append(str('"'+m+'" at item '+str(pos+1)+' and time '+t))
+    if len(entries)==1:
+      return 'Bookmark: '+str(entries[0])
+    return 'Bookmarks: '+str(entries)
   
   ######################################################################
   # Helper Functions                                                   #
@@ -889,7 +891,7 @@ class SibylBot(JabberBot):
     # set last_played for bookmarking
     self.last_played = (pid,matches[0])
     
-    return 'Playlist from "'+matches[0]+'" starting at #'+str(num+1)
+    return 'Playlist from "'+matches[0]+'" starting with #'+str(num+1)
   
   def file(self,args,dirs):
     """helper function for video() and audio()"""
@@ -1007,7 +1009,7 @@ class SibylBot(JabberBot):
     
     d = {}
     with open(self.bm_file,'r') as f:
-      lines = [l.strip() for l in f.readlines() if len(l)>0]
+      lines = [l.strip() for l in f.readlines() if l!='\n']
     
     # tab-separated, each line is: name path pid position time added
     for l in lines:
@@ -1070,7 +1072,7 @@ class SibylBot(JabberBot):
     order = ['path','pid','pos','time','add']
     for prop in order:
       name += ('\t'+str(props[prop]))
-    return name+'\n'
+    return name
   
   def bm_unformat(self,line):
     """return the name and props from the line as a tuple"""
