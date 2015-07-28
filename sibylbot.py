@@ -348,6 +348,23 @@ class SibylBot(JabberBot):
     url = result[3][0]
     return unicode(title)+' - '+unicode(url)+'\n'+unicode(text)
   
+  @botcmd
+  def log(self,mess,args):
+    """set the log level - log (critical|error|warning|info|debug)"""
+    
+    levels = ({'critical' : logging.CRITICAL,
+               'error'    : logging.ERROR,
+               'warning'  : logging.WARNING,
+               'info'     : logging.INFO,
+               'debug'    : logging.DEBUG})
+    
+    level = 'warning'
+    if args in levels.keys():
+      level = args
+    
+    self.log.setLevel(levels[level])
+    return 'Logging level set to: '+level
+  
   ######################################################################
   # XBMC Commands                                                      #
   ######################################################################
@@ -630,11 +647,15 @@ class SibylBot(JabberBot):
     
     # rebuild the library by traversing all paths then save it
     elif args=='rebuild':
+      
+      # when sibyl calls this method on init mess is None
       if mess is not None:
         t = self.lib_last_elapsed
         s = str(int(t/60))+':'
         s += str(int(t-60*int(t/60))).zfill(2)
         self.send_simple_reply(mess,'Working... (last rebuild took '+s+')')
+      
+      # time the rebuild and update library vars
       start = time.time()
       self.lib_last_rebuilt = time.asctime()
       self.lib_video_dir = self.find('dir',self.video_dirs)
@@ -643,6 +664,8 @@ class SibylBot(JabberBot):
       self.lib_audio_file = self.find('file',self.audio_dirs)
       self.lib_last_elapsed = time.time()-start
       result = self.library(None,'save')
+      
+      # if called during init log, if called by user reply
       if mess is not None:
         self.log.debug('Library rebuilt in '+str(self.lib_last_elapsed))
       return 'Library rebuilt and'+result[7:]
