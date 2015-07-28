@@ -762,7 +762,7 @@ class SibylBot(JabberBot):
       args = ' '.join(opts)
     
     # check if a name was passed
-    name = bm_recent()
+    name = self.bm_recent()
     if len(args)>0:
       name = args
     
@@ -1010,7 +1010,7 @@ class SibylBot(JabberBot):
       (name,props) = bm_unformat(l)
       d[name] = props
     
-    self.log.info('Parsed '+len(d)+' bookmarks from "'+self.bm_file+'"')
+    self.log.info('Parsed '+str(len(d))+' bookmarks from "'+self.bm_file+'"')
     self.bm_store = d
     return d
   
@@ -1063,11 +1063,10 @@ class SibylBot(JabberBot):
   def bm_format(self,name,props):
     """return props as a string formatted for the bm_file"""
     
-    order = ['name','path','pid','pos','time','add']
+    order = ['path','pid','pos','time','add']
     for prop in order:
       name += (str(props[prop])+'\t')
-    name[-1] = '\n'
-    return name
+    return name[:-1]+'\n'
   
   def bm_unformat(self,line):
     """return the name and props from the line as a tuple"""
