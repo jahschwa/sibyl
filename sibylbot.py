@@ -658,7 +658,8 @@ class SibylBot(JabberBot):
         pickle.dump(d,f,-1)
       
       s = 'Library saved to "'+self.lib_file+'"'
-      self.log.info(s)
+      if mess is not None:
+        self.log.info(s)
       return s
     
     # rebuild the library by traversing all paths then save it
@@ -682,7 +683,8 @@ class SibylBot(JabberBot):
       result = self.library(None,'save')
       
       s = 'Library rebuilt in '+str(self.lib_last_elapsed)
-      self.log.info(s)
+      if mess is not None:
+        self.log.info(s)
       return s
     
     # default prints some info
