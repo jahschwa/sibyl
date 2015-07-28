@@ -358,8 +358,12 @@ class SibylBot(JabberBot):
     return unicode(title)+' - '+unicode(url)+'\n'+unicode(text)
   
   @botcmd
-  def loglvl(self,mess,args):
-    """set the log level - log (critical|error|warning|info|debug)"""
+  def logging(self,mess,args):
+    """set the log level - log (critical|error|warning|info|debug|clear)"""
+    
+    if args=='clear':
+      with open(self.log_file,'w') as f:
+        return 'Log cleared'
     
     levels = ({'critical' : logging.CRITICAL,
                'error'    : logging.ERROR,
@@ -721,11 +725,11 @@ class SibylBot(JabberBot):
     """remember current audios or videos playlist position - bookmark [name]"""
     
     # check if last_played is set
-    if last_played is None:
+    if self.last_played is None:
       return 'No active audios or videos playlist to bookmark'
     
     # check if a name was passed
-    name = self.last_played
+    name = self.last_played[1]
     if len(args.strip())>0:
       name = args
     
@@ -802,6 +806,9 @@ class SibylBot(JabberBot):
       args = args[1:]
     
     # actual code for show function
+    if len(self.bm_store)==0:
+      return 'No bookmarks'
+    
     matches = self.bm_store.keys()
     if len(args)>0:
       search = ' '.join(args[1:]).lower()
