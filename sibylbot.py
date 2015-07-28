@@ -1045,7 +1045,7 @@ class SibylBot(JabberBot):
       return True
     
     # return False if name does not exist
-    if name not in self.bm_Store.keys():
+    if name not in self.bm_store.keys():
       return False
     
     del self.bm_store[name]
