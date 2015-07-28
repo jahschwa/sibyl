@@ -813,7 +813,11 @@ class SibylBot(JabberBot):
       search = ' '.join(args[1:]).lower()
       matches = [m for m in matches if search in m.lower()]
     
-    matches = [{m:self.bm_store[m]} for m in matches]
+    entries = []
+    for m in matches:
+      pos = self.bm_store[m]['pos']
+      t = self.bm_stor[m]['time']
+      entried.append('"'+m+'" at item '+str(pos+1)+' and time '+t)
     if len(matches)==1:
       return 'Bookmark: '+str(matches[0])
     return 'Bookmarks: '+str(matches)
