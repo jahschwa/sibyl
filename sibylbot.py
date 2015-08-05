@@ -765,7 +765,7 @@ class SibylBot(JabberBot):
     
     # if no args are passed return all bookmark names
     matches = self.bm_store.keys()
-    if len(args)==0 or arg[0]=='':
+    if len(args)==0 or args[0]=='':
       return 'There are '+str(len(matches))+' bookmarks: '+str(matches)
     
     # if a search term was passed find matches and display them
