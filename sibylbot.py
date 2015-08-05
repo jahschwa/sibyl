@@ -781,7 +781,7 @@ class SibylBot(JabberBot):
       entries.append('"'+m+'" at item '+str(pos+1)+' and time '+t+' which is "'+fil+'"')
     if len(entries)==1:
       return 'Found 1 bookmark: '+str(entries[0])
-    return 'Found '+str(len(entries))+' bookmarks: '+str(entries)
+    return 'Found '+str(len(entries))+' bookmarks: '+list2str(entries)
   
   @botcmd
   def resume(self,mess,args):
