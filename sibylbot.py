@@ -721,32 +721,67 @@ class SibylBot(JabberBot):
   
   @botcmd
   def bookmark(self,mess,args):
-    """remember current audios or videos playlist position - bookmark [name]"""
+    """manage bookmarks - bookmarks [show|set|remove] [name]"""
     
-    # check if last_played is set
-    if self.last_played is None:
-      return 'No active audios or videos playlist to bookmark'
+    args = args.split(' ')
+    if args[0]=='set':
+      # check if last_played is set
+      if self.last_played is None:
+        return 'No active audios or videos playlist to bookmark'
+      
+      # check if a name was passed
+      name = self.last_played[1]
+      if len(args.strip())>0:
+        name = args
+      
+      # get info for bookmark
+      pid = self.last_played[0]
+      path = self.last_played[1]
+      result = self.xbmc('Player.GetProperties',{'playerid':pid,'properties':['position','time']})
+      pos = result['result']['position']
+      t = str(time2str(result['result']['time']))
+      add = time.time()
+      result = self.xbmc('Player.GetItem',{'playerid':pid,'properties':['file']})
+      fil = str(result['result']['item']['file'])
+      
+      # note that the position is stored 0-indexed
+      self.bm_store[name] = {'path':path,'add':add,'time':t,'pid':pid,'pos':pos,'file':fil}
+      self.bm_update(name,self.bm_store[name])
+      return 'Bookmark added for "'+name+'" item '+str(pos+1)+' at '+t
+      
+    elif args[0]=='remove':
+      if len(args)==1:
+        return 'To remove all bookmarks use "bookmarks remove *"'
+      if not self.bm_remove(args[1]):
+        return 'Bookmark "'+name+'" not found'
+      return
+      
+    elif args[0]=='show':
+      args = args[1:]
     
-    # check if a name was passed
-    name = self.last_played[1]
-    if len(args.strip())>0:
-      name = args
+    # actual code for show function because this is default behavior
+    if len(self.bm_store)==0:
+      return 'No bookmarks'
     
-    # get info for bookmark
-    pid = self.last_played[0]
-    path = self.last_played[1]
-    result = self.xbmc('Player.GetProperties',{'playerid':pid,'properties':['position','time']})
-    pos = result['result']['position']
-    t = str(time2str(result['result']['time']))
-    add = time.time()
-    result = self.xbmc('Player.GetItem',{'playerid':pid,'properties':['file']})
-    fil = str(result['result']['item']['file'])
+    # if no args are passed return all bookmark names
+    matches = self.bm_store.keys()
+    if len(args)==0:
+      return 'There are '+str(len(matches))+' bookmarks: '+str(matches)
     
-    # note that the position is stored 0-indexed
-    self.bm_store[name] = {'path':path,'add':add,'time':t,'pid':pid,'pos':pos,'file':fil}
-    self.bm_update(name,self.bm_store[name])
+    # if a search term was passed find matches and display them
+    search = ' '.join(args).lower()
+    matches = [m for m in matches if search in m.lower()]
     
-    return 'Bookmark added for "'+name+'" item '+str(pos+1)+' at '+t
+    entries = []
+    for m in matches:
+      item = self.bm_store[m]
+      pos = item['pos']
+      t = item['time']
+      fil = item['file']
+      entries.append('"'+m+'" at item '+str(pos+1)+' and time '+t+' which is "'+fil+'"')
+    if len(entries)==1:
+      return 'Found 1 bookmark: '+str(entries[0])
+    return 'Found '+str(len(entires))+' bookmarks: '+str(entries)
   
   @botcmd
   def resume(self,mess,args):
@@ -795,44 +830,6 @@ class SibylBot(JabberBot):
       result += ' at '+t
     
     return result
-  
-  @botcmd
-  def bookmarks(self,mess,args):
-    """show or remove bookmarks - bookmarks [show|remove] [name]"""
-    
-    args = args.split(' ')
-    if args[0]=='remove':
-      if len(args)==1:
-        return 'To remove all bookmarks use "bookmarks remove *"'
-      if not self.bm_remove(args[1]):
-        return 'Bookmark "'+name+'" not found'
-      return
-    elif args[0]=='show':
-      args = args[1:]
-    
-    # actual code for show function
-    if len(self.bm_store)==0:
-      return 'No bookmarks'
-    
-    # if no args are passed return all bookmark names
-    matches = self.bm_store.keys()
-    if len(args)==0:
-      return 'There are '+str(len(matches))+' bookmarks: '+str(matches)
-    
-    # if a search term was passed find matches and display them
-    search = ' '.join(args).lower()
-    matches = [m for m in matches if search in m.lower()]
-    
-    entries = []
-    for m in matches:
-      item = self.bm_store[m]
-      pos = item['pos']
-      t = item['time']
-      fil = item['file']
-      entries.append('"'+m+'" at item '+str(pos+1)+' and time '+t+' which is "'+fil+'"')
-    if len(entries)==1:
-      return 'Found 1 bookmark: '+str(entries[0])
-    return 'Found '+str(len(entires))+' bookmarks: '+str(entries)
   
   ######################################################################
   # Helper Functions                                                   #
