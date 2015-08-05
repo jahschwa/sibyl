@@ -737,11 +737,13 @@ class SibylBot(JabberBot):
     path = self.last_played[1]
     result = self.xbmc('Player.GetProperties',{'playerid':pid,'properties':['position','time']})
     pos = result['result']['position']
-    t = time2str(result['result']['time'])
+    t = str(time2str(result['result']['time']))
     add = time.time()
+    result = self.xbmc('Player.GetItem',{'playerid':pid,'properties':['file']})
+    fil = str(result['result']['item']['file'])
     
     # note that the position is stored 0-indexed
-    self.bm_store[name] = {'path':path,'add':add,'time':t,'pid':pid,'pos':pos}
+    self.bm_store[name] = {'path':path,'add':add,'time':t,'pid':pid,'pos':pos,'file':fil}
     self.bm_update(name,self.bm_store[name])
     
     return 'Bookmark added for "'+name+'" item '+str(pos+1)+' at '+t
@@ -767,6 +769,8 @@ class SibylBot(JabberBot):
       name = args
     
     # get info from bookmark
+    if name not in self.bm_store.keys():
+      return 'No bookmark named "'+name+'"'
     item = self.bm_store[name]
     path = item['path']
     pid = item['pid']
@@ -810,19 +814,25 @@ class SibylBot(JabberBot):
     if len(self.bm_store)==0:
       return 'No bookmarks'
     
+    # if no args are passed return all bookmark names
     matches = self.bm_store.keys()
-    if len(args)>0:
-      search = ' '.join(args).lower()
-      matches = [m for m in matches if search in m.lower()]
+    if len(args)==0:
+      return 'There are '+str(len(matches))+' bookmarks: '+str(matches)
+    
+    # if a search term was passed find matches and display them
+    search = ' '.join(args).lower()
+    matches = [m for m in matches if search in m.lower()]
     
     entries = []
     for m in matches:
-      pos = self.bm_store[m]['pos']
-      t = self.bm_store[m]['time']
-      entries.append(str('"'+m+'" at item '+str(pos+1)+' and time '+t))
+      item = self.bm_store[m]
+      pos = item['pos']
+      t = item['time']
+      fil = item['file']
+      entries.append('"'+m+'" at item '+str(pos+1)+' and time '+t+' which is "'+fil+'"')
     if len(entries)==1:
-      return 'Bookmark: '+str(entries[0])
-    return 'Bookmarks: '+str(entries)
+      return 'Found 1 bookmark: '+str(entries[0])
+    return 'Found '+str(len(entires))+' bookmarks: '+str(entries)
   
   ######################################################################
   # Helper Functions                                                   #
@@ -1011,7 +1021,7 @@ class SibylBot(JabberBot):
     with open(self.bm_file,'r') as f:
       lines = [l.strip() for l in f.readlines() if l!='\n']
     
-    # tab-separated, each line is: name path pid position time added
+    # tab-separated each line is: name path pid position file time added
     for l in lines:
       (name,props) = self.bm_unformat(l)
       d[name] = props
@@ -1069,7 +1079,7 @@ class SibylBot(JabberBot):
   def bm_format(self,name,props):
     """return props as a string formatted for the bm_file"""
     
-    order = ['path','pid','pos','time','add']
+    order = ['path','pid','pos','file','time','add']
     for prop in order:
       name += ('\t'+str(props[prop]))
     return name
@@ -1078,11 +1088,11 @@ class SibylBot(JabberBot):
     """return the name and props from the line as a tuple"""
     
     line = line.strip()
-    (name,path,pid,pos,t,add) = line.split('\t')
+    (name,path,pid,pos,fil,t,add) = line.split('\t')
     pid = int(pid)
     pos = int(pos)
     add = float(add)
-    props = {'path':path,'add':add,'time':t,'pid':pid,'pos':pos}
+    props = {'path':path,'add':add,'time':t,'pid':pid,'pos':pos,'file':fil}
     
     # name is str, props is dict
     return (name,props)
