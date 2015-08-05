@@ -1,19 +1,32 @@
 # sibyl
-an XMPP bot for controlling XBMC/Kodi on the Raspberry Pi
+an XMPP bot for controlling XBMC/Kodi
 
 ## Intro
-This is my personal XMPP bot made mostly for controlling XBMC on my Raspberry Pi. I find the `videos`, `seek`, and `info` commands to be very handy. This is tested on RaspBMC, but should work on anything if you resolve the dependencies and setup python correctly. The code is in the `sibylbot.py` as a library, and an example script `sibyl.py` is shown for running the bot. For command explanations and other info check out [the wiki][1].
+This is my personal XMPP bot made mostly for controlling XBMC on my Raspberry Pi. I find the `videos`, `seek`, `info`, `bookmark`, and `resume` commands to be very handy. This is tested on RaspBMC, but should work on anything if you resolve the dependencies and setup python correctly. The code is in the `sibylbot.py` as a library, and an example script `sibyl.py` is shown for running the bot. For command explanations and other info check out [the wiki][1]. Currently sibyl is built assuming the bot is running on the same device that is running XBMC (e.g. an RPi).
 
 ## Dependencies
 You'll need the following installed in order to use sibyl:
- - [jabberbot][2] - XMPP bot using xmpppy - `pip install jabberbot` or `sudo apt-get install python-jabberbot`
- - [requests][3] - HTTP request and wrapper library - `pip install requests` or `sudo apt-get install python-requests`
+ - [jabberbot][2] - XMPP bot using xmpppy - `pip install jabberbot`
+ - [requests][3] - HTTP request and wrapper library - `pip install requests`
  - [pysmbclient][4] - crude `smbclint` wrapper - add the source to your python path
- - [cec-client][5] - HDMI CEC client - `sudo apt-get install libcec`
  - [JSON-RPC][6] - enable the web server in XBMC
 
+The following are optional but not having them may render some commands broken:
+ - [cec-client][5] - HDMI CEC client for tv commands
+
 ## Setup
-First set the global variables in `sibyl.py`. Enter the IP of the Raspberry Pi (an internal LAN IP should be fine) in `RPI_IP`. The XMPP login info for the bot should go in `USERNAME` and `PASSWORD`. The XMPP MUC info goes in `NICKNAME`, `CHATROOM`, and `ROOMPASS`. If the room doesn't have a password you can just set `ROOMPASS` to `None`. If you want to use the `video(s)` or `audio(s)` commands, remove the examples and add paths to `VIDEODIRS` and `AUDIODIRS`. If any of those paths are samba shares, you'll need to make auth functions for them. See the "Search Directories" section for an example.
+Below is a minimum working example, but most users will want to take a look at `sibyl.py` or `sibyl_adv.py` for more details on common use cases.
+
+```
+from sibylbot import SibylBot
+
+USERNAME = 'sibyl@xmpp.com'
+PASSWORD = 'password'
+RPI_IP = '192.168.1.314'
+
+bot = SibylBot(USERNAME,PASSWORD,rpi_ip=RPI_IP)
+bot.serve_forever()
+```
 
 ## JabberBot
 By default sibyl is setup to join an XMPP MUC (i.e. group chat) but you can change that if you want. Refer to the [examples directory][7] for JabberBot. Adding additional commands is easy as well. Simply define a new method inside the `SibylBot` class and preface it with `@botcmd` to register the command.
