@@ -1211,7 +1211,7 @@ def checkall(l,s):
   for x in l:
     if (x[0]!='-') and (x.lower() not in s.lower()):
       return False
-    if (x[0]=='-') and (x[1:].lower() in s.lower()):
+    if (x[0]=='-') and (x[1:].lower() in s.lower()) and (len(x[1:])>0):
       return False
   return True
 
