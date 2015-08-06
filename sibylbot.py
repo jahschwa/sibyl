@@ -720,7 +720,13 @@ class SibylBot(JabberBot):
     
     # play a random audio file from the matches
     rand = random.randint(0,len(matches)-1)
-    self.xbmc('Player.Open',{'item':{'file':matches[rand]}})
+    
+    result = self.xbmc('Player.Open',{'item':{'file':matches[rand]}})
+    if 'error' in result.keys():
+      s = 'Unable to open: '+matches[rand]
+      self.log.error(s)
+      return s
+      
     self.xbmc('GUI.SetFullscreen',{'fullscreen':True})
 
     return 'Playing "'+matches[rand]+'"'
@@ -825,9 +831,9 @@ class SibylBot(JabberBot):
     # note that the user-facing functions assume 1-indexing
     args = path+' '+str(pos+1)
     if pid==0:
-      result = 'Audio '+self.audios(None,args)
+      result = self.audios(None,args)
     elif pid==1:
-      result = 'Video '+self.videos(None,args)
+      result = self.videos(None,args)
     else:
       return 'Error in bookmark for "'+name+'": invalid pid'+str(pid)
     
@@ -896,8 +902,15 @@ class SibylBot(JabberBot):
         return 'Found '+str(len(matches))+' matches'
     
     # if there was 1 match, add the whole directory to a playlist
+    # also check for an error opening the directory
     self.xbmc('Playlist.Clear',{'playlistid':pid})
-    self.xbmc('Playlist.Add',{'playlistid':pid,'item':{'directory':matches[0]}})
+    
+    result = self.xbmc('Playlist.Add',{'playlistid':pid,'item':{'directory':matches[0]}})
+    if 'error' in result.keys():
+      s = 'Unable to open: '+matches[0]
+      self.log.error(s)
+      return s
+    
     self.xbmc('Player.Open',{'item':{'playlistid':pid,'position':num}})
     self.xbmc('GUI.SetFullscreen',{'fullscreen':True})
     
@@ -923,8 +936,13 @@ class SibylBot(JabberBot):
       else:
         return 'Found '+str(len(matches))+' matches'
     
-    # if there was 1 match, play the file
-    self.xbmc('Player.Open',{'item':{'file':matches[0]}})
+    # if there was 1 match, play the file, and check for not found error
+    result = self.xbmc('Player.Open',{'item':{'file':matches[0]}})
+    if 'error' in result.keys():
+      s = 'Unable to open: '+matches[0]
+      self.log.error(s)
+      return s
+    
     self.xbmc('GUI.SetFullscreen',{'fullscreen':True})
     
     # clear last_played
