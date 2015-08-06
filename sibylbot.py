@@ -151,6 +151,12 @@ class SibylBot(JabberBot):
     if delete:
       os.remove(self.lib_file)
     
+    try:
+      f = open(self.bm_file,'a')
+      f.close()
+    except IOError as e:
+      raise
+    
     # bw_list must be list of tuples of 3 strings
     for (i,l) in enumerate(self.bw_list):
       if not isinstance(l,tuple):
