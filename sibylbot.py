@@ -743,7 +743,7 @@ class SibylBot(JabberBot):
       
       # check if a name was passed
       name = self.last_played[1]
-      if len(args.strip())>0:
+      if len(args)>0:
         name = args
       
       # get info for bookmark
