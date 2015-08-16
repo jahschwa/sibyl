@@ -4,7 +4,7 @@
 
 import logging
 
-import sibylbot
+from sibylbot import SibylBot
 
 # XMPP parameters
 # set ROOMPASS to None for no password
@@ -14,25 +14,22 @@ PASSWORD = 'mypassword'
 CHATROOM = 'room@conference.example.com'
 ROOMPASS = 'roompass'
 
-# samba authentication methods
+# example samba authentication method
+smb_theschwa_videos = ({'server':'THESCHWA',
+                        'share':'videos',
+                        'username':'user',
+                        'password':'pass'})
 
-def do_auth_theschwa(svr,shr,wg,un,pw):
-  return ('WORKGROUP','username','password')
-
-# search path lists, items can be:
-#  - local: '/media/SCHWA 16G/MUSIC'
-#  - samba: ('smb://THESCHWA/videos',do_auth_theschwa)
-
+# audio library paths
 AUDIODIRS = (['/media/SCHWA 16G/MUSIC'])
 
+# video library paths
 VIDEODIRS = (['/home/pi/mnt/tardis',
               '/home/pi/mnt/area11',
-              ('smb://THESCHWA/videos',do_auth_theschwa)])
+              smb_theschwa_videos])
 
-bot = SibylBot(USERNAME,PASSWORD,only_direct=True,rpi_ip=RPI_IP,
+bot = SibylBot(USERNAME,PASSWORD,rpi_ip=RPI_IP,only_direct=True,
     audio_dirs=AUDIODIRS,video_dirs=VIDEODIRS)
-
-#bot.log.setLevel(logging.DEBUG)
 
 bot.join_room(CHATROOM,bot.nick_name,password=ROOMPASS)
 bot.serve_forever()
