@@ -547,7 +547,7 @@ class SibylBot(JabberBot):
     
     msg = mess.getBody()
     
-    if 'youtube' in msg:
+    if 'youtube' in msg.lower():
       
       vid = msg[msg.find('watch?v=')+8:]
       html = requests.get('http://youtube.com/watch?v='+vid).text
@@ -563,7 +563,7 @@ class SibylBot(JabberBot):
       response = self.xbmc('Player.Open',{'item':{'file':'plugin://plugin.video.youtube/play/?video_id='+vid}})
       return 'Streaming "'+title+'" by "'+channel+'" from YouTube'
       
-    elif 'twitch' in msg:
+    elif 'twitch' in msg.lower():
       
       vid = msg[msg.find('twitch.tv/')+10:]
       html = requests.get('http://twitch.tv/'+vid).text
