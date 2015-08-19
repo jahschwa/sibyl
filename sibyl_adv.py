@@ -77,7 +77,6 @@ VIDEODIRS = (['/home/pi/mnt/sshfs',
 # explanations of every option: https://github.com/TheSchwa/sibyl/wiki/API#class-sibylbot
 
 # nick_name is the bot's MUC nick (default is "Sibyl")
-# only_direct=False means you don't have to preface commands with nick_name
 # audio_dirs and video_dirs allow searching and playing media
 # xbmc_user and xbmc_pass are only needed if set on XBMC's webserver
 # you should always set 'log_file', 'lib_file', and 'bm_file'
@@ -85,7 +84,6 @@ VIDEODIRS = (['/home/pi/mnt/sshfs',
 # chat_ctrl=True enables the "reboot" and "kill" commands
 bot = Sibyl(USERNAME,PASSWORD,rpi_ip=RPI_IP,
     nick_name='SibylBot'
-    only_direct=False,
     audio_dirs=AUDIODIRS,
     video_dirs=VIDEODIRS,
     xbmc_user=XBMC_USER,
