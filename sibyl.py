@@ -6,7 +6,7 @@ from sibylbot import SibylBot
 
 # XMPP parameters
 # set ROOMPASS to None for no password
-RPI_IP = ''
+RPI_IP = '192.168.1.3'
 USERNAME = 'user@example.com'
 PASSWORD = 'mypassword'
 CHATROOM = 'room@conference.example.com'
