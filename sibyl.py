@@ -27,7 +27,6 @@ VIDEODIRS = (['/home/pi/mnt/sshfs',
               '/media/usbdrive/videos',
               smb_theschwa_videos])
 
-# you can change the bot's nick by specifying nick_name here (default: 'Sibyl')
 # the 3 parameters on the first line are required, the rest are optional
 # audio_dirs and video_dirs allow searching and playing media
 # you should always set 'log_file', 'lib_file', and 'bm_file'
