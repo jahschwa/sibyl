@@ -37,5 +37,5 @@ bot = SibylBot(USERNAME,PASSWORD,rpi_ip=RPI_IP,
     lib_file='/home/pi/bin/sibyl_lib.pickle',
     bm_file='/home/pi/bin/sibyl_bm.txt')
 
-bot.join_room(CHATROOM,bot.nick_name,password=ROOMPASS)
+bot.muc_join_room(CHATROOM,bot.nick_name,password=ROOMPASS)
 bot.serve_forever()
