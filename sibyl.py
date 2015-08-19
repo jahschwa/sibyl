@@ -2,8 +2,6 @@
 #
 # Example Sibyl bot
 
-import logging
-
 from sibylbot import SibylBot
 
 # XMPP parameters
