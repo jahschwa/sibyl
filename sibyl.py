@@ -14,7 +14,8 @@ PASSWORD = 'mypassword'
 CHATROOM = 'room@conference.example.com'
 ROOMPASS = 'roompass'
 
-# example samba authentication method
+# example samba share definitio
+# set 'username' or 'password' to None as necessary
 smb_theschwa_videos = ({'server':'THESCHWA',
                         'share':'videos',
                         'username':'user',
@@ -24,10 +25,12 @@ smb_theschwa_videos = ({'server':'THESCHWA',
 AUDIODIRS = (['/media/SCHWA 16G/MUSIC'])
 
 # video library paths
-VIDEODIRS = (['/home/pi/mnt/tardis',
-              '/home/pi/mnt/area11',
+VIDEODIRS = (['/home/pi/mnt/sshfs',
+              '/media/usbdrive/videos',
               smb_theschwa_videos])
 
+# only_direct means users in the MUC must preface commands with "sibyl"
+# you can change the bot's nick by specifying nick_name here (default: 'Sibyl')
 bot = SibylBot(USERNAME,PASSWORD,rpi_ip=RPI_IP,only_direct=True,
     audio_dirs=AUDIODIRS,video_dirs=VIDEODIRS)
 
