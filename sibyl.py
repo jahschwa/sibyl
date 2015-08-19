@@ -27,13 +27,17 @@ VIDEODIRS = (['/home/pi/mnt/sshfs',
               '/media/usbdrive/videos',
               smb_theschwa_videos])
 
-# only_direct means users in the MUC must preface commands with "sibyl"
 # you can change the bot's nick by specifying nick_name here (default: 'Sibyl')
 # the 3 parameters on the first line are required, the rest are optional
+# only_direct means users in the MUC must preface commands with "sibyl"
+# you should always set 'log_file', 'lib_file', and 'bm_file'
 bot = SibylBot(USERNAME,PASSWORD,rpi_ip=RPI_IP,
     only_direct=True,
     audio_dirs=AUDIODIRS,
-    video_dirs=VIDEODIRS)
+    video_dirs=VIDEODIRS,
+    log_file='/home/pi/bin/sibyl.log'
+    lib_file='/home/pi/bin/sibyl_lib.pickle',
+    bm_file='/home/pi/bin/sibyl_bm.txt')
 
 bot.join_room(CHATROOM,bot.nick_name,password=ROOMPASS)
 bot.serve_forever()
