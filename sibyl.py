@@ -29,10 +29,9 @@ VIDEODIRS = (['/home/pi/mnt/sshfs',
 
 # you can change the bot's nick by specifying nick_name here (default: 'Sibyl')
 # the 3 parameters on the first line are required, the rest are optional
-# only_direct means users in the MUC must preface commands with "sibyl"
+# audio_dirs and video_dirs allow searching and playing media
 # you should always set 'log_file', 'lib_file', and 'bm_file'
 bot = SibylBot(USERNAME,PASSWORD,rpi_ip=RPI_IP,
-    only_direct=True,
     audio_dirs=AUDIODIRS,
     video_dirs=VIDEODIRS,
     log_file='/home/pi/bin/sibyl.log'
