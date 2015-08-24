@@ -755,7 +755,7 @@ class SibylBot(JabberBot):
       t = str(time2str(result['result']['time']))
       add = time.time()
       result = self.xbmc('Player.GetItem',{'playerid':pid,'properties':['file']})
-      fil = str(result['result']['item']['file'])
+      fil = os.path.basename(str(result['result']['item']['file']))
       
       # note that the position is stored 0-indexed
       self.bm_store[name] = {'path':path,'add':add,'time':t,'pid':pid,'pos':pos,'file':fil}
