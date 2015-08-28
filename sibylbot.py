@@ -7,6 +7,7 @@ import sys,json,time,os,subprocess,logging,pickle,socket,random
 
 # dependencies
 import requests
+import xmpp
 from jabberbot import JabberBot,botcmd
 from smbclient import SambaClient,SambaClientError
 
@@ -241,6 +242,38 @@ class SibylBot(JabberBot):
     """override unknown command callback"""
     
     return 'Unknown command "'+cmd+'"'
+
+  def _idle_ping(self):
+    """override to not catch the IOError"""
+    
+    if self.PING_FREQUENCY and time.time()-self._JabberBot__lastping>self.PING_FREQUENCY:
+      self._JabberBot__lastping = time.time()
+      payload = [xmpp.Node('ping',attrs={'xmlns':'urn:xmpp:ping'})]
+      ping = xmpp.Protocol('iq',typ='get',payload=payload)
+      res = self.conn.SendAndWaitForResponse(ping,self.PING_TIMEOUT)
+      if res is None:
+        self.on_ping_timeout()
+
+  def on_ping_timeout(self):
+    """override to write to the log"""
+    
+    self.log.debug('Ping timeout to server')
+
+  def run_forever(self,room=None,username=None,password=None):
+    """join a muc (optional), serve forever, reconnect if needed"""
+    
+    while not self.conn:
+      try:
+        if room:
+          self.muc_join_room(room,username,password)
+        self.serve_forever()
+      
+      # IOError from failure to send a ping
+      # AttributeError from failure to connect
+      except (IOError,AttributeError) as e:
+        self.log.error('Connection to server lost, retrying in 60 sec')
+        time.sleep(60)
+        self.conn = None
 
   ######################################################################
   # General Commands                                                   #
