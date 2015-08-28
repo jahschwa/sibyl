@@ -219,6 +219,7 @@ class SibylBot(JabberBot):
           mess.setBody(' '.join(msg.split(' ',1)[1:]))
     
     # check against bw_list
+    msg = mess.getBody()
     cmd = msg.split()[0]
     usr = str(mess.getFrom())
     
