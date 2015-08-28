@@ -36,12 +36,16 @@ class SibylBot(JabberBot):
     self.bw_list = kwargs.get('bw_list',[])
     self.log_file = kwargs.get('log_file','/var/log/sibyl.log')
     self.bm_file = kwargs.get('bm_file','sibyl_bm.txt')
+    self.ping_freq = kwargs.get('ping_freq',None)
     
     # validate args
     self.validate_args()
     
     # default bw_list behavior is to allow everything
     self.bw_list.insert(0,('w','*','*'))
+    
+    # save value for after super call (PING_FREQUENCY is overwritten)
+    ping_freq = self.ping_freq
     
     # configure logging
     logging.basicConfig(filename=self.log_file,format='%(asctime)-15s | %(message)s')
@@ -50,7 +54,7 @@ class SibylBot(JabberBot):
     # delete kwargs before calling super init
     words = (['rpi_ip','nick_name','audio_dirs','video_dirs','log_file',
         'lib_file','max_matches','xbmc_user','xbmc_pass','chat_ctrl',
-        'bw_list','bm_file'])
+        'bw_list','bm_file','ping_freq'])
     for w in words:
       try:
         del kwargs[w]
@@ -89,6 +93,9 @@ class SibylBot(JabberBot):
     
     # call JabberBot init
     super(SibylBot,self).__init__(*args,**kwargs)
+    
+    # set PING_FREQUENCY after super call
+    self.PING_FREQUENCY = ping_freq
 
   def validate_args(self):
     """validate args to prevent errors popping up during run-time"""
@@ -116,6 +123,8 @@ class SibylBot(JabberBot):
       raise TypeError('param xbmc_user must be str')
     if self.xbmc_pass is not None and not isinstance(self.xbmc_pass,str):
       raise TypeError('param xbmc_pass must be str')
+    if self.ping_freq is not None and not isinstance(self.ping_freq,int):
+      raise TypeError('param ping_freq must be int')
     
     # lib dir lists must contain either str or valid samba dict
     try:
