@@ -37,5 +37,6 @@ bot = SibylBot(USERNAME,PASSWORD,rpi_ip=RPI_IP,
     lib_file='/home/pi/bin/sibyl_lib.pickle',
     bm_file='/home/pi/bin/sibyl_bm.txt')
 
-bot.muc_join_room(CHATROOM,bot.nick_name,password=ROOMPASS)
-bot.serve_forever()
+# if you don't want the bot to join a MUC just call the method without
+# any parameters; omit the third option if the MUC has no password
+bot.run_forever(CHATROOM,bot.nick_name,ROOMPASS)

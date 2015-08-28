@@ -97,5 +97,6 @@ bot = Sibyl(USERNAME,PASSWORD,rpi_ip=RPI_IP,
 # set logging level to debug
 bot.log.setLevel(logging.DEBUG)
 
-bot.muc_join_room(CHATROOM,bot.nick_name,password=ROOMPASS)
-bot.serve_forever()
+# if you don't want the bot to join a MUC just call the method without
+# any parameters; omit the third option if the MUC has no password
+bot.run_forever(CHATROOM,bot.nick_name,ROOMPASS)

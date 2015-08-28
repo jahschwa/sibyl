@@ -25,7 +25,7 @@ PASSWORD = 'password'
 RPI_IP = '192.168.1.314'
 
 bot = SibylBot(USERNAME,PASSWORD,rpi_ip=RPI_IP)
-bot.serve_forever()
+bot.run_forever()
 ```
 
 ## JabberBot
