@@ -242,6 +242,15 @@ class SibylBot(JabberBot):
     
     return 'Unknown command "'+cmd+'"'
 
+  def on_ping_timeout(self):
+    """override to reconnect"""
+    
+    self.log.error('Ping timeout; waiting 60 seconds')
+    while self.conn.disconnected:
+      time.sleep(60)
+      self.log.info('Attempting to reconnect')
+      self.conn.reconnectAndReauth()
+
   ######################################################################
   # General Commands                                                   #
   ######################################################################
