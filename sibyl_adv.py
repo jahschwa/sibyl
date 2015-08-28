@@ -82,6 +82,7 @@ VIDEODIRS = (['/home/pi/mnt/sshfs',
 # you should always set 'log_file', 'lib_file', and 'bm_file'
 # max_matches=0 is useful for XMPP servers with pastebin support
 # chat_ctrl=True enables the "reboot" and "kill" commands
+# ping_freq=60 pings the server every 60 seconds and logs on failure
 bot = Sibyl(USERNAME,PASSWORD,rpi_ip=RPI_IP,
     nick_name='SibylBot'
     audio_dirs=AUDIODIRS,
@@ -92,7 +93,8 @@ bot = Sibyl(USERNAME,PASSWORD,rpi_ip=RPI_IP,
     lib_file='/home/pi/bin/sibyl_lib.pickle',
     bm_file='/home/pi/bin/sibyl_bm.txt',
     max_matches=0,
-    chat_ctrl=True)
+    chat_ctrl=True,
+    ping_freq=60)
 
 # set logging level to debug
 bot.log.setLevel(logging.DEBUG)
