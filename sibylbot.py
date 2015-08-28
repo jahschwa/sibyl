@@ -91,6 +91,10 @@ class SibylBot(JabberBot):
         self.bm_store = {}
     self.last_played = None
     
+    # define variables to keep track of real JIDS
+    self.__muc = None
+    self.__realjids = {}
+    
     # call JabberBot init
     super(SibylBot,self).__init__(*args,**kwargs)
     
@@ -195,11 +199,25 @@ class SibylBot(JabberBot):
       else:
         raise TypeError('invalid type '+type(l).__name__+' for item '+str(i+1))
 
+  def callback_presence(self,conn,presence):
+    """override to keep track of real JIDs in MUCs"""
+    
+    jid = presence.getFrom()
+    if self.__muc and self.__muc in jid:
+      try:
+        realjid = presence.getTag('x').getTag('item').getAttr('jid').split('/')[0]
+        self.__realjids[jid] = realjid
+      except:
+        pass
+    
+    return super(SibylBot,self).callback_presence(conn,presence)
+
   def callback_message(self,conn,mess):
     """override to only answer direct msgs"""
     
     # discard blank messages
     msg = mess.getBody()
+    usr = str(mess.getFrom())
     if not msg:
       return
     
@@ -216,12 +234,15 @@ class SibylBot(JabberBot):
         if not msg.lower().startswith(self.nick_name.lower()):
           return
         else:
-          mess.setBody(' '.join(msg.split(' ',1)[1:]))
+          msg = ' '.join(msg.split(' ',1)[1:])
+          mess.setBody(msg)
+      
+      # convert MUC JIDs to real JIDs
+      if usr in self.__realjids.keys():
+        usr = self.__realjids[usr]
     
     # check against bw_list
-    msg = mess.getBody()
     cmd = msg.split()[0]
-    usr = str(mess.getFrom())
     
     for rule in self.bw_list:
       if (rule[1]!='*') and (rule[1] not in usr):
@@ -273,6 +294,7 @@ class SibylBot(JabberBot):
     if password is not None:
       pres.setTag('x', namespace=NS_MUC).setTagData('password', password)
     self.connect().send(pres)
+    self.__muc = room
 
   def run_forever(self,room=None,username=None,password=None):
     """join a muc (optional), serve forever, reconnect if needed"""
