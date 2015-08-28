@@ -1198,7 +1198,10 @@ def xbmc(ip,method,params=None,user=None,pword=None):
   payload = p
   params = {'request':json.dumps(payload)}
 
-  r = requests.get(url,params=params,headers=headers,auth=(user,pword),timeout=3)
+  try:
+    r = requests.get(url,params=params,headers=headers,auth=(user,pword),timeout=60)
+  except requests.Timeout as e:
+    return None
   # return the response from xbmc as a dict
   return json.loads(r.text)
 
