@@ -202,11 +202,12 @@ class SibylBot(JabberBot):
   def callback_presence(self,conn,presence):
     """override to keep track of real JIDs in MUCs"""
     
-    jid = presence.getFrom()
+    jid = str(presence.getFrom())
     if self.__muc and self.__muc in jid:
       try:
-        realjid = presence.getTag('x').getTag('item').getAttr('jid').split('/')[0]
-        self.__realjids[jid] = realjid
+        realjid = presence.getTag('x').getTag('item').getAttr('jid')
+        self.__realjids[jid] = realjid.split('/')[0]
+        self.log.debug('JID: '+jid+' = realJID: '+realjid)
       except:
         pass
     
