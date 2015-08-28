@@ -1185,7 +1185,8 @@ class SibylBot(JabberBot):
 ########################################################################
 
 def xbmc(ip,method,params=None,user=None,pword=None):
-  """make a JSON-RPC request to xbmc and return the resulti as a dict"""
+  """make a JSON-RPC request to xbmc and return the resulti as a dict
+  or None if ConnectionError or Timeout"""
   
   # build a json call with the requests library
   p = {'jsonrpc':'2.0','id':1,'method':method}
@@ -1196,9 +1197,8 @@ def xbmc(ip,method,params=None,user=None,pword=None):
   headers = {'content-type':'application/json'}
   payload = p
   params = {'request':json.dumps(payload)}
-  
-  r = requests.get(url,params=params,headers=headers,auth=(user,pword))
-  
+
+  r = requests.get(url,params=params,headers=headers,auth=(user,pword),timeout=3)
   # return the response from xbmc as a dict
   return json.loads(r.text)
 
