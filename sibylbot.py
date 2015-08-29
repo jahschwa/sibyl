@@ -463,7 +463,7 @@ class SibylBot(JabberBot):
   
   @botcmd
   def remote(self,mess,args):
-    """execute the given remote commands"""
+    """execute remote buttons in order - remote (lrudeb)[...]"""
     
     cmds = {'u':'Input.Up',
             'd':'Input.Down',
