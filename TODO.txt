@@ -1,0 +1,14 @@
+TODO list:
+
+ - improve stream YouTube parsing logic
+ - add list support for user and cmd in bw_list
+ - support adding bookmarks outside of audios or videos
+ - fix JabberBot's subscription logic
+ - add ping command
+ - add isup command
+
+MAYBE list:
+
+ - switch from real JID dict to on execute requests
+ - read from config file (will work with @botcmd?)
+ - allow user to set requests timeout (currently 60s)
