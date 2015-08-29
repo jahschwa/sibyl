@@ -469,7 +469,8 @@ class SibylBot(JabberBot):
             'd':'Input.Down',
             'l':'Input.Left',
             'r':'Input.Right',
-            'e':'Input.Select'}
+            'e':'Input.Select',
+            'b':'Input.Back'}
     
     raw = ''.join(args)
     cmd = [s for s in raw if s in cmds]
