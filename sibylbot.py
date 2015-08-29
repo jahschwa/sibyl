@@ -462,6 +462,21 @@ class SibylBot(JabberBot):
   ######################################################################
   
   @botcmd
+  def remote(self,mess,args):
+    """execute the given remote commands"""
+    
+    cmds = {'u':'Input.Up',
+            'd':'Input.Down',
+            'l':'Input.Left',
+            'r':'Input.Right',
+            'e':'Input.Select'}
+    
+    raw = ''.join(args)
+    cmd = [s for s in raw if s in cmds]
+    for s in cmd:
+      self.xbmc(cmds[s])
+  
+  @botcmd
   def info(self,mess,args):
     """display info about currently playing file"""
     
