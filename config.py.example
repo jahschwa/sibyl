@@ -1,0 +1,27 @@
+# XMPP parameters
+# set ROOMPASS to None for no password
+
+RPI_IP = '192.168.1.3'
+USERNAME = 'user@example.com'
+PASSWORD = 'mypassword'
+CHATROOM = 'room@conference.example.com'
+ROOMPASS = 'roompass'
+
+# example samba share definitio
+# set 'username' or 'password' to None as necessary
+smb_theschwa_videos = ({'server':'THESCHWA',
+                        'share':'videos',
+                        'username':'user',
+                        'password':'pass'})
+
+# audio library paths
+AUDIODIRS = (['/media/SCHWA 16G/MUSIC'])
+
+# video library paths
+VIDEODIRS = (['/home/pi/mnt/sshfs',
+              '/media/usbdrive/videos',
+              smb_theschwa_videos])
+
+LOG_FILE = '/home/pi/bin/sibyl.log'
+LIB_FILE = '/home/pi/bin/sibyl_lib.pickle'
+BM_FILE = '/home/pi/bin/sibyl_bm.txt'
