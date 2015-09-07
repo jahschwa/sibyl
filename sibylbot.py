@@ -632,7 +632,7 @@ class SibylBot(JabberBot):
   def stream(self,mess,args):
     """stream from [YouTube, Twitch (Live)] - stream url"""
     
-    msg = args[0]
+    msg = args
     
     # remove http:// https:// www. from start
     msg = msg.replace('http://','').replace('https://','').replace('www.','')
@@ -642,6 +642,7 @@ class SibylBot(JabberBot):
       tim = None
       if '?t=' in msg:
         tim = msg[msg.find('?t=')+3:]
+        msg = msg[:msg.find('?t=')]
       msg = 'youtube.com/watch?v='+msg[msg.rfind('/')+1:]
       if tim:
         msg += ('&t='+tim)
@@ -656,7 +657,9 @@ class SibylBot(JabberBot):
       tim = None
       if '&t=' in msg:
         start = msg.find('&t=')+3
-        end = msg.find('&',start)
+        end = msg.find('&',start+1)
+        if end==-1:
+          end = len(msg)
         tim = msg[start:end]
       
         # get raw seconds from start time
@@ -674,7 +677,7 @@ class SibylBot(JabberBot):
           sec = int(tim)
         
         # parse seconds to 'h:mm:ss'
-        tim = {}
+        tim = {'hours':0,'minutes':0,'seconds':0}
         if int(sec/3600)>0:
           tim['hours'] = int(sec/3600)
           sec -= 3600*tim['hours']
