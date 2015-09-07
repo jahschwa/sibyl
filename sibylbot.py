@@ -634,19 +634,32 @@ class SibylBot(JabberBot):
     
     msg = mess.getBody()
     
-    if 'youtube' in msg.lower():
+    # remove http:// https:// www. from start
+    msg.replace('http://','').replace('https://','').replace('www.','')
+    
+    # account for mobile links from youtu.be
+    if msg.lower().startswith('youtu.be'):
+      msg = 'youtube.com/watch?v='+msg[msg.rfind('/')+1:]
+    
+    # parse youtube links
+    if msg.lower().startswith('youtube'):
       
+      # remove feature, playlist, etc info from end and get vid
+      if '&' in msg:
+        msg = msg[:msg.find('&')]
       vid = msg[msg.find('watch?v=')+8:]
+      
+      # retrieve video info from webpage
       html = requests.get('http://youtube.com/watch?v='+vid).text
       title = html[html.find('<title>')+7:html.find(' - YouTube</title>')]
       title = title.replace('&#39;',"'").replace('&amp;','&')
-      
       channel = html.find('class="yt-user-info"')
       start = html.find('>',channel+1)
       start = html.find('>',start+1)+1
       stop = html.find('<',start+1)
       channel = html[start:stop]
       
+      # send xbmc request and reply to user with info
       response = self.xbmc('Player.Open',{'item':{'file':'plugin://plugin.video.youtube/play/?video_id='+vid}})
       return 'Streaming "'+title+'" by "'+channel+'" from YouTube'
       
