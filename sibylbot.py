@@ -632,7 +632,7 @@ class SibylBot(JabberBot):
   def stream(self,mess,args):
     """stream from [YouTube, Twitch (Live)] - stream url"""
     
-    msg = mess.getBody()
+    msg = args[0]
     
     # remove http:// https:// www. from start
     msg = msg.replace('http://','').replace('https://','').replace('www.','')
