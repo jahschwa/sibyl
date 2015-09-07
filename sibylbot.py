@@ -635,14 +635,54 @@ class SibylBot(JabberBot):
     msg = mess.getBody()
     
     # remove http:// https:// www. from start
-    msg.replace('http://','').replace('https://','').replace('www.','')
+    msg = msg.replace('http://','').replace('https://','').replace('www.','')
     
-    # account for mobile links from youtu.be
+    # account for mobile links from youtu.be and custom start times
     if msg.lower().startswith('youtu.be'):
+      tim = None
+      if '?t=' in msg:
+        tim = msg[msg.find('?t=')+3:]
       msg = 'youtube.com/watch?v='+msg[msg.rfind('/')+1:]
+      if tim:
+        msg += ('&t='+tim)
+    
+    # account for "&start=" custom start times
+    msg = msg.replace('&start=','&t=')
     
     # parse youtube links
     if msg.lower().startswith('youtube'):
+      
+      #check for custom start time
+      tim = None
+      if '&t=' in msg:
+        start = msg.find('&t=')+3
+        end = msg.find('&',start)
+        tim = msg[start:end]
+      
+        # get raw seconds from start time
+        sec = 0
+        if 'h' in tim:
+          sec += 3600*int(tim[:tim.find('h')])
+          tim = tim[tim.find('h')+1:]
+        if 'm' in tim:
+          sec += 60*int(tim[:tim.find('m')])
+          tim = tim[tim.find('m')+1:]
+        if 's' in tim:
+          sec += int(tim[:tim.find('s')])
+          tim = ''
+        if len(tim)>0:
+          sec = int(tim)
+        
+        # parse seconds to 'h:mm:ss'
+        tim = {}
+        if int(sec/3600)>0:
+          tim['hours'] = int(sec/3600)
+          sec -= 3600*tim['hours']
+        if int(sec/60)>0:
+          tim['minutes'] = int(sec/60)
+          sec -= 60*tim['minutes']
+        tim['seconds'] = sec
+        tim = time2str(tim)
       
       # remove feature, playlist, etc info from end and get vid
       if '&' in msg:
@@ -659,9 +699,16 @@ class SibylBot(JabberBot):
       stop = html.find('<',start+1)
       channel = html[start:stop]
       
-      # send xbmc request and reply to user with info
-      response = self.xbmc('Player.Open',{'item':{'file':'plugin://plugin.video.youtube/play/?video_id='+vid}})
-      return 'Streaming "'+title+'" by "'+channel+'" from YouTube'
+      # send xbmc request and seek if given custom start time
+      self.xbmc('Player.Open',{'item':{'file':'plugin://plugin.video.youtube/play/?video_id='+vid}})
+      if tim:
+        self.seek(None,tim)
+      
+      # respond to the user with video info
+      s = 'Streaming "'+title+'" by "'+channel+'" from YouTube'
+      if tim:
+        s += (' at '+tim)
+      return s
       
     elif 'twitch' in msg.lower():
       
