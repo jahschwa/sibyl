@@ -1,11 +1,11 @@
 TODO list:
 
- - improve stream YouTube parsing logic
  - add list support for user and cmd in bw_list
  - support adding bookmarks outside of audios or videos
  - fix JabberBot's subscription logic
  - add ping command
  - add isup command
+ - add way to specify highest directory in tree when searching
 
 MAYBE list:
 
