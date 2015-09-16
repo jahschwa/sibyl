@@ -12,3 +12,4 @@ MAYBE list:
  - switch from real JID dict to on execute requests
  - read from config file (will work with @botcmd?)
  - allow user to set requests timeout (currently 60s)
+ - read and search media tags (e.g. title, album, artist from mp3)
