@@ -6,6 +6,8 @@ TODO list:
  - add ping command
  - add isup command
  - add way to specify highest directory in tree when searching
+ - add redo command
+ - add realjid command
 
 MAYBE list:
 
