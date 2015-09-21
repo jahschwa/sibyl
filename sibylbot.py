@@ -8,6 +8,7 @@ import sys,json,time,os,subprocess,logging,pickle,socket,random
 # dependencies
 import requests
 import xmpp
+from xmpp.protocol import SystemShutdown
 from jabberbot import JabberBot,botcmd
 from smbclient import SambaClient,SambaClientError
 
@@ -308,8 +309,12 @@ class SibylBot(JabberBot):
       
       # IOError from failure to send a ping
       # AttributeError from failure to connect
-      except (IOError,AttributeError) as e:
-        self.log.error('Connection to server lost, retrying in 60 sec')
+      # SystemShutdown from chatserver shutdown
+      except (IOError,AttributeError,SystemShutdown) as e:
+        reason = {IOError:'Ping Timeout',
+                  AttributeError:'Unable to Connect',
+                  SystemShutdown:'Server Shutdown'}
+        self.log.error('Connection to server lost because: '+e.__class__+'; retrying in 60 sec')
         time.sleep(60)
         self.conn = None
 
