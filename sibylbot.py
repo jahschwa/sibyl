@@ -264,10 +264,10 @@ class SibylBot(JabberBot):
       return
     
     # redo command logic
-    if mess.split(' ')[0]=='redo':
-      mess = self.last_cmd
+    if msg.split(' ')[0]=='redo':
+      mess.setBody(self.last_cmd)
     else:
-      self.last_cmd = mess
+      self.last_cmd = msg
     
     return super(SibylBot,self).callback_message(conn,mess)
 
