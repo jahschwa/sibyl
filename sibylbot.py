@@ -96,6 +96,9 @@ class SibylBot(JabberBot):
     self.__muc = None
     self.__realjids = {}
     
+    # variable to keep track of last executed command
+    self.last_cmd = 'echo Nothing to redo'
+    
     # call JabberBot init
     super(SibylBot,self).__init__(*args,**kwargs)
     
@@ -260,6 +263,12 @@ class SibylBot(JabberBot):
       self.send_simple_reply(mess,'You do not have permission to execute that command')
       return
     
+    # redo command logic
+    if mess.split(' ')[0]=='redo':
+      mess = self.last_cmd
+    else:
+      self.last_cmd = mess
+    
     return super(SibylBot,self).callback_message(conn,mess)
 
   def unknown_command(self,mess,cmd,args):
@@ -321,6 +330,14 @@ class SibylBot(JabberBot):
   ######################################################################
   # General Commands                                                   #
   ######################################################################
+
+  @botcmd
+  def redo(self,mess,args):
+    """execute the last command again"""
+    
+    # this is a dummy function so it gets displayed in the help command
+    # the real logic is at the end of callback_message()
+    return
 
   @botcmd
   def git(self,mess,args):
