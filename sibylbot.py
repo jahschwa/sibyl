@@ -323,7 +323,7 @@ class SibylBot(JabberBot):
         reason = {IOError:'Ping Timeout',
                   AttributeError:'Unable to Connect',
                   SystemShutdown:'Server Shutdown'}
-        self.log.error('Connection to server lost because: '+e.__class__+'; retrying in 60 sec')
+        self.log.error('Connection to server lost because: '+reason[e.__class__]+'; retrying in 60 sec')
         time.sleep(60)
         self.conn = None
 
