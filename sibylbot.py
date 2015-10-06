@@ -500,6 +500,28 @@ class SibylBot(JabberBot):
       self.xbmc(cmds[s])
   
   @botcmd
+  def volume(self,mess,args):
+    """set the player volume percentage - volume %"""
+  
+    # if no arguments are passed, return the current volume
+    if len(args.strip())==0:
+      result = self.xbmc('Application.GetProperties',{'properties':['volume']})
+      vol = result['result']['volume']
+      return 'Current volume: '+str(vol)+'%'
+    
+    # otherwise try to set the volume
+    args = args.replace('%','')
+    try:
+      val = int(args.strip())
+    except ValueError as e:
+      val = -1
+  
+    if val<0 or val>100:
+      return 'Argument to "volume" must be an integer from 0-100'
+  
+    self.xbmc('Application.SetVolume',{'volume':val})
+
+  @botcmd
   def info(self,mess,args):
     """display info about currently playing file"""
     
