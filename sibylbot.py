@@ -1024,7 +1024,7 @@ class SibylBot(JabberBot):
       pos += 1
     
     # note that the user-facing functions assume 1-indexing
-    args = path+' '+str(pos+1)
+    args = '"'+path+'" '+str(pos+1)
     if pid==0:
       result = self.audios(None,args)
     elif pid==1:
