@@ -93,8 +93,9 @@ class SibylBot(JabberBot):
     self.last_played = None
     
     # define variables to keep track of real JIDS
-    self.__muc = None
-    self.__realjids = {}
+    self.muc_room = None
+    self.muc_pass = None
+    self.realjids = {}
     
     # variable to keep track of last executed command
     self.last_cmd = 'echo Nothing to redo'
@@ -207,10 +208,10 @@ class SibylBot(JabberBot):
     """override to keep track of real JIDs in MUCs"""
     
     jid = str(presence.getFrom())
-    if self.__muc and self.__muc in jid:
+    if self.muc_room and self.muc_room in jid:
       try:
         realjid = presence.getTag('x').getTag('item').getAttr('jid')
-        self.__realjids[jid] = realjid.split('/')[0]
+        self.realjids[jid] = realjid.split('/')[0]
         self.log.debug('JID: '+jid+' = realJID: '+realjid)
       except:
         pass
@@ -243,8 +244,8 @@ class SibylBot(JabberBot):
           mess.setBody(msg)
       
       # convert MUC JIDs to real JIDs
-      if usr in self.__realjids.keys():
-        usr = self.__realjids[usr]
+      if usr in self.realjids.keys():
+        usr = self.realjids[usr]
     
     # check against bw_list
     cmd = msg.split()[0]
@@ -305,7 +306,8 @@ class SibylBot(JabberBot):
     if password is not None:
       pres.setTag('x', namespace=NS_MUC).setTagData('password', password)
     self.connect().send(pres)
-    self.__muc = room
+    self.muc_room = room
+    self.muc_pass = password
 
   def run_forever(self,room=None,username=None,password=None):
     """join a muc (optional), serve forever, reconnect if needed"""
@@ -391,6 +393,35 @@ class SibylBot(JabberBot):
     subprocess.Popen(['service','sibyl','restart'],
         stdout=DEVNULL,stderr=DEVNULL,close_fds=True)
     sys.exit()
+  
+  @botcmd
+  def join(self,mess,args):
+    """join a MUC - [roomJID nick pass]"""
+    
+    if args=='':
+      self.rejoin(None,None)
+    args = args.split(' ')
+    if len(args)<2:
+      args.append(self.nick_name)
+    if len(args)<3:
+      args.append(None)
+    
+    try:
+      self.muc_join_room(args[0],args[1],args[2])
+    except Exception as e:
+      return 'Unable to join room'
+    
+    return 'Success joining room'
+
+  @botcmd
+  def rejoin(self,mess,args):
+    """rejoin the configured MUC"""
+    
+    args = self.muc_room+' '+self.nick_name
+    if self.muc_pass is not None:
+      args += self.muc_pass
+    
+    return self.join(None,args)
 
   @botcmd
   def tv(self,mess,args):
