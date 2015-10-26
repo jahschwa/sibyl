@@ -553,6 +553,71 @@ class SibylBot(JabberBot):
     self.xbmc('Application.SetVolume',{'volume':val})
 
   @botcmd
+  def subtitles(self,mess,args):
+    """change the subtitles - subtitles (info|on|off|next|prev|set) [index]"""
+    
+    args = args.split(' ')
+    pid = self.xbmc_active_player()
+    if pid!=1:
+      return 'No video playing'
+    
+    if args[0]=='prev':
+      args[0] = 'previous'
+    
+    if args[0]=='on' or args[0]=='off' or args[0]=='next' or args[0]=='previous':
+      self.xbmc('Player.SetSubtitle',{'playerid':pid,'subtitle':args[0]})
+      if args[0]=='off':
+        return
+      subs = self.xbmc('Player.GetProperties',{'playerid':1,
+          'properties':['currentsubtitle']})
+      subs = subs['result']['currentsubtitle']
+      return 'Subtitle: '+str(subs['index'])+'-'+subs['language']+'-'+subs['name']
+    
+    subs = self.xbmc('Player.GetProperties',{'playerid':1,
+        'properties':['subtitles','currentsubtitle']})
+    cur = subs['result']['currentsubtitle']
+    subs = subs['result']['subtitles']
+    
+    if args[0]=='set':
+      try:
+        index = int(args[1])
+      except ValueError as e:
+        return 'Index must be an integer'
+      
+      if (index<0) or (index>len(subs)-1):
+        return 'Index must be in [0,'+str(len(subs)-1)+']'
+      cur = cur['index']
+      if index==cur:
+        return 'That is already the active subtitle'
+      elif index<cur:
+        diff = cur-index
+        func = 'prev'
+      else:
+        diff = index-cur
+        func = 'next'
+      
+      for i in range(0,diff):
+        self.subtitles(None,func)
+      return
+    
+    sub = []
+    for i in range(0,len(subs)):
+      for s in subs:
+        if i==s['index']:
+          sub.append(subs[i])
+          continue
+    
+    s = 'Subtitles: '
+    for x in sub:
+      if x['index']==cur['index']:
+        s += '('
+      s += str(x['index'])+'-'+x['language']+'-'+x['name']
+      if x['index']==cur['index']:
+        s += ')'
+      s += ', '
+    return s[:-2]
+
+  @botcmd
   def info(self,mess,args):
     """display info about currently playing file"""
     
@@ -915,7 +980,7 @@ class SibylBot(JabberBot):
       self.lib_video_file = self.find('file',self.video_dirs)
       self.lib_audio_dir = self.find('dir',self.audio_dirs)
       self.lib_audio_file = self.find('file',self.audio_dirs)
-      self.lib_last_elapsed = time.time()-start
+      self.lib_last_elapsed = int(time.time()-start)
       result = self.library(None,'save')
       
       s = 'Library rebuilt in '+str(self.lib_last_elapsed)
