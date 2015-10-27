@@ -37,6 +37,7 @@ class SibylBot(JabberBot):
     self.bw_list = kwargs.get('bw_list',[])
     self.log_file = kwargs.get('log_file','/var/log/sibyl.log')
     self.bm_file = kwargs.get('bm_file','sibyl_bm.txt')
+    self.note_file = kwargs.get('note_file','sibyl_note.txt')
     self.ping_freq = kwargs.get('ping_freq',None)
     
     # validate args
@@ -55,7 +56,7 @@ class SibylBot(JabberBot):
     # delete kwargs before calling super init
     words = (['rpi_ip','nick_name','audio_dirs','video_dirs','log_file',
         'lib_file','max_matches','xbmc_user','xbmc_pass','chat_ctrl',
-        'bw_list','bm_file','ping_freq'])
+        'bw_list','bm_file','note_file','ping_freq'])
     for w in words:
       try:
         del kwargs[w]
@@ -91,6 +92,13 @@ class SibylBot(JabberBot):
       with open(self.bm_file,'w') as f:
         self.bm_store = {}
     self.last_played = None
+
+    # initialize note list
+    if os.path.isfile(self.note_file):
+      self.notes = self.note_parse()
+    else:
+      with open(self.note_file,'w') as f:
+        self.notes = []
     
     # define variables to keep track of real JIDS
     self.muc_room = None
@@ -509,6 +517,90 @@ class SibylBot(JabberBot):
     
     self.log.setLevel(levels[level])
     return 'Logging level set to: '+level
+
+  @botcmd
+  def note(self,mess,args):
+    """add a note - note (show|add|playing|remove) [body|num]"""
+
+    args = args.split(' ')
+
+    # default behavior is "show"
+    if args[0]=='':
+      args[0] = 'show'
+    if args[0] not in ['show','add','playing','remove']:
+      args.insert(0,'show')
+
+    # set second parameter to make playing/add logic easier
+    if len(args)<2:
+      args.append('')
+    else:
+      args[1] = ' '.join(args[1:])
+
+    # add the currently playing file to the body of the note then do "add"
+    if args[0]=='playing':
+      args[0] = 'add'
+      
+      pid = self.xbmc_active_player()
+      result = self.xbmc('Player.GetProperties',{'playerid':pid,'properties':['time']})
+      t = str(time2str(result['result']['time']))
+      
+      result = self.xbmc('Player.GetItem',{'playerid':pid,'properties':['file']})
+      fil = os.path.basename(str(result['result']['item']['file']))
+      
+      args[1] += ' --- file "'+fil+'" at '+t
+
+    # add the note to self.notes and self.note_file
+    if args[0]=='add':
+      if args[1]=='':
+        return 'Note body cannot be blank'
+      self.notes.append(args[1])
+      self.note_write()
+      return 'Added note #'+str(len(self.notes))+': '+args[1]
+
+    # remove the specified note number from self.notes and rewrite self.note_file
+    # notes are stored internally 0-indexed, but users see 1-indexed
+    if args[0]=='remove':
+      try:
+        num = int(args[1])-1
+      except ValueError as e:
+        return 'Parameter to note remove must be an integer'
+      if num<0 or num>len(self.notes)-1:
+        return 'Parameter to note remove must be in [1,'+str(len(self.notes))+']'
+      
+      body = self.notes[num]
+      del self.notes[num]
+      return 'Removed note #'+str(num+1)+': '+body
+
+    # otherwise show notes if they exist
+    if len(self.notes)==0:
+      return 'No notes'
+
+    # if args[1] is blank then show all
+    if args[1]=='':
+      s = ''
+      for (i,n) in enumerate(self.notes):
+        s += '(Note #'+str(i+1)+'): '+n+', '
+      return s[:-2]
+
+    # if args[1] is a valid integer show that note
+    try:
+      num = int(args[1])-1
+    except ValueError as e:
+      num = None
+
+    if num is not None:
+      if num<0 or num>len(self.notes)-1:
+        return 'Parameter to note show must be in [1,'+str(len(self.notes))+']'
+      return 'Note #'+str(num+1)+': '+self.notes[num]
+
+    # if args[1] is text, show matching notes
+    search = args[1].lower()
+    matches = [i for i in range(0,len(self.notes)) if search in self.notes[i].lower()]
+
+    s = 'Found '+str(len(matches))+' matches: '
+    for i in matches:
+      s += '(Note #'+str(i+1)+'): '+self.notes[i]+', '
+    return s[:-2]
   
   ######################################################################
   # XBMC Commands                                                      #
@@ -1421,6 +1513,21 @@ class SibylBot(JabberBot):
         add = t
     
     return name
+
+  def note_parse(self):
+    """read the note file into a list"""
+
+    with open(self.note_file,'r') as f:
+      return [l.strip() for l in f.readlines() if l!='\n']
+
+  def note_write(self):
+    """write self.notes to self.note_file"""
+
+    lines = [l+'\n' for l in self.notes]
+    lines.append('\n')
+    
+    with open(self.note_file,'w') as f:
+      f.writelines(lines)
 
 ########################################################################
 # Static Functions                                                     #

@@ -25,3 +25,4 @@ VIDEODIRS = (['/home/pi/mnt/sshfs',
 LOG_FILE = '/home/pi/bin/sibyl.log'
 LIB_FILE = '/home/pi/bin/sibyl_lib.pickle'
 BM_FILE = '/home/pi/bin/sibyl_bm.txt'
+NOTE_FILE = '/home/pi/bin/sibyl_note.txt'
