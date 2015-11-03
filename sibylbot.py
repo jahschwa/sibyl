@@ -569,6 +569,7 @@ class SibylBot(JabberBot):
       
       body = self.notes[num]
       del self.notes[num]
+      self.note_write()
       return 'Removed note #'+str(num+1)+': '+body
 
     # otherwise show notes if they exist
