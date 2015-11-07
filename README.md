@@ -58,7 +58,7 @@ By default, sibyl logs to `/var/log/sibyl.log`. To enable debug logging, simply 
  - Very large media libraries may cause smaller devices like the Pi to run out of RAM.
 
 ## Contact Me
-If you have a bug report or feature request, use github's issue tracker. For other stuff, you can contact me at [haas.josh.a@gmail.com][8].
+If you have a bug report or feature request, use github's issue tracker. For other stuff, you can join the Sibyl XMPP dev room `sibyl@conference.jahschwa.com` or contact me at [haas.josh.a@gmail.com][8].
 
  [1]: https://github.com/TheSchwa/sibyl/wiki
  [2]: https://thp.io/2007/python-jabberbot/
