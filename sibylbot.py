@@ -304,18 +304,9 @@ class SibylBot(JabberBot):
   def muc_join_room(self,room,username=None,password=None):
     """override to request no history"""
     
-    NS_MUC = 'http://jabber.org/protocol/muc'
-    if username is None:
-      username = self._JabberBot__username.split('@')[0]
-    my_room_JID = '/'.join((room, username))
-    pres = xmpp.Presence(to=my_room_JID)
-    # request no history
-    pres.setTag('x',namespace=NS_MUC).setTagData('history','',attrs={'maxchars':'0'})
-    if password is not None:
-      pres.setTag('x', namespace=NS_MUC).setTagData('password', password)
-    self.connect().send(pres)
     self.muc_room = room
     self.muc_pass = password
+    super(SibylBot,self).muc_join_room(room,username,password)
 
   def run_forever(self,room=None,username=None,password=None):
     """join a muc (optional), serve forever, reconnect if needed"""
