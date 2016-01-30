@@ -368,6 +368,18 @@ class SibylBot(JabberBot):
     return args
 
   @botcmd
+  def say(self,mess,args):
+    """if in a MUC, say this in it"""
+    
+    if not self.muc_room:
+      return
+    
+    msg = self.build_message(args)
+    msg.setTo(self.muc_room)
+    msg.setType('groupchat')
+    self.send_message(msg)
+
+  @botcmd
   def network(self,mess,args):
     """reply with some network info"""
     
