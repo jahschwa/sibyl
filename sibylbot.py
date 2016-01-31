@@ -273,9 +273,14 @@ class SibylBot(JabberBot):
       return
     
     # redo command logic
-    if msg.split(' ')[0]=='redo':
-      mess.setBody(self.last_cmd)
-    else:
+    args = msg.split(' ')
+    if args[0]=='redo':
+      cmd = self.last_cmd
+      if len(args)>1:
+        cmd += (' '+' '.join(args[1:]))
+        self.last_cmd = cmd
+      mess.setBody(cmd)
+    elif args[0]!='last':
       self.last_cmd = msg
     
     return super(SibylBot,self).callback_message(conn,mess)
@@ -334,11 +339,17 @@ class SibylBot(JabberBot):
 
   @botcmd
   def redo(self,mess,args):
-    """execute the last command again"""
+    """redo last command - redo [args]"""
     
     # this is a dummy function so it gets displayed in the help command
     # the real logic is at the end of callback_message()
     return
+
+  @botcmd
+  def last(self,mess,args):
+    """display last command (from any chat)"""
+    
+    return self.last_cmd
 
   @botcmd
   def git(self,mess,args):
