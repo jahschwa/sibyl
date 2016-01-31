@@ -1064,10 +1064,8 @@ class SibylBot(JabberBot):
       
       # when sibyl calls this method on init mess is None
       if mess is not None:
-        t = self.lib_last_elapsed
-        s = str(int(t/60))+':'
-        s += str(int(t-60*int(t/60))).zfill(2)
-        self.send_simple_reply(mess,'Working... (last rebuild took '+s+')')
+        t = sec2str(self.lib_last_elapsed)
+        self.send_simple_reply(mess,'Working... (last rebuild took '+t+')')
       
       # time the rebuild and update library vars
       start = time.time()
@@ -1079,7 +1077,7 @@ class SibylBot(JabberBot):
       self.lib_last_elapsed = int(time.time()-start)
       result = self.library(None,'save')
       
-      s = 'Library rebuilt in '+str(self.lib_last_elapsed)
+      s = 'Library rebuilt in '+sec2str(self.lib_last_elapsed)
       self.log.info(s)
       return s
     
@@ -1581,6 +1579,18 @@ def time2str(t):
   s+= sec.zfill(2)
   
   return s
+
+def sec2str(t):
+  """change the time in seconds to a string"""
+  
+  s = int(t)
+  
+  h = int(s/3600)
+  s -= 3600*h
+  m = int(s/60)
+  s -= 60*m
+  
+  return time2str({'hours':h,'minutes':m,'seconds':s})
 
 def rlistdir(path):
   """list folders recursively"""
