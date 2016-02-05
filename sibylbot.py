@@ -382,7 +382,7 @@ class SibylBot(JabberBot):
     self.send_message(msg)
 
   @botcmd
-  def broadcast(self,mess,args):
+  def all(self,mess,args):
     """append every user's nick to the front and say it in MUC"""
 
     if not self.muc_room:
