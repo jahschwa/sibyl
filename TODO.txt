@@ -1,5 +1,6 @@
 TODO list:
 
+ - add option for command prefix ala !
  - add list support for user and cmd in bw_list
  - fix JabberBot's subscription logic
  - add ping command
@@ -19,3 +20,4 @@ MAYBE list:
  - read from config file (will work with @botcmd?)
  - allow user to set requests timeout (currently 60s)
  - read and search media tags (e.g. title, album, artist from mp3)
+ - allow specifying that some cmds only work for uesrs in the same room
