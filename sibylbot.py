@@ -389,11 +389,19 @@ class SibylBot(JabberBot):
       return
 
     s = ''
-    for user in self._Jabberbot__seen:
-      if self.muc_room in user:
+    f = str(mess.getFrom())
+    self.log.debug(str(self._JabberBot__seen))
+    for jid in self._JabberBot__seen:
+      user = str(jid)
+      if ((self.muc_room in user)
+           and (not user.endswith(self.nick_name))
+           and (user!=f)):
         s += (user[user.rfind('/')+1:]+': ')
 
-    self.say(None,s+args+' ['+mess.getFrom()+']')
+    if self.muc_room in f:
+      f = f[f.rfind('/')+1:]
+
+    self.say(None,s+args+' ['+f+']')
 
   @botcmd
   def network(self,mess,args):
