@@ -382,6 +382,20 @@ class SibylBot(JabberBot):
     self.send_message(msg)
 
   @botcmd
+  def broadcast(self,mess,args):
+    """append every user's nick to the front and say it in MUC"""
+
+    if not self.muc_room:
+      return
+
+    s = ''
+    for user in self._Jabberbot__seen:
+      if self.muc_room in user:
+        s += (user[user.rfind('/')+1:]+': ')
+
+    self.say(None,s+args+' ['+mess.getFrom()+']')
+
+  @botcmd
   def network(self,mess,args):
     """reply with some network info"""
     
