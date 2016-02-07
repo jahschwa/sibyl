@@ -200,6 +200,12 @@ class SibylBot(JabberBot):
     if cmd is None:
       return
 
+    if self.cmd_prefix and cmd.startswith(self.cmd_prefix):
+      new = self.remove_prefix(cmd)
+      cmd = 'redo'
+      if len(new.strip())>0:
+        cmd += (' '+new.strip())
+    
     args = cmd.split(' ')
     cmd_name = args[0]
 

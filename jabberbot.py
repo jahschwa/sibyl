@@ -99,7 +99,7 @@ class JabberBot(object):
 
   def __init__(self, username, password, res=None, debug=False,
       privatedomain=True, acceptownmsgs=False, handlers=None,
-      command_prefix='', server=None, port=5222, ping_freq=300,
+      cmd_prefix=None, server=None, port=5222, ping_freq=300,
       ping_timeout=3, only_direct=True, reconnect_wait=60):
     """Initializes the jabber bot and sets up commands.
 
@@ -129,9 +129,9 @@ class JabberBot(object):
     Don't forget to raise exception xmpp.NodeProcessed to stop
     processing in other handlers (see callback_presence)
 
-    If command_prefix is set to a string different from '' (the empty
+    If cmd_prefix is set to a string different from '' (the empty
     string), it will require the commands to be prefixed with this text,
-    e.g. command_prefix = '!' means: Type "!info" for the "info" command.
+    e.g. cmd_prefix = '!' means: Type "!info" for the "info" command.
     """
 
     # XMPP JID
@@ -174,10 +174,10 @@ class JabberBot(object):
     # User options
     self.__privatedomain = privatedomain
     self.__acceptownmsgs = acceptownmsgs
-    self.__command_prefix = command_prefix
     self.__reconnect_wait = reconnect_wait
 
     self.only_direct = only_direct
+    self.cmd_prefix = cmd_prefix
 
     # Collect commands from source
     self.commands = {}
@@ -185,7 +185,7 @@ class JabberBot(object):
       if getattr(value, '_jabberbot_command', False):
         name = getattr(value, '_jabberbot_command_name')
         self.log.info('Registered command: %s' % name)
-        self.commands[self.__command_prefix + name] = value
+        self.commands[name] = value
 
 ################################################################################
 # Basic XMPP                                                                   #
@@ -553,18 +553,38 @@ class JabberBot(object):
       if not only_available or show is self.AVAILABLE:
         self.send(jid, message)
 
+  def remove_prefix(self,text):
+    """remove the command prefix from the given text"""
+
+    if not self.cmd_prefix:
+      return text
+    if not text.startswith(self.cmd_prefix):
+      return text
+    return text[len(self.cmd_prefix):]
+
   def get_cmd(self,mess):
-    """return the message with nick and prefix removed if necessary"""
+    """return the body of mess with nick and prefix removed, or None if invalid"""
 
     text = mess.getBody()
-    # MUC only_direct logic
-    if mess.getType()=='groupchat' and self.only_direct:
-      if text.lower().startswith(self.muc_nick.lower()):
-        text = ' '.join(text.split(' ',1)[1:])
-      else:
-        return None
+    direct = False
+    prefix = False
 
-    return text
+    # only direct logic
+    if text.lower().startswith(self.muc_nick.lower()):
+      text = ' '.join(text.split(' ',1)[1:])
+      direct = True
+
+    # command prefix logic
+    text = self.remove_prefix(text)
+    prefix = (text!=mess.getBody())
+
+    if mess.getType()=='chat':
+      return text
+    else:
+      if ((not self.only_direct) and (not self.cmd_prefix) or
+          ((self.only_direct and direct) or (self.cmd_prefix and prefix))):
+        return text
+    return None
 
 ################################################################################
 # Callbacks                                                                    #
@@ -701,7 +721,7 @@ class JabberBot(object):
     self.log.debug("*** type = %s" % typ)
     self.log.debug("*** text = %s" % text)
 
-    # remove nick_name for only_direct or command_prefix
+    # remove nick_name for only_direct or cmd_prefix
     text = self.get_cmd(mess)
     if text is None:
       return
@@ -747,7 +767,7 @@ class JabberBot(object):
       else:
         default_reply = self.MSG_UNKNOWN_COMMAND % {
           'command': cmd,
-          'helpcommand': self.__command_prefix + 'help',
+          'helpcommand': 'help',
         }
       reply = self.unknown_command(mess, cmd, args)
       if reply is None:
@@ -803,18 +823,14 @@ class JabberBot(object):
         '%s: %s' % (name, (command.__doc__ or \
           '(undocumented)').strip().split('\n', 1)[0])
         for (name, command) in self.commands.iteritems() \
-          if name != (self.__command_prefix + 'help') \
+          if name != 'help' \
           and not command._jabberbot_command_hidden
       ]))
       usage = '\n\n' + '\n\n'.join(filter(None,
-        [usage, self.MSG_HELP_TAIL % {'helpcommand':
-          self.__command_prefix + 'help'}]))
+        [usage, self.MSG_HELP_TAIL % {'helpcommand': 'help'}]))
     else:
       description = ''
-      if (args not in self.commands and
-          (self.__command_prefix + args) in self.commands):
-        # Automatically add prefix if it's missing
-        args = self.__command_prefix + args
+      args = self.remove_prefix(args)
       if args in self.commands:
         usage = (self.commands[args].__doc__ or \
           'undocumented').strip()
