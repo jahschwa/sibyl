@@ -17,7 +17,13 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
+
+################################################################################
+#                                                                              #
+# Modified by Joshua Haas for use with Sibyl                                   #
+# https://github.com/TheSchwa/sibyl                                            #
+#                                                                              #
+################################################################################
 
 """
 A framework for writing Jabber/XMPP bots and services
@@ -28,10 +34,7 @@ decorating functions in your subclass or customize the
 bot's operation completely. MUCs are also supported.
 """
 
-import os
-import re
-import sys
-import thread
+import os,re,sys,time,inspect,logging,traceback
 
 try:
     import xmpp
@@ -42,26 +45,23 @@ except ImportError:
     """
     sys.exit(-1)
 
-import time
-import inspect
-import logging
-import traceback
-
 # Will be parsed by setup.py to determine package metadata
 __author__ = 'Thomas Perl <m@thp.io>'
 __version__ = '0.16'
 __website__ = 'http://thp.io/2007/python-jabberbot/'
 __license__ = 'GNU General Public License version 3 or later'
 
+################################################################################
+# botcmd Decorator                                                             #
+################################################################################
 
 def botcmd(*args, **kwargs):
     """Decorator for bot command functions"""
 
-    def decorate(func, hidden=False, name=None, thread=False):
+    def decorate(func, hidden=False, name=None):
         setattr(func, '_jabberbot_command', True)
         setattr(func, '_jabberbot_command_hidden', hidden)
         setattr(func, '_jabberbot_command_name', name or func.__name__)
-        setattr(func, '_jabberbot_command_thread', thread)  # Experimental!
         return func
 
     if len(args):
@@ -69,6 +69,9 @@ def botcmd(*args, **kwargs):
     else:
         return lambda func: decorate(func, **kwargs)
 
+################################################################################
+# JabberBot class                                                              #
+################################################################################
 
 class JabberBot(object):
     # Show types for presence
@@ -88,12 +91,14 @@ class JabberBot(object):
     MSG_ERROR_OCCURRED = 'Sorry for your inconvenience. '\
         'An unexpected error occurred.'
 
-    PING_FREQUENCY = 0  # Set to the number of seconds, e.g. 60.
-    PING_TIMEOUT = 2  # Seconds to wait for a response.
+################################################################################
+# Init                                                                         #
+################################################################################
 
     def __init__(self, username, password, res=None, debug=False,
-            privatedomain=False, acceptownmsgs=False, handlers=None,
-            command_prefix='', server=None, port=5222):
+            privatedomain=True, acceptownmsgs=False, handlers=None,
+            command_prefix='', server=None, port=5222, ping_freq=300,
+            ping_timeout=3):
         """Initializes the jabber bot and sets up commands.
 
         username and password should be clear ;)
@@ -126,31 +131,45 @@ class JabberBot(object):
         string), it will require the commands to be prefixed with this text,
         e.g. command_prefix = '!' means: Type "!info" for the "info" command.
         """
-        # TODO sort this initialisation thematically
-        self.__debug = debug
-        self.log = logging.getLogger(__name__)
+
+        # XMPP JID
         if server is not None:
             self.__server = (server, port)
         else:
             self.__server = None
         self.__username = username
         self.__password = password
+        
         self.jid = xmpp.JID(self.__username)
         self.res = (res or self.__class__.__name__)
-        self.conn = None
-        self.muc = None
-        self.__finished = False
-        self.__show = None
+
+        # General XMPP
+        self.__muc = None
         self.__status = None
         self.__seen = {}
         self.__threads = {}
+
+        self.conn = None
+        self.roster = None
+
+        # Pinging
         self.__lastping = time.time()
+        self.__ping_freq = ping_freq
+        self.__ping_timeout = ping_timeout
+
+        # Control
+        self.__debug = debug
+        self.__finished = False
+        self.__show = None
+        self.__handlers = (handlers or [('message', self.callback_message),
+                    ('presence', self.callback_presence)])
+
+        self.log = logging.getLogger(__name__)
+
+        # User options
         self.__privatedomain = privatedomain
         self.__acceptownmsgs = acceptownmsgs
         self.__command_prefix = command_prefix
-
-        self.handlers = (handlers or [('message', self.callback_message),
-                    ('presence', self.callback_presence)])
 
         # Collect commands from source
         self.commands = {}
@@ -160,9 +179,9 @@ class JabberBot(object):
                 self.log.info('Registered command: %s' % name)
                 self.commands[self.__command_prefix + name] = value
 
-        self.roster = None
-
-################################
+################################################################################
+# Basic XMPP                                                                   #
+################################################################################
 
     def _send_status(self):
         """Send status to everyone"""
@@ -194,8 +213,6 @@ class JabberBot(object):
         return self.__show
 
     status_type = property(fget=__get_show, fset=__set_show)
-
-################################
 
     def connect(self):
         """Connects the bot to server or returns current connection,
@@ -234,7 +251,7 @@ class JabberBot(object):
             self.conn = conn
 
             # Register given handlers (TODO move to own function)
-            for (handler, callback) in self.handlers:
+            for (handler, callback) in self.__handlers:
                 self.conn.RegisterHandler(handler, callback)
                 self.log.debug('Registered handler: %s' % handler)
 
@@ -249,7 +266,9 @@ class JabberBot(object):
 
         return self.conn
 
-### XEP-0045 Multi User Chat # prefix: muc # START ###
+################################################################################
+# XEP-0045 Multi User Chat (MUC)                                               #
+################################################################################
 
     def muc_join_room(self, room, username=None, password=None, prefix=""):
         """Join the specified multi-user chat room or changes nickname
@@ -267,8 +286,8 @@ class JabberBot(object):
         if password is not None:
             pres.setTag('x', namespace=NS_MUC).setTagData('password', password)
         self.connect().send(pres)
-        self.muc = room
-        self.log.debug('Joined room "'+self.muc+'"')
+        self.__muc = room
+        self.log.debug('Joined room "'+self.__muc+'"')
 
     def muc_part_room(self, room, username=None, message=None):
         """Parts the specified multi-user chat"""
@@ -361,7 +380,9 @@ class JabberBot(object):
         self.log.error(mess)
         self.connect().send(mess)
 
-### XEP-0045 Multi User Chat # END ###
+################################################################################
+# General XMPP                                                                 #
+################################################################################
 
     def quit(self):
         """Stop serving messages and exit.
@@ -518,6 +539,10 @@ class JabberBot(object):
             if not only_available or show is self.AVAILABLE:
                 self.send(jid, message)
 
+################################################################################
+# Callbacks                                                                    #
+################################################################################
+
     def callback_presence(self, conn, presence):
         jid, type_, show, status = presence.getFrom(), \
                 presence.getType(), presence.getShow(), \
@@ -619,7 +644,7 @@ class JabberBot(object):
             return
 
         # Account for MUC PM messages
-        if type=='chat' and self.muc and self.muc in str(jid):
+        if type=='chat' and self.__muc and self.__muc in str(jid):
             private = True
 
         # Ignore messages from before we joined
@@ -649,7 +674,6 @@ class JabberBot(object):
             return
 
         # Remember the last-talked-in message thread for replies
-        # FIXME i am not threadsafe
         self.__threads[jid] = mess.getThread()
 
         if ' ' in text:
@@ -660,22 +684,15 @@ class JabberBot(object):
         self.log.debug("*** cmd = %s" % cmd)
 
         if cmd in self.commands:
-            def execute_and_send():
-                try:
-                    reply = self.commands[cmd](mess, args)
-                except Exception, e:
-                    self.log.exception('An error happened while processing '\
-                        'a message ("%s") from %s: %s"' %
-                        (text, jid, traceback.format_exc(e)))
-                    reply = self.MSG_ERROR_OCCURRED
-                if reply:
-                    self.send_simple_reply(mess, reply, private)
-            # Experimental!
-            # if command should be executed in a seperate thread do it
-            if self.commands[cmd]._jabberbot_command_thread:
-                thread.start_new_thread(execute_and_send, ())
-            else:
-                execute_and_send()
+              try:
+                  reply = self.commands[cmd](mess, args)
+              except Exception, e:
+                  self.log.exception('An error happened while processing '\
+                      'a message ("%s") from %s: %s"' %
+                      (text, jid, traceback.format_exc(e)))
+                  reply = self.MSG_ERROR_OCCURRED
+              if reply:
+                  self.send_simple_reply(mess, reply, private)
         else:
             # In private chat, it's okay for the bot to always respond.
             # In group chat, the bot should silently ignore commands it
@@ -692,6 +709,10 @@ class JabberBot(object):
                 reply = default_reply
             if reply:
                 self.send_simple_reply(mess, reply, private)
+
+################################################################################
+# UI Functions                                                                 #
+################################################################################
 
     def unknown_command(self, mess, cmd, args):
         """Default handler for unknown commands
@@ -759,6 +780,10 @@ class JabberBot(object):
         bottom = self.bottom_of_help_message()
         return ''.join(filter(None, [top, description, usage, bottom]))
 
+################################################################################
+# Pinging                                                                      #
+################################################################################
+
     def idle_proc(self):
         """This function will be called in the main loop."""
         self._idle_ping()
@@ -766,16 +791,16 @@ class JabberBot(object):
     def _idle_ping(self):
         """Pings the server, calls on_ping_timeout() on no response.
 
-        To enable set self.PING_FREQUENCY to a value higher than zero.
+        Default ping frequency is every 5 minutes.
         """
-        if self.PING_FREQUENCY \
-            and time.time() - self.__lastping > self.PING_FREQUENCY:
+        if self.__ping_freq \
+            and time.time() - self.__lastping > self.__ping_freq:
             self.__lastping = time.time()
             #logging.debug('Pinging the server.')
             ping = xmpp.Protocol('iq', typ='get', \
                 payload=[xmpp.Node('ping', attrs={'xmlns':'urn:xmpp:ping'})])
             try:
-                res = self.conn.SendAndWaitForResponse(ping, self.PING_TIMEOUT)
+                res = self.conn.SendAndWaitForResponse(ping, self.__ping_timeout)
                 #logging.debug('Got response: ' + str(res))
                 if res is None:
                     self.on_ping_timeout()
@@ -787,6 +812,10 @@ class JabberBot(object):
     def on_ping_timeout(self):
         logging.info('Terminating due to PING timeout.')
         self.quit()
+
+################################################################################
+# Run and Stop Functions                                                       #
+################################################################################
 
     def shutdown(self):
         """This function will be called when we're done serving

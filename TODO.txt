@@ -1,5 +1,6 @@
 TODO list:
 
+ - does muc_join_room need error checking?
  - add option for command prefix ala !
  - add list support for user and cmd in bw_list
  - fix JabberBot's subscription logic
