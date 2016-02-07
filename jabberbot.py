@@ -566,6 +566,9 @@ class JabberBot(object):
     """return the body of mess with nick and prefix removed, or None if invalid"""
 
     text = mess.getBody()
+    if not text:
+      return None
+
     direct = False
     prefix = False
 
