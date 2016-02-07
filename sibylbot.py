@@ -46,9 +46,6 @@ class SibylBot(JabberBot):
     # default bw_list behavior is to allow everything
     self.bw_list.insert(0,('w','*','*'))
 
-    # save value for after super call (PING_FREQUENCY is overwritten)
-    ping_freq = self.ping_freq
-
     # configure logging
     logging.basicConfig(filename=self.log_file,format='%(asctime)-15s | %(message)s')
     self.log = logging.getLogger()
@@ -62,13 +59,6 @@ class SibylBot(JabberBot):
         del kwargs[w]
       except KeyError:
         pass
-
-    # add an additional kwarg for enabling only direct messages
-    self.only_direct = kwargs.get('only_direct',True)
-    try:
-      del kwargs['only_direct']
-    except KeyError:
-      pass
 
     # create libraries
     if os.path.isfile(self.lib_file):
@@ -97,19 +87,11 @@ class SibylBot(JabberBot):
       with open(self.note_file,'w') as f:
         self.notes = []
 
-    # define variables to keep track of real JIDS
-    self.muc_room = None
-    self.muc_pass = None
-    self.realjids = {}
-
     # variable to keep track of last executed command
     self.last_cmd = 'echo Nothing to redo'
 
     # call JabberBot init
     super(SibylBot,self).__init__(*args,**kwargs)
-
-    # set PING_FREQUENCY after super call
-    self.PING_FREQUENCY = ping_freq
 
   def validate_args(self):
     """validate args to prevent errors popping up during run-time"""
@@ -209,126 +191,53 @@ class SibylBot(JabberBot):
       else:
         raise TypeError('invalid type '+type(l).__name__+' for item '+str(i+1))
 
-  def callback_presence(self,conn,presence):
-    """override to keep track of real JIDs in MUCs"""
-
-    jid = str(presence.getFrom())
-    if self.muc_room and self.muc_room in jid:
-      try:
-        realjid = presence.getTag('x').getTag('item').getAttr('jid')
-        self.realjids[jid] = realjid.split('/')[0]
-        self.log.debug('JID: '+jid+' = realJID: '+realjid)
-      except:
-        pass
-
-    return super(SibylBot,self).callback_presence(conn,presence)
-
   def callback_message(self,conn,mess):
-    """override to only answer direct msgs"""
+    """override to look at realjids and implement bwlist and redo"""
 
-    # discard blank messages
+    usr = mess.getFrom()
     msg = mess.getBody()
-    usr = str(mess.getFrom())
-    if not msg:
+    
+    cmd = self.get_cmd(mess)
+    if cmd is None:
       return
 
-    if mess.getType()=='groupchat':
+    args = cmd.split(' ')
+    cmd_name = args[0]
 
-      # don't respond to messages from myself
-      # note that the code in jabberbot.py does not work for MUC
-      if str(mess.getFrom()).endswith(self.nick_name):
-        return
-
-      # if in a MUC, only respond to direct messages (i.e. those
-      # containing self.nick_name, case insensitive)
-      if self.only_direct:
-        if not msg.lower().startswith(self.nick_name.lower()):
-          return
-        else:
-          msg = ' '.join(msg.split(' ',1)[1:])
-          mess.setBody(msg)
-
-      # convert MUC JIDs to real JIDs
-      if usr in self.realjids.keys():
-        usr = self.realjids[usr]
+    # convert MUC JIDs to real JIDs
+    if (mess.getType()=='groupchat') and (usr in self.real_jids):
+      usr = self.real_jids[usr]
 
     # check against bw_list
-    cmd = msg.split()[0]
-
+    usr = str(usr)
     for rule in self.bw_list:
       if (rule[1]!='*') and (rule[1] not in usr):
         continue
-      if rule[2]!='*' and rule[2]!=cmd:
+      if rule[2]!='*' and rule[2]!=cmd_name:
         continue
       applied = rule
 
     if applied[0]=='w':
-      self.log.debug('Allowed "'+usr+'" to execute "'+cmd+'" with rule '+str(applied))
+      self.log.debug('Allowed "'+usr+'" to execute "'+cmd_name+'" with rule '+str(applied))
     else:
-      self.log.debug('Denied "'+usr+'" from executing "'+cmd+'" with rule '+str(applied))
+      self.log.debug('Denied "'+usr+'" from executing "'+cmd_name+'" with rule '+str(applied))
       self.send_simple_reply(mess,'You do not have permission to execute that command')
       return
 
     # redo command logic
-    args = msg.split(' ')
-    if args[0]=='redo':
+    if cmd_name=='redo':
+      self.log.debug('Redo cmd; original msg: "'+msg+'"')
       cmd = self.last_cmd
       if len(args)>1:
         cmd += (' '+' '.join(args[1:]))
         self.last_cmd = cmd
+      if mess.getType()=='groupchat' and self.only_direct and not cmd.startswith(self.muc_nick):
+        cmd = (self.muc_nick+' '+cmd)
       mess.setBody(cmd)
-    elif args[0]!='last':
-      self.last_cmd = msg
-
+    else:
+      self.last_cmd = cmd
+    
     return super(SibylBot,self).callback_message(conn,mess)
-
-  def unknown_command(self,mess,cmd,args):
-    """override unknown command callback"""
-
-    return 'Unknown command "'+cmd+'"'
-
-  def _idle_ping(self):
-    """override to not catch the IOError"""
-
-    if self.PING_FREQUENCY and time.time()-self._JabberBot__lastping>self.PING_FREQUENCY:
-      self._JabberBot__lastping = time.time()
-      payload = [xmpp.Node('ping',attrs={'xmlns':'urn:xmpp:ping'})]
-      ping = xmpp.Protocol('iq',typ='get',payload=payload)
-      res = self.conn.SendAndWaitForResponse(ping,self.PING_TIMEOUT)
-      if res is None:
-        self.on_ping_timeout()
-
-  def on_ping_timeout(self):
-    """override to write to the log"""
-
-    self.log.debug('Ping timeout to server')
-
-  def muc_join_room(self,room,username=None,password=None):
-    """override to request no history"""
-
-    self.muc_room = room
-    self.muc_pass = password
-    super(SibylBot,self).muc_join_room(room,username,password)
-
-  def run_forever(self,room=None,username=None,password=None):
-    """join a muc (optional), serve forever, reconnect if needed"""
-
-    while not self.conn:
-      try:
-        if room:
-          self.muc_join_room(room,username,password)
-        self.serve_forever()
-
-      # IOError from failure to send a ping
-      # AttributeError from failure to connect
-      # SystemShutdown from chatserver shutdown
-      except (IOError,AttributeError,SystemShutdown) as e:
-        reason = {IOError:'Ping Timeout',
-                  AttributeError:'Unable to Connect',
-                  SystemShutdown:'Server Shutdown'}
-        self.log.error('Connection to server lost because: '+reason[e.__class__]+'; retrying in 60 sec')
-        time.sleep(60)
-        self.conn = None
 
   ##############################################################################
   # General Commands                                                           #
@@ -386,19 +295,19 @@ class SibylBot(JabberBot):
       return
 
     s = ''
-    f = str(mess.getFrom())
-    self.log.debug(str(self._JabberBot__seen))
-    for jid in self._JabberBot__seen:
-      user = str(jid)
-      if ((self.muc_room in user)
-           and (not user.endswith(self.nick_name))
-           and (user!=f)):
-        s += (user[user.rfind('/')+1:]+': ')
+    frm = mess.getFrom()
+    for jid in self.seen:
+      if ((self.muc_room==jid.getStripped())
+          and (self.muc_nick!=jid.getResource())
+          and (jid!=frm)):
+        s += (jid.getResource()+': ')
 
-    if self.muc_room in f:
-      f = f[f.rfind('/')+1:]
+    if self.muc_room==frm.getStripped():
+      frm = frm.getResource()
+    else:
+      frm = str(frm)
 
-    self.say(None,s+args+' ['+f+']')
+    self.say(None,s+'['+args+'] '+frm)
 
   @botcmd
   def network(self,mess,args):
@@ -421,7 +330,7 @@ class SibylBot(JabberBot):
     if not self.chat_ctrl:
       return 'chat_ctrl disabled'
 
-    sys.exit()
+    self.quit('Killed via chat_ctrl')
 
   @botcmd
   def reboot(self,mess,args):
@@ -458,9 +367,11 @@ class SibylBot(JabberBot):
   def rejoin(self,mess,args):
     """rejoin the configured MUC"""
 
-    args = self.muc_room+' '+self.nick_name
+    if not self.muc_room:
+      return 'No room to rejoin; use the "join" command instead'
+    args = self.muc_room+' '+self.muc_nick
     if self.muc_pass is not None:
-      args += self.muc_pass
+      args += (' '+self.muc_pass)
 
     return self.join(None,args)
 
