@@ -410,20 +410,6 @@ class JabberBot(object):
 # General XMPP                                                                 #
 ################################################################################
 
-  def quit(self,msg=None):
-    """Stop serving messages and exit.
-
-    I find it is handy for development to run the
-    jabberbot in a 'while true' loop in the shell, so
-    whenever I make a code change to the bot, I send
-    the 'reload' command, which I have mapped to call
-    self.quit(), and my shell script relaunches the
-    new version.
-    """
-    self.__finished = True
-    if msg:
-      self.log.debug(msg)
-
   def send_message(self, mess):
     """Send an XMPP message"""
     self.connect().send(mess)
@@ -867,6 +853,20 @@ class JabberBot(object):
 # Run and Stop Functions                                                       #
 ################################################################################
 
+  def quit(self,msg=None):
+    """Stop serving messages and exit.
+
+    I find it is handy for development to run the
+    jabberbot in a 'while true' loop in the shell, so
+    whenever I make a code change to the bot, I send
+    the 'reload' command, which I have mapped to call
+    self.quit(), and my shell script relaunches the
+    new version.
+    """
+    self.__finished = True
+    if msg:
+      self.log.debug(msg)
+
   def shutdown(self):
     """This function will be called when we're done serving
 
@@ -919,6 +919,6 @@ class JabberBot(object):
         reason = {IOError:'Ping Timeout',
                   AttributeError:'Unable to Connect',
                   SystemShutdown:'Server Shutdown'}
-        self.log.error('Connection to server lost because: '+reason[e.__class__]+'; retrying in 60 sec')
+        self.log.error('Connection to server lost because ['+reason[e.__class__]+']; retrying in 60 sec')
         time.sleep(self.__reconnect_wait)
         self.conn = None

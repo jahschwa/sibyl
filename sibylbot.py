@@ -8,16 +8,15 @@ import sys,json,time,os,subprocess,logging,pickle,socket,random
 # dependencies
 import requests
 import xmpp
-from xmpp.protocol import SystemShutdown
 from jabberbot import JabberBot,botcmd
 from smbclient import SambaClient,SambaClientError
 
 class SibylBot(JabberBot):
   """More details: https://github.com/TheSchwa/sibyl/wiki/Commands"""
 
-  ##############################################################################
-  # Setup                                                                      #
-  ##############################################################################
+################################################################################
+# Setup                                                                        #
+################################################################################
 
   def __init__(self,*args,**kwargs):
     """override to only answer direct msgs"""
@@ -239,9 +238,9 @@ class SibylBot(JabberBot):
     
     return super(SibylBot,self).callback_message(conn,mess)
 
-  ##############################################################################
-  # General Commands                                                           #
-  ##############################################################################
+################################################################################
+# General Commands                                                             #
+################################################################################
 
   @botcmd
   def redo(self,mess,args):
@@ -547,9 +546,9 @@ class SibylBot(JabberBot):
       s += '(Note #'+str(i+1)+'): '+self.notes[i]+', '
     return s[:-2]
 
-  ##############################################################################
-  # XBMC Commands                                                              #
-  ##############################################################################
+################################################################################
+# XBMC Commands                                                                #
+################################################################################
 
   @botcmd
   def remote(self,mess,args):
@@ -1169,9 +1168,9 @@ class SibylBot(JabberBot):
 
     return result
 
-  ##############################################################################
-  # Helper Functions                                                           #
-  ##############################################################################
+################################################################################
+# Helper Functions                                                             #
+################################################################################
 
   def xbmc(self,method,params=None):
     """wrapper method to always provide IP to static method"""
