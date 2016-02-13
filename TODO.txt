@@ -2,7 +2,6 @@ TODO list:
 
  - does muc_join_room need error checking?
  - add list support for user and cmd in bw_list
- - fix JabberBot's subscription logic
  - add ping command
  - add isup command
  - make redo command per chat instead of global
