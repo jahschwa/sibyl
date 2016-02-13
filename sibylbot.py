@@ -1226,6 +1226,9 @@ class SibylBot(JabberBot):
     if len(matches)==0:
       return 'Found 0 matches'
 
+    # default to top dir if every match is a sub dir
+    matches = reducetree(matches)
+
     if len(matches)>1:
       if self.max_matches<1 or len(matches)<=self.max_matches:
         return 'Found '+str(len(matches))+' matches: '+list2str(matches)
@@ -1610,3 +1613,12 @@ def list2str(l):
   for x in l:
     s += ('"'+x+'",\n')
   return (s[:-2]+']')
+
+def reducetree(paths):
+  """if all paths are sub-dirs of a common root, return the root"""
+
+  shortest = sorted(paths,key=len)[0]
+  for path in paths:
+    if not path.startswith(shortest):
+      return paths
+  return shortest
