@@ -353,6 +353,9 @@ class SibylBot(JabberBot):
   def join(self,mess,args):
     """join a MUC - [roomJID nick pass]"""
 
+    if not self.chat_ctrl:
+      return 'chat_ctrl disabled'
+
     if args=='':
       self.rejoin(None,None)
     args = args.split(' ')
