@@ -5,13 +5,9 @@ TODO list:
  - fix JabberBot's subscription logic
  - add ping command
  - add isup command
- - add way to specify highest directory in tree when searching
- - add realjid command
  - make redo command per chat instead of global
  - add logic checks to rejoin
- - add chat_ctrl check to join command
  - edit example config to include note_file
- - add wiki entry on notes
  - add subtitle logic for files without them
 
 MAYBE list:
@@ -27,3 +23,4 @@ DOC list:
  - add reconnect_wait option
  - add ping_freq option
  - add command_prefix option
+ - add wiki entry on notes

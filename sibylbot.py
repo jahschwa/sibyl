@@ -281,6 +281,16 @@ class SibylBot(JabberBot):
     return args
 
   @botcmd
+  def realjid(self,mess,args):
+    """return the real JID of the given MUC nick if known"""
+
+    if '@' not in args:
+      args = mess.getFrom().getStripped()+'/'+args
+    if args.lower() in [str(jid).lower() for jid in self.seen]:
+      return str(self.real_jids.get(args,args))
+    return "I haven't seen that nick"
+
+  @botcmd
   def say(self,mess,args):
     """if in a MUC, say this in it"""
 
