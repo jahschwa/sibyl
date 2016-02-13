@@ -14,7 +14,7 @@ bot = SibylBot(config.USERNAME,config.PASSWORD,rpi_ip=config.RPI_IP,
     log_file=config.LOG_FILE,
     lib_file=config.LIB_FILE,
     bm_file=config.BM_FILE,
-    note_file=confg.NOTE_FILE)
+    note_file=config.NOTE_FILE)
 
 # if you don't want the bot to join a MUC just call the method without
 # any parameters; omit the third option if the MUC has no password
