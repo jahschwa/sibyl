@@ -212,8 +212,9 @@ class SibylBot(JabberBot):
           linkcount = 1
           reply = ""
           for title in titles:
-            reply += "[" + str(linkcount)+ "] " + title + " "
-            linkcount += 1
+            if title is not None:
+              reply += "[" + str(linkcount)+ "] " + title + " "
+              linkcount += 1
           self.send_simple_reply(mess, reply)
       return
 
