@@ -10,6 +10,8 @@ import requests
 import xmpp
 from jabberbot import JabberBot,botcmd
 from smbclient import SambaClient,SambaClientError
+from lxml.html import fromstring
+import re
 
 class SibylBot(JabberBot):
   """More details: https://github.com/TheSchwa/sibyl/wiki/Commands"""
@@ -38,6 +40,7 @@ class SibylBot(JabberBot):
     self.bm_file = kwargs.get('bm_file','sibyl_bm.txt')
     self.note_file = kwargs.get('note_file','sibyl_note.txt')
     self.ping_freq = kwargs.get('ping_freq',None)
+    self.link_echo = kwargs.get('link_echo', False)
 
     # validate args
     self.validate_args()
@@ -52,7 +55,7 @@ class SibylBot(JabberBot):
     # delete kwargs before calling super init
     words = (['rpi_ip','nick_name','audio_dirs','video_dirs','log_file',
         'lib_file','max_matches','xbmc_user','xbmc_pass','chat_ctrl',
-        'bw_list','bm_file','note_file','ping_freq'])
+        'bw_list','bm_file','note_file','ping_freq', 'link_echo'])
     for w in words:
       try:
         del kwargs[w]
@@ -195,17 +198,33 @@ class SibylBot(JabberBot):
 
     usr = mess.getFrom()
     msg = mess.getBody()
-    
+
     cmd = self.get_cmd(mess)
     if cmd is None:
+      if self.link_echo:
+        if msg is not None:
+          print(mess)
+          titles = []
+          urls = re.findall(r'(https?://[^\s]+)', msg)
+          for url in urls:
+            r = requests.get(url)
+            title = fromstring(r.content).findtext('.//title')
+            titles.append(title)
+          linkcount = 1
+          reply = ""
+          for title in titles:
+            reply += "[" + str(linkcount)+ "] " + title + " "
+            linkcount += 1
+          self.send_simple_reply(mess, reply)
       return
+
 
     if self.cmd_prefix and cmd.startswith(self.cmd_prefix):
       new = self.remove_prefix(cmd)
       cmd = 'redo'
       if len(new.strip())>0:
         cmd += (' '+new.strip())
-    
+
     args = cmd.split(' ')
     cmd_name = args[0]
 
@@ -241,7 +260,7 @@ class SibylBot(JabberBot):
       mess.setBody(cmd)
     else:
       self.last_cmd = cmd
-    
+
     return super(SibylBot,self).callback_message(conn,mess)
 
 ################################################################################
