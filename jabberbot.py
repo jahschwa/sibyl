@@ -668,24 +668,12 @@ class JabberBot(object):
         'match private domain (%s)' % (user_domain, domain))
         return
 
+    # Incoming subscription request
     if type_ == 'subscribe':
-      # Incoming presence subscription request
-      if subscription in ('to', 'both', 'from'):
-        self.roster.Authorize(jid)
-        self._send_status()
-
-      if subscription not in ('to', 'both'):
-        self.roster.Subscribe(jid)
-
-      if subscription in (None, 'none'):
-        self.send(jid, self.MSG_AUTHORIZE_ME)
-    elif type_ == 'subscribed':
-      # Authorize any pending requests for that JID
+      # Authorize all subscription requests (we checked for domain above)
       self.roster.Authorize(jid)
-    elif type_ == 'unsubscribed':
-      # Authorization was not granted
-      self.send(jid, self.MSG_NOT_AUTHORIZED)
-      self.roster.Unauthorize(jid)
+      self._send_status()
+    # Do nothing for 'subscribed' or 'unsubscribed'
 
   def callback_message(self, conn, mess):
     """Messages sent to the bot will arrive here.

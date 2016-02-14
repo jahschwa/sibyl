@@ -1653,4 +1653,4 @@ def reducetree(paths):
   for path in paths:
     if not path.startswith(shortest):
       return paths
-  return shortest
+  return [shortest]
