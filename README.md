@@ -9,6 +9,7 @@ You'll need the following installed in order to use sibyl:
  - [requests][3] - HTTP request and wrapper library - `pip install requests`
  - [pysmbclient][4] - crude `smbclient` wrapper - add the source to your python path
  - [JSON-RPC][6] - enable the web server in XBMC
+ - [lxml][9] - xml and html parsing - `pip install lxml`
 
 The following are optional but not having them may render some commands broken:
  - [cec-client][5] - HDMI CEC client for tv commands
@@ -69,3 +70,4 @@ If you have a bug report or feature request, use github's issue tracker. For oth
  [6]: http://kodi.wiki/view/Webserver#Enabling_the_webserver
  [7]: https://github.com/antont/pythonjabberbot/tree/master/examples
  [8]: mailto:haas.josh.a@gmail.com
+ [9]: http://lxml.de/
