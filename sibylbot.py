@@ -203,7 +203,6 @@ class SibylBot(JabberBot):
     if cmd is None:
       if self.link_echo:
         if msg is not None:
-          print(mess)
           titles = []
           urls = re.findall(r'(https?://[^\s]+)', msg)
           for url in urls:
