@@ -6,6 +6,7 @@ This is my personal XMPP bot made mostly for controlling XBMC on my Raspberry Pi
 
 ## Dependencies
 You'll need the following installed in order to use sibyl:
+ - [xmpppy][10] - XMPP python API - `git clone https://github.com/normanr/xmpppy.git`
  - [requests][3] - HTTP request and wrapper library - `pip install requests`
  - [pysmbclient][4] - crude `smbclient` wrapper - add the source to your python path
  - [JSON-RPC][6] - enable the web server in XBMC
@@ -71,3 +72,4 @@ If you have a bug report or feature request, use github's issue tracker. For oth
  [7]: https://github.com/antont/pythonjabberbot/tree/master/examples
  [8]: mailto:haas.josh.a@gmail.com
  [9]: http://lxml.de/
+ [10]: http://xmpppy.sourceforge.net/
