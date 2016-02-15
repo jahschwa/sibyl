@@ -8,14 +8,16 @@ This is my personal XMPP bot made mostly for controlling XBMC on my Raspberry Pi
 You'll need the following installed in order to use sibyl:
  - [xmpppy][10] - XMPP python API - `git clone https://github.com/normanr/xmpppy.git`
  - [requests][3] - HTTP request and wrapper library - `pip install requests`
- - [pysmbclient][4] - crude `smbclient` wrapper - add the source to your python path
+ - [pysmbclient][4] - crude `smbclient` wrapper - `pip install pysmbclient`
  - [lxml][9] - xml and html parsing - `pip install lxml`
  - [JSON-RPC][6] - enable the web server in XBMC
 
 The following are optional but not having them may render some commands broken:
  - [cec-client][5] - HDMI CEC client for tv commands
 
-Note that Sibyl uses a modified version of [JabberBot][2] included in this repo. Do not use Sibyl will the default JabberBot available in your distro or from PyPI.
+**NOTE:** You can install `xmpppy` via `pip`, but I've had problems with that in the past. I recommend you install from `git` repo. Or Debian/Ubuntu should be fine with `sudo apt-get install python-xmpp`.
+
+**NOTE:** Sibyl uses a modified version of [JabberBot][2] included in this repo. Do not use Sibyl will the default JabberBot available in your distro or from `pip`.
 
 ## Setup
 Below is a minimum working example, but most users will want to take a look at `sibyl.py` or `sibyl_adv.py` for more details on common use cases.
