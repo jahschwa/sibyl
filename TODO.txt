@@ -1,10 +1,22 @@
+OVERHAUL list:
+
+ - abstract out chat protocol (some sort of plugin framework)
+ - create actual config file and processing
+ - framework for custom functions
+ - support multiple rooms
+ - possibly revisit BW-list
+ - redo DOCS following config rework
+
 TODO list:
 
- - creeate actual config file and processing
  - does muc_join_room need error checking?
  - add list support for user and cmd in bw_list
  - add ping command
  - add isup command
+ - add leave command
+ - add remind command
+ - add tell command
+ - add stalk command
  - make redo command per chat instead of global
  - add logic checks to rejoin
  - edit example config to include note_file
@@ -13,7 +25,6 @@ TODO list:
 MAYBE list:
 
  - switch from real JID dict to on execute requests
- - read from config file (will work with @botcmd?)
  - allow user to set requests timeout (currently 60s)
  - read and search media tags (e.g. title, album, artist from mp3)
  - allow specifying that some cmds only work for uesrs in the same room
@@ -23,4 +34,5 @@ DOC list:
  - add reconnect_wait option
  - add ping_freq option
  - add command_prefix option
+ - add link_echo option
  - add wiki entry on notes
