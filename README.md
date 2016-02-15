@@ -9,8 +9,8 @@ You'll need the following installed in order to use sibyl:
  - [xmpppy][10] - XMPP python API - `git clone https://github.com/normanr/xmpppy.git`
  - [requests][3] - HTTP request and wrapper library - `pip install requests`
  - [pysmbclient][4] - crude `smbclient` wrapper - add the source to your python path
- - [JSON-RPC][6] - enable the web server in XBMC
  - [lxml][9] - xml and html parsing - `pip install lxml`
+ - [JSON-RPC][6] - enable the web server in XBMC
 
 The following are optional but not having them may render some commands broken:
  - [cec-client][5] - HDMI CEC client for tv commands
