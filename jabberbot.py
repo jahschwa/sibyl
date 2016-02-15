@@ -72,6 +72,19 @@ def botcmd(*args, **kwargs):
     return lambda func: decorate(func, **kwargs)
 
 ################################################################################
+# Custom exceptions                                                            #
+################################################################################
+
+class PingTimeout(Exception):
+  pass
+
+class ConnectFailure(Exception):
+  pass
+
+class AuthFailure(Exception):
+  pass
+
+################################################################################
 # JabberBot class                                                              #
 ################################################################################
 
@@ -100,7 +113,7 @@ class JabberBot(object):
   def __init__(self, username, password, res=None, debug=False,
       privatedomain=True, acceptownmsgs=False, handlers=None,
       cmd_prefix=None, server=None, port=5222, ping_freq=300,
-      ping_timeout=3, only_direct=True, reconnect_wait=60):
+      ping_timeout=3, only_direct=True, reconnect_wait=60, catch_except=True):
     """Initializes the jabber bot and sets up commands.
 
     username and password should be clear ;)
@@ -170,7 +183,10 @@ class JabberBot(object):
           ('presence', self.callback_presence)])
 
     self.log = logging.getLogger(__name__)
-
+    self.catch_except = catch_except
+    if self.__debug:
+      self.catch_except = False
+    
     # User options
     self.__privatedomain = privatedomain
     self.__acceptownmsgs = acceptownmsgs
@@ -240,17 +256,14 @@ class JabberBot(object):
       else:
         conres = conn.connect()
       if not conres:
-        self.log.error('unable to connect to server %s.' %
-            self.jid.getDomain())
-        return None
+        raise ConnectFailure
       if conres != 'tls':
         self.log.warning('unable to establish secure connection '\
         '- TLS failed!')
 
       authres = conn.auth(self.jid.getNode(), self.__password, self.res)
       if not authres:
-        self.log.error('unable to authorize with server.')
-        return None
+        raise AuthFailure
       if authres != 'sasl':
         self.log.warning("unable to perform SASL auth on %s. "\
         "Old authentication method used!" % self.jid.getDomain())
@@ -843,18 +856,23 @@ class JabberBot(object):
   def _idle_ping(self):
     """Pings the server, calls on_ping_timeout() on no response.
 
-    Default ping frequency is every 5 minutes. Raises IOError.
+    Default ping frequency is every 5 minutes.
     """
     if self.__ping_freq and time.time()-self.__lastping>self.__ping_freq:
       self.__lastping = time.time()
       payload = [xmpp.Node('ping',attrs={'xmlns':'urn:xmpp:ping'})]
       ping = xmpp.Protocol('iq',typ='get',payload=payload)
-      res = self.conn.SendAndWaitForResponse(ping,self.__ping_freq)
+      try:
+        res = self.conn.SendAndWaitForResponse(ping,3)
+      except IOError as e:
+        self.on_ping_timeout()
       if res is None:
         self.on_ping_timeout()
 
   def on_ping_timeout(self):
-    self.log.debug('Ping timeout to server')
+    """raises PingTimeout exception"""
+    
+    raise PingTimeout
 
 ################################################################################
 # Run and Stop Functions                                                       #
@@ -913,19 +931,33 @@ class JabberBot(object):
         connect_callback=None, disconnect_callback=None):
     """join a MUC (optional), server forever, reconnect if needed"""
 
-    while not self.conn:
-      try:
-        if room:
-          self.muc_join_room(room,nickname,password)
-        self._serve_forever()
+    # log unknown exceptions then quit
+    try:
+      while not self.conn:
+        try:
+          if room:
+            self.muc_join_room(room,nickname,password)
+          self._serve_forever(connect_callback=None, disconnect_callback=None)
+        
+        # catch known exceptions
+        except (PingTimeout,ConnectFailure,SystemShutdown) as e:
 
-      # IOError from failure to send a ping
-      # AttributeError from failure to connect
-      # SystemShutdown from chatserver shutdown
-      except (IOError,AttributeError,SystemShutdown) as e:
-        reason = {IOError:'Ping Timeout',
-                  AttributeError:'Unable to Connect',
-                  SystemShutdown:'Server Shutdown'}
-        self.log.error('Connection to server lost because ['+reason[e.__class__]+']; retrying in 60 sec')
-        time.sleep(self.__reconnect_wait)
-        self.conn = None
+          # attempt to reconnect if self.catch_except
+          if self.catch_except:
+            reason = {PingTimeout:'ping timeout',
+                      ConnectFailure:'unable to connect',
+                      SystemShutdown:'server shutdown'}
+            self.log.error('Connection lost ('+reason[e.__class__]+'); retrying in '+str(self.__reconnect_wait)+' sec')
+
+          # traceback all exceptions and quit if not self.catch_except
+          else:
+            raise e
+
+          # wait then reconnect
+          time.sleep(self.__reconnect_wait)
+          self.conn = None
+
+    # catch all exceptions, add to log, then quit
+    except Exception as e:
+      self.shutdown()
+      self.log.critical('CRITICAL: %s\n\n%s' % (e.__class__.__name__,traceback.format_exc(e)))

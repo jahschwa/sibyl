@@ -26,7 +26,7 @@ class SibylBot(JabberBot):
     # required kwargs
     self.rpi_ip = kwargs.get('rpi_ip')
 
-    # optional kwargs
+    # optional kwargs (must be deleted)
     self.nick_name = kwargs.get('nick_name','Sibyl')
     self.audio_dirs = kwargs.get('audio_dirs',[])
     self.video_dirs = kwargs.get('video_dirs',[])
@@ -55,7 +55,7 @@ class SibylBot(JabberBot):
     # delete kwargs before calling super init
     words = (['rpi_ip','nick_name','audio_dirs','video_dirs','log_file',
         'lib_file','max_matches','xbmc_user','xbmc_pass','chat_ctrl',
-        'bw_list','bm_file','note_file','ping_freq', 'link_echo'])
+        'bw_list','bm_file','note_file','link_echo'])
     for w in words:
       try:
         del kwargs[w]
@@ -109,12 +109,18 @@ class SibylBot(JabberBot):
       raise TypeError('param log_file must be str')
     if not isinstance(self.lib_file,str):
       raise TypeError('param lib_file must be str')
+    if not isinstance(self.bm_file,str):
+      raise TypeError('param bm_file must be str')
+    if not isinstance(self.note_file,str):
+      raise TypeError('param not_file must be str')
     if not isinstance(self.max_matches,int):
       raise TypeError('param max_matches must be int')
     if not isinstance(self.chat_ctrl,bool):
       raise TypeError('param chat_ctrl must be bool')
     if not isinstance(self.bw_list,list):
       raise TypeError('param bw_list must be list')
+    if not isinstance(self.link_echo,bool):
+      raise TypeError('param link_echo must be bool')
 
     # these may also be None
     if self.xbmc_user is not None and not isinstance(self.xbmc_user,str):
@@ -138,30 +144,18 @@ class SibylBot(JabberBot):
       raise
 
     # must be able to write to files
-    try:
-      f = open(self.log_file,'a')
-      f.close()
-    except IOError as e:
-      raise
+    self.can_write_file(self.log_file)
+    self.can_write_file(self.bm_file)
+    self.can_write_file(self.note_file)
 
     # account for later logic that checks if the pickle exists
     if os.path.isfile(self.lib_file):
       delete = False
     else:
       delete = True
-    try:
-      f = open(self.lib_file,'a')
-      f.close()
-    except IOError as e:
-      raise
+    self.can_write_file(self.lib_file)
     if delete:
       os.remove(self.lib_file)
-
-    try:
-      f = open(self.bm_file,'a')
-      f.close()
-    except IOError as e:
-      raise
 
     # bw_list must be list of tuples of 3 strings
     for (i,l) in enumerate(self.bw_list):
@@ -193,6 +187,12 @@ class SibylBot(JabberBot):
       else:
         raise TypeError('invalid type '+type(l).__name__+' for item '+str(i+1))
 
+  def can_write_file(self,fil):
+    """check if we have write permission to the specified file"""
+
+    f = open(fil,'a')
+    f.close()
+
   def callback_message(self,conn,mess):
     """override to look at realjids and implement bwlist and redo"""
 
@@ -200,11 +200,15 @@ class SibylBot(JabberBot):
     msg = mess.getBody()
 
     cmd = self.get_cmd(mess)
+
+    # link_echo logic
     if cmd is None:
       if self.link_echo:
         if msg is not None:
           titles = []
           urls = re.findall(r'(https?://[^\s]+)', msg)
+          if len(urls)==0:
+            return
           for url in urls:
             r = requests.get(url)
             title = fromstring(r.content).findtext('.//title')
@@ -218,7 +222,7 @@ class SibylBot(JabberBot):
           self.send_simple_reply(mess, reply)
       return
 
-
+    # account for double cmd_prefix = redo (e.g. !!)
     if self.cmd_prefix and cmd.startswith(self.cmd_prefix):
       new = self.remove_prefix(cmd)
       cmd = 'redo'
