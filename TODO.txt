@@ -9,6 +9,7 @@ OVERHAUL list:
 
 TODO list:
 
+ - catch SSLError from link_echo
  - does muc_join_room need error checking?
  - add list support for user and cmd in bw_list
  - add ping command
