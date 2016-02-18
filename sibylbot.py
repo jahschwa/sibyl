@@ -222,6 +222,7 @@ class SibylBot(JabberBot):
         return
     except Exception as e:
       self.log.error('Link echo - '+e.__class__.__name__+' - '+url)
+      return
 
     # account for double cmd_prefix = redo (e.g. !!)
     if self.cmd_prefix and cmd.startswith(self.cmd_prefix):
