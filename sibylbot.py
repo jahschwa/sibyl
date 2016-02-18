@@ -211,7 +211,7 @@ class SibylBot(JabberBot):
             for url in urls:
               r = requests.get(url)
               title = fromstring(r.content).findtext('.//title')
-              titles.append(title)
+              titles.append(title.strip())
             linkcount = 1
             reply = ""
             for title in titles:
