@@ -94,10 +94,6 @@ class JabberBot(object):
   DND, XA, OFFLINE = 'dnd', 'xa', 'unavailable'
 
   # UI-messages (overwrite to change content)
-  MSG_AUTHORIZE_ME = 'Hey there. You are not yet on my roster. ' \
-    'Authorize my request and I will do the same.'
-  MSG_NOT_AUTHORIZED = 'You did not authorize my subscription request. '\
-    'Access denied.'
   MSG_UNKNOWN_COMMAND = 'Unknown command: "%(command)s". '\
     'Type "%(helpcommand)s" for available commands.'
   MSG_HELP_TAIL = 'Type %(helpcommand)s <command name> to get more info '\
@@ -937,7 +933,7 @@ class JabberBot(object):
         try:
           if room:
             self.muc_join_room(room,nickname,password)
-          self._serve_forever(connect_callback=None, disconnect_callback=None)
+          self._serve_forever(connect_callback, disconnect_callback)
         
         # catch known exceptions
         except (PingTimeout,ConnectFailure,SystemShutdown) as e:
@@ -959,5 +955,5 @@ class JabberBot(object):
 
     # catch all exceptions, add to log, then quit
     except Exception as e:
-      self.shutdown()
       self.log.critical('CRITICAL: %s\n\n%s' % (e.__class__.__name__,traceback.format_exc(e)))
+      self.shutdown()

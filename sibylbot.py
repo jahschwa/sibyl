@@ -3,7 +3,7 @@
 # XBMC JSON-RPC XMPP MUC bot
 
 # built-ins
-import sys,json,time,os,subprocess,logging,pickle,socket,random
+import sys,json,time,os,subprocess,logging,pickle,socket,random,re
 
 # dependencies
 import requests
@@ -11,7 +11,6 @@ import xmpp
 from jabberbot import JabberBot,botcmd
 from smbclient import SambaClient,SambaClientError
 from lxml.html import fromstring
-import re
 
 class SibylBot(JabberBot):
   """More details: https://github.com/TheSchwa/sibyl/wiki/Commands"""
@@ -149,13 +148,7 @@ class SibylBot(JabberBot):
     self.can_write_file(self.note_file)
 
     # account for later logic that checks if the pickle exists
-    if os.path.isfile(self.lib_file):
-      delete = False
-    else:
-      delete = True
-    self.can_write_file(self.lib_file)
-    if delete:
-      os.remove(self.lib_file)
+    self.can_write_file(self.lib_file,True)
 
     # bw_list must be list of tuples of 3 strings
     for (i,l) in enumerate(self.bw_list):
@@ -187,11 +180,16 @@ class SibylBot(JabberBot):
       else:
         raise TypeError('invalid type '+type(l).__name__+' for item '+str(i+1))
 
-  def can_write_file(self,fil):
+  def can_write_file(self,fil,delete=False):
     """check if we have write permission to the specified file"""
 
+    do_delete = (delete and not os.path.isfile(fil))
+    
     f = open(fil,'a')
     f.close()
+    
+    if do_delete:
+      os.remove(fil)
 
   def callback_message(self,conn,mess):
     """override to look at realjids and implement bwlist and redo"""
