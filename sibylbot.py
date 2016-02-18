@@ -202,25 +202,28 @@ class SibylBot(JabberBot):
     cmd = self.get_cmd(mess)
 
     # link_echo logic
-    if cmd is None:
-      if self.link_echo:
-        if msg is not None:
-          titles = []
-          urls = re.findall(r'(https?://[^\s]+)', msg)
-          if len(urls)==0:
-            return
-          for url in urls:
-            r = requests.get(url)
-            title = fromstring(r.content).findtext('.//title')
-            titles.append(title)
-          linkcount = 1
-          reply = ""
-          for title in titles:
-            if title is not None:
-              reply += "[" + str(linkcount)+ "] " + title + " "
-              linkcount += 1
-          self.send_simple_reply(mess, reply)
-      return
+    try:
+      if cmd is None:
+        if self.link_echo:
+          if msg is not None:
+            titles = []
+            urls = re.findall(r'(https?://[^\s]+)', msg)
+            if len(urls)==0:
+              return
+            for url in urls:
+              r = requests.get(url)
+              title = fromstring(r.content).findtext('.//title')
+              titles.append(title)
+            linkcount = 1
+            reply = ""
+            for title in titles:
+              if title is not None:
+                reply += "[" + str(linkcount)+ "] " + title + " "
+                linkcount += 1
+            self.send_simple_reply(mess, reply)
+        return
+    except Exception as e:
+      self.log.error('Link echo - '+e.__class__.__name__+' - '+url)
 
     # account for double cmd_prefix = redo (e.g. !!)
     if self.cmd_prefix and cmd.startswith(self.cmd_prefix):
