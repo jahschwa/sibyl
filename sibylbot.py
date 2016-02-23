@@ -915,7 +915,7 @@ class SibylBot(JabberBot):
       # retrieve video info from webpage
       html = requests.get('http://youtube.com/watch?v='+vid).text
       title = html[html.find('<title>')+7:html.find(' - YouTube</title>')]
-      title = title.replace('&#39;',"'").replace('&amp;','&')
+      title = cleanhtml(title)
       channel = html.find('class="yt-user-info"')
       start = html.find('>',channel+1)
       start = html.find('>',start+1)+1
@@ -1660,3 +1660,15 @@ def reducetree(paths):
     if not path.startswith(shortest):
       return paths
   return [shortest]
+
+def cleanhtml(text):
+   """replace common html codes with actual characters"""
+   
+   codes = {'&#39;'  : "'",
+            '&amp;'  : '&',
+            '&quot;' : '"'}
+   
+   for code in codes:
+     text = text.replace(code,codes[code])
+   
+   return text
