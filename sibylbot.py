@@ -8,7 +8,7 @@ import sys,json,time,os,subprocess,logging,pickle,socket,random,re
 # dependencies
 import requests
 import xmpp
-from jabberbot import JabberBot,botcmd
+from jabberbot import JabberBot,botcmd,MUCJoinFailure
 from smbclient import SambaClient,SambaClientError
 from lxml.html import fromstring
 
@@ -48,7 +48,7 @@ class SibylBot(JabberBot):
     self.bw_list.insert(0,('w','*','*'))
 
     # configure logging
-    logging.basicConfig(filename=self.log_file,format='%(asctime)-15s | %(message)s')
+    logging.basicConfig(filename=self.log_file,format='%(asctime).19s | %(levelname).3s | %(message)s')
     self.log = logging.getLogger()
 
     # delete kwargs before calling super init
@@ -401,8 +401,10 @@ class SibylBot(JabberBot):
 
     try:
       self.muc_join_room(args[0],args[1],args[2])
-    except Exception as e:
-      return 'Unable to join room'
+    except MUCJoinFailure as e:
+      return 'Unable to join room (%s)' % e.message
+    except:
+      return 'Unable to join room (unknown reason)'
 
     return 'Success joining room'
 
