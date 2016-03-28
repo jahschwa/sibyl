@@ -106,16 +106,27 @@ class JabberBot(object):
     'An unexpected error occurred.'
 
   # MUC joining errors
-  MUC_JOIN_ERROR = {'not-authorized'        : 'invalid password',
-                    'forbidden'             : 'banned',
-                    'item-not-found'        : 'room does not exist',
-                    'not-allowed'           : 'room creation forbidden',
-                    'not-acceptable'        : 'must use reserved nick',
-                    'registration-required' : 'not a member',
-                    'conflict'              : 'nick in use',
-                    'service-unavailable'   : 'room is full',
-                    'timeout'               : 'timeout'}
+  MUC_JOIN_ERROR = {'not-authorized'          : 'invalid password',
+                    'forbidden'               : 'banned',
+                    'item-not-found'          : 'room does not exist',
+                    'not-allowed'             : 'room creation forbidden',
+                    'not-acceptable'          : 'must use reserved nick',
+                    'registration-required'   : 'not a member',
+                    'conflict'                : 'nick in use',
+                    'service-unavailable'     : 'room is full',
+                    'remote-server-not-found' : 'server not found',
+                    'timeout'                 : 'timeout'}
 
+  # MUC status codes
+  MUC_PARTED = -1
+  MUC_OK = 0
+  MUC_ERR = 1
+  MUC_BANNED = 301
+  MUC_KICKED = 307
+  MUC_AFFIL = 321
+  MUC_MEMBERS = 322
+  MUC_SHUTDOWN = 332
+  
 ################################################################################
 # Init                                                                         #
 ################################################################################
@@ -157,14 +168,14 @@ class JabberBot(object):
     e.g. cmd_prefix = '!' means: Type "!info" for the "info" command.
     """
 
-    self.MUC_CODES = {-1  : ('untried',None),
-                      0   : ('OK',None),
-                      1   : ('unknown',self.log.error),
-                      301 : ('banned',self.log.critical),
-                      307 : ('kicked',self.log.error),
-                      321 : ('affiliation',self.log.info),
-                      322 : ('members-only',self.log.error),
-                      332 : ('shutdown',self.log.error)}
+    self.MUC_CODES = {self.MUC_PARTED   : ('parted',None),
+                      self.MUC_OK       : ('OK',None),
+                      self.MUC_ERR      : ('unknown',self.log.error),
+                      self.MUC_BANNED   : ('banned',self.log.critical),
+                      self.MUC_KICKED   : ('kicked',self.log.error),
+                      self.MUC_AFFIL    : ('affiliation',self.log.info),
+                      self.MUC_MEMBERS  : ('members-only',self.log.error),
+                      self.MUC_SHUTDOWN : ('shutdown',self.log.error)}
 
     # XMPP JID
     if server is not None:
@@ -308,6 +319,21 @@ class JabberBot(object):
 # XEP-0045 Multi User Chat (MUC)                                               #
 ################################################################################
 
+  def get_current_mucs(self):
+    """return all mucs that we are currently in"""
+
+    return [room for room in self.mucs if self.mucs[room]['status']==self.MUC_OK]
+
+  def get_active_mucs(self):
+    """return all mucs we are in or are trying to reconnect"""
+
+    return [room for room in self.mucs if self.mucs[room]['status']!=self.MUC_PARTED]
+
+  def get_inactive_mucs(self):
+    """return all mucs that we are currently not in"""
+
+    return [room for room in self.mucs if self.mucs[room]['status']!=self.MUC_OK]
+
   def get_default_nick(self):
     """Return a default nick name"""
 
@@ -353,7 +379,7 @@ class JabberBot(object):
       raise MUCJoinFailure(error)
 
     # we joined successfully
-    self.mucs[room] = {'pass':password,'nick':username,'status':0}
+    self.mucs[room] = {'pass':password,'nick':username,'status':self.MUC_OK}
     self.log.info('Success joining room "%s"' % room)
 
   def _muc_join_success(self,room):
@@ -366,26 +392,34 @@ class JabberBot(object):
     
     pass
 
-  def muc_rejoin(self):
+  def muc_rejoin(self,room):
     """Rejoin the last joined room"""
 
-    if not self.last_muc:
-      raise RuntimeError('No room to rejoin; use muc_join_room() first')
+    if not room:
+      if not self.last_muc:
+        raise RuntimeError('No room to rejoin; use muc_join_room() first')
+      else:
+        room = self.last_muc
 
-    muc = self.mucs[self.last_muc]
-    self.muc_join_room(self.last_muc,muc['nick'],muc['pass'])
+    muc = self.mucs[room]
+    self.muc_join_room(room,muc['nick'],muc['pass'])
 
   def muc_part_room(self, room, username=None, message=None):
     """Parts the specified multi-user chat"""
-    if username is None:
-      # TODO use xmpppy function getNode
-      username = self.__username.split('@')[0]
-    my_room_JID = '/'.join((room, username))
-    pres = xmpp.Presence(to=my_room_JID)
-    pres.setAttr('type', 'unavailable')
-    if message is not None:
-      pres.setTagData('status', message)
-    self.connect().send(pres)
+
+    if self.mucs[room]['status']==self.MUC_OK:
+      if username is None:
+        # TODO use xmpppy function getNode
+        username = self.__username.split('@')[0]
+      my_room_JID = '/'.join((room, username))
+      pres = xmpp.Presence(to=my_room_JID)
+      pres.setAttr('type', 'unavailable')
+      if message is not None:
+        pres.setTagData('status', message)
+      self.connect().send(pres)
+      
+    self.mucs[room]['status'] = self.MUC_PARTED
+    self.log.debug('Parted room "%s"' % room)
 
   def muc_set_role(self, room, nick, role, reason=None):
     """Set role to user from muc
@@ -635,7 +669,7 @@ class JabberBot(object):
 
     # only direct logic
     room = frm.getStripped()
-    if room in self.mucs and text.lower().startswith(self.mucs[room]['nick'].lower()):
+    if room in self.get_current_mucs() and text.lower().startswith(self.mucs[room]['nick'].lower()):
       text = ' '.join(text.split(' ',1)[1:])
       direct = True
 
@@ -662,7 +696,7 @@ class JabberBot(object):
         presence.getStatus()
 
     # keep track of "real" JIDs in a MUC
-    if len(self.mucs) and jid.getStripped() in self.mucs:
+    if len(self.get_current_mucs()) and jid.getStripped() in self.get_current_mucs():
       try:
         realjid = presence.getTag('x').getTag('item').getAttr('jid')
         self.real_jids[jid] = xmpp.protocol.JID(realjid)
@@ -714,7 +748,7 @@ class JabberBot(object):
 
     # Catch kicked from the room
     room = jid.getStripped()
-    if room in self.mucs and jid.getResource()==self.mucs[room]['nick']:
+    if room in self.get_current_mucs() and jid.getResource()==self.mucs[room]['nick']:
       code = presence.getStatusCode()
       if code:
         code = int(code)
@@ -724,7 +758,7 @@ class JabberBot(object):
         self.__lastjoin = time.time()
         (text,func) = self.MUC_CODES[code]
         func('Forced from room "%s" (%s)' % (room,text))
-        self.log.debug('Rejoining room in %i sec' % self.__reconnect_wait)
+        self.log.debug('Rejoining room "%s" in %i sec' % (room,self.__reconnect_wait))
 
     # If subscription is private,
     # disregard anything not from the private domain
@@ -768,7 +802,8 @@ class JabberBot(object):
       return
 
     # Account for MUC PM messages
-    if typ=='chat' and len(self.mucs) and jid.getStripped() in self.mucs:
+    if (typ=='chat' and len(self.get_current_mucs())
+        and jid.getStripped() in self.get_current_mucs()):
       private = True
 
     if typ=='groupchat':
@@ -780,7 +815,7 @@ class JabberBot(object):
       # Ignore messages from myself
       room = jid.getStripped()
       if ((self.jid==jid) or
-          (room in self.mucs and jid.getResource()==self.mucs[room]['nick'])):
+          (room in self.get_current_mucs() and jid.getResource()==self.mucs[room]['nick'])):
         return
 
     self.log.debug("*** props = %s" % props)
@@ -951,8 +986,8 @@ class JabberBot(object):
         self._muc_join_success(room)
       except MUCJoinFailure as e:
         self._muc_join_failure(room,e.message)
-        if room in self.mucs and self.mucs[room]['status'] > 0:
-          self.log.debug('Rejoining in %i sec' % self.__reconnect_wait)
+        if room in self.mucs and self.mucs[room]['status'] > self.MUC_OK:
+          self.log.debug('Rejoining room "%s" in %i sec' % (room,self.__reconnect_wait))
 
   def _rejoin_muc(self):
     """attempt to rejoin the MUC if needed"""
@@ -962,10 +997,10 @@ class JabberBot(object):
       return
 
     for room in self.mucs:
-      if self.mucs[room]['status']>0:
+      if self.mucs[room]['status']>self.MUC_OK:
         self.__lastjoin = time.time()
         muc = self.mucs[room]
-        self.muc_join_room(muc[room],muc['nick'],muc['pass'])
+        self.muc_join_room(room,muc['nick'],muc['pass'])
 
 ################################################################################
 # Run and Stop Functions                                                       #

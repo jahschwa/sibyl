@@ -347,12 +347,12 @@ class SibylBot(JabberBot):
   def say(self,mess,args):
     """if in a MUC, say this in it"""
 
-    if not len(self.mucs):
-      return
+    if not len(self.get_current_mucs()):
+      return "I'm not in any rooms!"
 
     room = self.last_muc
     cmd = args.split(' ')
-    if cmd[0] in self.mucs:
+    if cmd[0] in self.get_current_mucs():
       room = cmd[0]
       args = ' '.join(cmd[1:])
 
@@ -365,16 +365,16 @@ class SibylBot(JabberBot):
   def all(self,mess,args):
     """append every user's nick to the front and say it in MUC"""
 
-    if not len(self.mucs):
-      return
+    if not len(self.get_current_mucs()):
+      return "I'm not in any rooms!"
 
     room = self.last_muc
     frm = self.last_jid
     cmd = args.split(' ')
-    if cmd[0] in self.mucs:
+    if cmd[0] in self.get_current_mucs():
       room = cmd[0]
       args = ' '.join(cmd[1:])
-    elif frm.getStripped() in self.mucs:
+    elif frm.getStripped() in self.get_current_mucs():
       room = frm.getStripped()
 
     s = room+' '
@@ -447,16 +447,43 @@ class SibylBot(JabberBot):
 
   @botcmd
   def rejoin(self,mess,args):
-    """rejoin the configured MUC"""
+    """rejoin the last used MUC"""
 
-    if not len(self.mucs):
+    if not len(self.get_inactive_mucs()):
       return 'No room to rejoin; use the "join" command instead'
     room = self.last_muc
+    if self.mucs[room]['status']==self.MUC_OK:
+      return 'I am already in "%s"!' % room
     args = room+' '+self.mucs[room]['nick']
     if self.mucs[room]['pass'] is not None:
       args += (' '+self.mucs[room]['pass'])
 
     return self.join(None,args)
+
+  @botcmd
+  def leave(self,mess,args):
+    """leave the specified MUC - leave [room]"""
+
+    if not len(self.get_active_mucs()):
+      return 'I am not in any rooms!'
+
+    room = self.last_muc
+    frm = self.last_jid
+    cmd = args.split(' ')
+    if len(cmd)>0 and cmd[0].strip():
+      if cmd[0] in self.get_active_mucs():
+        room = cmd[0]
+        args = ' '.join(cmd[1:])
+      else:
+        return 'Unknown room "%s"' % cmd[0]
+    elif frm.getStripped() in self.get_current_mucs():
+      room = frm.getStripped()
+
+    status = self.mucs[room]['status']
+    self.muc_part_room(room,username=self.mucs[room]['nick'])
+    if status==self.MUC_OK:
+      return 'Left room "%s"' % room
+    return 'Stopped reconnecting to room "%s" (%s)' % (room,self.MUC_CODES[status][0])
 
   @botcmd
   def tv(self,mess,args):
