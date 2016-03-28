@@ -91,7 +91,10 @@ class SibylBot(JabberBot):
     # variable to keep track of last executed command
     self.last_cmd = 'echo Nothing to redo'
 
-    # list to keep track of room joining results
+    # variable to retain MUC JID for certain command purposes
+    self.last_jid = None
+
+    # dict to keep track of room joining results
     self.muc_pending = {}
 
     # call JabberBot init
@@ -237,6 +240,7 @@ class SibylBot(JabberBot):
     args = cmd.split(' ')
     cmd_name = args[0]
 
+    self.last_jid = usr
     # convert MUC JIDs to real JIDs
     if (mess.getType()=='groupchat') and (usr in self.real_jids):
       usr = self.real_jids[usr]
@@ -343,11 +347,17 @@ class SibylBot(JabberBot):
   def say(self,mess,args):
     """if in a MUC, say this in it"""
 
-    if not self.muc_room:
+    if not len(self.mucs):
       return
 
+    room = self.last_muc
+    cmd = args.split(' ')
+    if cmd[0] in self.mucs:
+      room = cmd[0]
+      args = ' '.join(cmd[1:])
+
     msg = self.build_message(args)
-    msg.setTo(self.muc_room)
+    msg.setTo(room)
     msg.setType('groupchat')
     self.send_message(msg)
 
@@ -355,23 +365,31 @@ class SibylBot(JabberBot):
   def all(self,mess,args):
     """append every user's nick to the front and say it in MUC"""
 
-    if not self.muc_room:
+    if not len(self.mucs):
       return
 
-    s = ''
-    frm = mess.getFrom()
+    room = self.last_muc
+    frm = self.last_jid
+    cmd = args.split(' ')
+    if cmd[0] in self.mucs:
+      room = cmd[0]
+      args = ' '.join(cmd[1:])
+    elif frm.getStripped() in self.mucs:
+      room = frm.getStripped()
+
+    s = room+' '
     for jid in self.seen:
-      if ((self.muc_room==jid.getStripped())
-          and (self.muc_nick!=jid.getResource())
+      if ((room==jid.getStripped())
+          and (self.mucs[room]['nick']!=jid.getResource())
           and (jid!=frm)):
         s += (jid.getResource()+': ')
 
-    if self.muc_room==frm.getStripped():
+    if room==frm.getStripped():
       frm = frm.getResource()
     else:
       frm = str(frm)
 
-    self.say(None,s+'['+args+'] '+frm)
+    self.say(None,s+'[ '+args+' ] '+frm)
 
   @botcmd
   def network(self,mess,args):
@@ -431,11 +449,12 @@ class SibylBot(JabberBot):
   def rejoin(self,mess,args):
     """rejoin the configured MUC"""
 
-    if not self.muc_room:
+    if not len(self.mucs):
       return 'No room to rejoin; use the "join" command instead'
-    args = self.muc_room+' '+self.muc_nick
-    if self.muc_pass is not None:
-      args += (' '+self.muc_pass)
+    room = self.last_muc
+    args = room+' '+self.mucs[room]['nick']
+    if self.mucs[room]['pass'] is not None:
+      args += (' '+self.mucs[room]['pass'])
 
     return self.join(None,args)
 
