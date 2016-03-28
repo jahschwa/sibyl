@@ -91,6 +91,9 @@ class SibylBot(JabberBot):
     # variable to keep track of last executed command
     self.last_cmd = 'echo Nothing to redo'
 
+    # list to keep track of room joining results
+    self.muc_pending = {}
+
     # call JabberBot init
     super(SibylBot,self).__init__(*args,**kwargs)
 
@@ -269,6 +272,27 @@ class SibylBot(JabberBot):
 
     return super(SibylBot,self).callback_message(conn,mess)
 
+  def _muc_join_success(self,room):
+    """override method to notify user of join success"""
+    
+    self._send_muc_result(room,'Success joining room "%s"' % room)
+
+  def _muc_join_failure(self,room,error):
+    """override method to notify user of join failure"""
+    
+    error = self.MUC_JOIN_ERROR[error]
+    self._send_muc_result(room,'Failed to join room "%s" (%s)' % (room,error))
+
+  def _send_muc_result(self,room,msg):
+    """helper method for notifying user of result"""
+    
+    if room not in self.muc_pending:
+      return
+    mess = self.muc_pending[room]
+    del self.muc_pending[room]
+    
+    self.send_simple_reply(mess,msg)
+
 ################################################################################
 # General Commands                                                             #
 ################################################################################
@@ -398,15 +422,10 @@ class SibylBot(JabberBot):
       args.append(self.nick_name)
     if len(args)<3:
       args.append(None)
+    (room,nick,pword) = args
 
-    try:
-      self.muc_join_room(args[0],args[1],args[2])
-    except MUCJoinFailure as e:
-      return 'Unable to join room (%s)' % e.message
-    except:
-      return 'Unable to join room (unknown reason)'
-
-    return 'Success joining room'
+    self.muc_pending[room] = mess
+    self.muc_join_room(room,nick,pword)
 
   @botcmd
   def rejoin(self,mess,args):

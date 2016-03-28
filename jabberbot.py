@@ -187,6 +187,7 @@ class JabberBot(object):
 
     # XMPP MUC stuff
     self.__lastjoin = 0
+    self.__muc_pending = []
     
     self.real_jids = {}
     self.muc_room = None
@@ -208,8 +209,6 @@ class JabberBot(object):
 
     self.log = logging.getLogger(__name__)
     self.catch_except = catch_except
-    if self.__debug:
-      self.catch_except = False
     
     # User options
     self.__privatedomain = privatedomain
@@ -268,11 +267,7 @@ class JabberBot(object):
     and registers handlers
     """
     if not self.conn:
-      # TODO improve debug
-      if self.__debug:
-        conn = xmpp.Client(self.jid.getDomain())
-      else:
-        conn = xmpp.Client(self.jid.getDomain(), debug=[])
+      conn = xmpp.Client(self.jid.getDomain(), debug=self.__debug)
 
       #connection attempt
       if self.__server:
@@ -340,7 +335,11 @@ class JabberBot(object):
     if password is not None:
       pres.setTag('x', namespace=NS_MUC).setTagData('password', password)
 
-    # attempt to join MUC
+    self.__muc_pending.append((pres,room,username,password))
+
+  def _muc_join(self,pres,room,username,password):
+    """join a muc and handle the result"""
+
     self.log.debug('Attempting to join room "%s"' % room)
     result = self.connect().SendAndWaitForResponse(pres)
 
@@ -359,8 +358,17 @@ class JabberBot(object):
     self.muc_pass = password
     self.muc_nick = username
     self.muc_status = 0
-    self.__lastjoin = time.time()
     self.log.info('Success joining room "%s"' % room)
+
+  def _muc_join_success(self,room):
+    """Override to do stuff on joining a room"""
+    
+    pass
+
+  def _muc_join_failure(self,room,error):
+    """Override to do stuff on failing to join a room"""
+    
+    pass
 
   def muc_rejoin(self):
     """Rejoin the last joined room"""
@@ -707,12 +715,13 @@ class JabberBot(object):
 
     # Catch kicked from the room
     if jid.getStripped()==self.muc_room and jid.getResource()==self.muc_nick:
-      code = int(presence.getStatusCode())
+      code = presence.getStatusCode()
       if code:
+        code = int(code)
         if code not in self.MUC_CODES:
           code = 1
         self.muc_status = code
-        self.__lastjoined = time.time()
+        self.__lastjoin = time.time()
         (text,func) = self.MUC_CODES[code]
         func('Forced from room "%s" (%s)' % (self.muc_room,text))
         self.log.debug('Rejoining room in %i sec' % self.__reconnect_wait)
@@ -900,12 +909,13 @@ class JabberBot(object):
     return ''.join(filter(None, [top, description, usage, bottom]))
 
 ################################################################################
-# Pinging                                                                      #
+# idle_proc: Pinging, MUC join, MUC rejoin                                     #
 ################################################################################
 
   def idle_proc(self):
     """This function will be called in the main loop."""
     self._idle_ping()
+    self._join_muc()
     self._rejoin_muc()
 
   def _idle_ping(self):
@@ -929,15 +939,28 @@ class JabberBot(object):
     
     raise PingTimeout
 
+  def _join_muc(self):
+    """do the actual muc joining if needed"""
+    
+    if len(self.__muc_pending):
+      try:
+        (pres,room,user,pword) = self.__muc_pending[0]
+        del self.__muc_pending[0]
+        self._muc_join(pres,room,user,pword)
+        self._muc_join_success(room)
+      except MUCJoinFailure as e:
+        self._muc_join_failure(room,e.message)
+        if self.muc_status > 0:
+          self.log.debug('Rejoining in %i sec' % self.__reconnect_wait)
+
   def _rejoin_muc(self):
     """attempt to rejoin the MUC if needed"""
 
-    if self.muc_status>0 and time.time()-self.__reconnect_wait>self.__lastjoin:
+    t = time.time()
+    if self.muc_status>0 and t-self.__reconnect_wait>self.__lastjoin:
+      self.log.debug('%.2f - %.2f = %i > %.2f' % (t,self.__reconnect_wait,t-self.__reconnect_wait,self.__lastjoin))
       self.__lastjoin = time.time()
-      try:
-        self.muc_rejoin()
-      except:
-        self.log.debug('Rejoining room in %i sec' % self.__reconnect_wait)
+      self.muc_rejoin()
 
 ################################################################################
 # Run and Stop Functions                                                       #
@@ -1019,10 +1042,7 @@ class JabberBot(object):
       while not self.conn:
         try:
           if room:
-            try:
-              self.muc_join_room(room,nickname,password)
-            except:
-              pass
+            self.muc_join_room(room,nickname,password)
           self._serve_forever(connect_callback, disconnect_callback)
         
         # catch known exceptions
