@@ -8,9 +8,13 @@ import sys,json,time,os,subprocess,logging,pickle,socket,random,re
 # dependencies
 import requests
 import xmpp
-from jabberbot import JabberBot,botcmd,MUCJoinFailure
 from smbclient import SambaClient,SambaClientError
 from lxml.html import fromstring
+
+# in-project
+from jabberbot import JabberBot,botcmd,MUCJoinFailure
+from util import *
+from config import Config
 
 class SibylBot(JabberBot):
   """More details: https://github.com/TheSchwa/sibyl/wiki/Commands"""
@@ -19,47 +23,37 @@ class SibylBot(JabberBot):
 # Setup                                                                        #
 ################################################################################
 
-  def __init__(self,*args,**kwargs):
+  def __init__(self,conf_file='sibyl.conf'):
     """override to only answer direct msgs"""
 
-    # required kwargs
-    self.rpi_ip = kwargs.get('rpi_ip')
-
-    # optional kwargs (must be deleted)
-    self.nick_name = kwargs.get('nick_name','Sibyl')
-    self.audio_dirs = kwargs.get('audio_dirs',[])
-    self.video_dirs = kwargs.get('video_dirs',[])
-    self.lib_file = kwargs.get('lib_file','sibyl_lib.pickle')
-    self.max_matches = kwargs.get('max_matches',10)
-    self.xbmc_user = kwargs.get('xbmc_user',None)
-    self.xbmc_pass = kwargs.get('xbmc_pass',None)
-    self.chat_ctrl = kwargs.get('chat_ctrl',False)
-    self.bw_list = kwargs.get('bw_list',[])
-    self.log_file = kwargs.get('log_file','/var/log/sibyl.log')
-    self.bm_file = kwargs.get('bm_file','sibyl_bm.txt')
-    self.note_file = kwargs.get('note_file','sibyl_note.txt')
-    self.ping_freq = kwargs.get('ping_freq',None)
-    self.link_echo = kwargs.get('link_echo', False)
-
-    # validate args
-    self.validate_args()
-
-    # default bw_list behavior is to allow everything
-    self.bw_list.insert(0,('w','*','*'))
+    # load config
+    self.conf_file = conf_file
+    self.conf = Config(self)
+    result = self.conf.reload()
 
     # configure logging
-    logging.basicConfig(filename=self.log_file,format='%(asctime).19s | %(levelname).3s | %(message)s')
+    logging.basicConfig(filename=self.log_file,format='%(asctime).19s | %(levelname).3s | %(message)s',level=self.log_level)
     self.log = logging.getLogger()
 
-    # delete kwargs before calling super init
-    words = (['rpi_ip','nick_name','audio_dirs','video_dirs','log_file',
-        'lib_file','max_matches','xbmc_user','xbmc_pass','chat_ctrl',
-        'bw_list','bm_file','note_file','link_echo'])
-    for w in words:
-      try:
-        del kwargs[w]
-      except KeyError:
-        pass
+    self.log.info('')
+    self.log.info('-'*50)
+    self.log.info('')
+    self.log.critical('SibylBot starting...')
+    self.log.critical('Reading config file "%s"...' % self.conf_file)
+
+    if result!=Config.SUCCESS:
+      if result==Config.FAIL:
+        self.log.critical('Unable to parse config file; exiting')
+      else:
+        self.log.critical('Parsed config file with warnings')
+      self.log.info('')
+
+    # log config errors and check for success
+    self.conf.process_log()
+    if result==Config.FAIL:
+      print ('Unable to parse config file "%s"; see "%s" for details' % (self.conf_file,self.log_file))
+      sys.exit(1)
+    self.log.info('Success parsing config file')
 
     # create libraries
     if os.path.isfile(self.lib_file):
@@ -88,6 +82,10 @@ class SibylBot(JabberBot):
       with open(self.note_file,'w') as f:
         self.notes = []
 
+    self.log.info('')
+    self.log.info('-'*50)
+    self.log.info('')
+
     # variable to keep track of last executed command
     self.last_cmd = 'echo Nothing to redo'
 
@@ -98,104 +96,18 @@ class SibylBot(JabberBot):
     self.muc_pending = {}
 
     # call JabberBot init
-    super(SibylBot,self).__init__(*args,**kwargs)
-
-  def validate_args(self):
-    """validate args to prevent errors popping up during run-time"""
-
-    # type checking
-    if not isinstance(self.nick_name,str):
-      raise TypeError('param nick_name must be str')
-    if not isinstance(self.audio_dirs,list):
-      raise TypeError('param audio_dirs must be list')
-    if not isinstance(self.video_dirs,list):
-      raise TypeError('param video_dirs must be list')
-    if not isinstance(self.log_file,str):
-      raise TypeError('param log_file must be str')
-    if not isinstance(self.lib_file,str):
-      raise TypeError('param lib_file must be str')
-    if not isinstance(self.bm_file,str):
-      raise TypeError('param bm_file must be str')
-    if not isinstance(self.note_file,str):
-      raise TypeError('param not_file must be str')
-    if not isinstance(self.max_matches,int):
-      raise TypeError('param max_matches must be int')
-    if not isinstance(self.chat_ctrl,bool):
-      raise TypeError('param chat_ctrl must be bool')
-    if not isinstance(self.bw_list,list):
-      raise TypeError('param bw_list must be list')
-    if not isinstance(self.link_echo,bool):
-      raise TypeError('param link_echo must be bool')
-
-    # these may also be None
-    if self.xbmc_user is not None and not isinstance(self.xbmc_user,str):
-      raise TypeError('param xbmc_user must be str')
-    if self.xbmc_pass is not None and not isinstance(self.xbmc_pass,str):
-      raise TypeError('param xbmc_pass must be str')
-    if self.ping_freq is not None and not isinstance(self.ping_freq,int):
-      raise TypeError('param ping_freq must be int')
-
-    # lib dir lists must contain either str or valid samba dict
-    try:
-      self.validate_lib(self.audio_dirs)
-    except Exception as e:
-      e.message += ' in param audio_dirs'
-      raise
-
-    try:
-      self.validate_lib(self.video_dirs)
-    except Exception as e:
-      e.message += ' in param video_dirs'
-      raise
-
-    # must be able to write to files
-    self.can_write_file(self.log_file)
-    self.can_write_file(self.bm_file)
-    self.can_write_file(self.note_file)
-
-    # account for later logic that checks if the pickle exists
-    self.can_write_file(self.lib_file,True)
-
-    # bw_list must be list of tuples of 3 strings
-    for (i,l) in enumerate(self.bw_list):
-      if not isinstance(l,tuple):
-        raise TypeError('invalid type '+type(l).__name__+' for item '+str(i+1)+' in param bw_list')
-      if len(l)!=3:
-        raise ValueError('length of tuple '+str(i+1)+' in param bw_list must be 3 not '+str(len(l)))
-      for x in l:
-        if not isinstance(x,str):
-          raise TypeError('invalid type '+type(l).__name__+' for tuple member of item '+str(i+1)+' in param bw_list')
-      if l[0]!='b' and l[0]!='w':
-        raise ValueError('first member of tuple '+str(i+1)+' in param bw_list must be "b" or "w"')
-
-  def validate_lib(self,lib):
-    """check lib list for valid types and entries"""
-
-    for (i,l) in enumerate(lib):
-      if isinstance(l,str):
-        if not os.path.isdir(l):
-          raise ValueError('path "'+l+'" is not a valid directory')
-      elif isinstance(l,dict):
-        if 'server' not in l.keys():
-          raise KeyError('key "server" missing from item '+str(i+1))
-        if 'share' not in l.keys():
-          raise KeyError('key "share" missing from item '+str(i+1))
-        for k in ['server','share','username','password']:
-          if not isinstance(l[k],str):
-            raise TypeError('value for key "'+k+'" must be of type str for item '+str(i+1))
-      else:
-        raise TypeError('invalid type '+type(l).__name__+' for item '+str(i+1))
-
-  def can_write_file(self,fil,delete=False):
-    """check if we have write permission to the specified file"""
-
-    do_delete = (delete and not os.path.isfile(fil))
-    
-    f = open(fil,'a')
-    f.close()
-    
-    if do_delete:
-      os.remove(fil)
+    super(SibylBot,self).__init__(self.username,self.password,
+        res = self.resource,
+        debug = self.debug,
+        rooms = self.rooms,
+        privatedomain = self.priv_domain,
+        cmd_prefix = self.cmd_prefix,
+        port = self.port,
+        ping_freq = self.ping_freq,
+        ping_timeout = self.ping_timeout,
+        only_direct = self.only_direct,
+        reconnect_wait = self.recon_wait,
+        catch_except = self.catch_except)
 
   def callback_message(self,conn,mess):
     """override to look at realjids and implement bwlist and redo"""
@@ -458,7 +370,7 @@ class SibylBot(JabberBot):
     if self.mucs[room]['pass'] is not None:
       args += (' '+self.mucs[room]['pass'])
 
-    return self.join(None,args)
+    return self.join(mess,args)
 
   @botcmd
   def leave(self,mess,args):

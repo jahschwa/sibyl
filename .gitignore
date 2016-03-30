@@ -56,5 +56,5 @@ docs/_build/
 # PyBuilder
 target/
 
-# Configuration
-config.py
+# Config
+sibyl.conf

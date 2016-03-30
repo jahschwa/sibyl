@@ -131,7 +131,7 @@ class JabberBot(object):
 # Init                                                                         #
 ################################################################################
 
-  def __init__(self, username, password, res=None, debug=False,
+  def __init__(self, username, password, res=None, debug=False, rooms=None,
       privatedomain=True, acceptownmsgs=False, handlers=None,
       cmd_prefix=None, server=None, port=5222, ping_freq=300,
       ping_timeout=3, only_direct=True, reconnect_wait=60, catch_except=True):
@@ -199,7 +199,10 @@ class JabberBot(object):
     # XMPP MUC stuff
     self.__lastjoin = 0
     self.__muc_pending = []
-    
+
+    self.rooms = rooms
+    if not self.rooms:
+      self.rooms = []
     self.real_jids = {}
     self.mucs = {}
     self.last_muc = None
@@ -232,7 +235,7 @@ class JabberBot(object):
     for name, value in inspect.getmembers(self, inspect.ismethod):
       if getattr(value, '_jabberbot_command', False):
         name = getattr(value, '_jabberbot_command_name')
-        self.log.info('Registered command: %s' % name)
+        self.log.debug('Registered command: %s' % name)
         self.commands[name] = value
 
 ################################################################################
@@ -1055,7 +1058,7 @@ class JabberBot(object):
     if disconnect_callback:
       disconnect_callback()
 
-  def log_startup_msg(self,room=None,nickname=None,password=None):
+  def log_startup_msg(self,rooms=None):
     """log a message to appear when the bot starts"""
 
     self.log.info('')
@@ -1064,25 +1067,30 @@ class JabberBot(object):
     self.log.critical('JabberBot starting...')
     self.log.info('')
     self.log.info('JID  : %s' % self.jid)
-    self.log.info('Room : %s/%s' % (room,(nickname if nickname else self.get_default_nick())))
+    if rooms:
+      for room in rooms:
+        self.log.info('Room : %s/%s' % (room['room'],(room['nick'] if room['nick'] else self.get_default_nick())))
+    else:
+      self.log.info('Room : None')
     self.log.info('Cmds : %i' % len(self.commands))
     self.log.info('Log  : %s' % logging.getLevelName(self.log.getEffectiveLevel()))
     self.log.info('')
     self.log.info('-'*50)
     self.log.info('')
 
-  def run_forever(self,room=None, nickname=None, password=None,
+  def run_forever(self,
         connect_callback=None, disconnect_callback=None):
-    """join a MUC (optional), server forever, reconnect if needed"""
+    """join a MUCs (optional), server forever, reconnect if needed"""
 
-    self.log_startup_msg(room=room,nickname=nickname,password=password)
+    self.log_startup_msg(rooms=self.rooms)
 
     # log unknown exceptions then quit
     try:
       while not self.conn:
         try:
-          if room:
-            self.muc_join_room(room,nickname,password)
+          if len(self.rooms):
+            for room in self.rooms:
+              self.muc_join_room(room['room'],room['nick'],room['pass'])
           self._serve_forever(connect_callback, disconnect_callback)
         
         # catch known exceptions
