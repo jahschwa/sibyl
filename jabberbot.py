@@ -34,7 +34,7 @@ decorating functions in your subclass or customize the
 bot's operation completely. MUCs are also supported.
 """
 
-import os,re,sys,time,inspect,logging,traceback
+import os,re,sys,time,inspect,imp,logging,traceback
 
 try:
   import xmpp
@@ -54,22 +54,47 @@ __website__ = 'http://thp.io/2007/python-jabberbot/'
 __license__ = 'GNU General Public License version 3 or later'
 
 ################################################################################
-# botcmd Decorator                                                             #
+# Decorators                                                                   #
 ################################################################################
 
-def botcmd(*args, **kwargs):
-  """Decorator for bot command functions"""
+def botcmd(func,name=None):
+  """Decorator for bot commands"""
 
-  def decorate(func, hidden=False, name=None):
-    setattr(func, '_jabberbot_command', True)
-    setattr(func, '_jabberbot_command_hidden', hidden)
-    setattr(func, '_jabberbot_command_name', name or func.__name__)
-    return func
+  setattr(func, '_jabberbot_command', True)
+  setattr(func, '_jabberbot_command_name', name or func.__name__)
+  return func
 
-  if len(args):
-    return decorate(args[0], **kwargs)
-  else:
-    return lambda func: decorate(func, **kwargs)
+def botfunc(func):
+  """Decorator for bot helper functions"""
+
+  setattr(func, '_jabberbot_function', True)
+  return func
+
+def botinit(func):
+  """Decorator for bot helper functions"""
+
+  setattr(func, '_jabberbot_init', True)
+  return func
+
+def botmucjoinsuccess(func):
+
+  setattr(func, '_jabberbot_mucjoinsucc', True)
+  return func
+
+def botmucjoinfailure(func):
+
+  setattr(func, '_jabberbot_mucjoinfail', True)
+  return func
+
+def botmsg(func):
+
+  setattr(func, '_jabberbot_msgcallback', True)
+  return func
+
+def botpres(func):
+
+  setattr(func, '_jabberbot_prescallback', True)
+  return func
 
 ################################################################################
 # Custom exceptions                                                            #
@@ -132,7 +157,7 @@ class JabberBot(object):
 ################################################################################
 
   def __init__(self, username, password, res=None, debug=False, rooms=None,
-      privatedomain=True, acceptownmsgs=False, handlers=None,
+      privatedomain=True, acceptownmsgs=False, handlers=None, cmd_dir='cmds',
       cmd_prefix=None, server=None, port=5222, ping_freq=300,
       ping_timeout=3, only_direct=True, reconnect_wait=60, catch_except=True):
     """Initializes the jabber bot and sets up commands.
@@ -221,6 +246,7 @@ class JabberBot(object):
 
     self.log = logging.getLogger(__name__)
     self.catch_except = catch_except
+    self.cmd_dir = os.path.abspath(cmd_dir)
     
     # User options
     self.__privatedomain = privatedomain
@@ -230,13 +256,56 @@ class JabberBot(object):
     self.only_direct = only_direct
     self.cmd_prefix = cmd_prefix
 
-    # Collect commands from source
+    # Load commands and functions
     self.commands = {}
-    for name, value in inspect.getmembers(self, inspect.ismethod):
-      if getattr(value, '_jabberbot_command', False):
-        name = getattr(value, '_jabberbot_command_name')
-        self.log.debug('Registered command: %s' % name)
-        self.commands[name] = value
+    self.init_cmds = {}
+    self.muc_join_succ_cmds = {}
+    self.muc_join_fail_cmds = {}
+    self.msg_cmds = {}
+    self.pres_cmds = {}
+    
+    files = [x for x in os.listdir(self.cmd_dir) if x.endswith('.py')]
+    for f in files:
+      f = f.split('.')[0]
+      found = imp.find_module(f,[self.cmd_dir])
+      mod = imp.load_module(f,*found)
+      self.__load_funcs(mod,f)
+    self.__load_funcs(self,'jabberbot')
+
+    # Run plugin init hooks
+    for cmd in self.init_cmds:
+      self.log.debug('Running init hook: %s' % cmd)
+      self.init_cmds[cmd]()
+
+  def __load_funcs(self,mod,f):
+
+    for (name,func) in inspect.getmembers(mod,inspect.isfunction):
+      if getattr(func,'_jabberbot_command',False):
+        fname = getattr(func, '_jabberbot_command_name')
+        self.commands[fname] = self.__bind(func)
+        self.log.debug('Registered command: %s.%s = %s' % (f,name,fname))
+      if getattr(func,'_jabberbot_init',False):
+        self.init_cmds[f+'.'+name] = self.__bind(func)
+        self.log.debug('Registered init hook: %s.%s' % (f,name))
+      if getattr(func,'_jabberbot_function',False):
+        setattr(self,name,self.__bind(func))
+        self.log.debug('Registered function: %s.%s' % (f,name))
+      if getattr(func,'_jabberbot_mucjoinsucc',False):
+        self.muc_join_succ_cmds[f+'.'+name] = self.__bind(func)
+        self.log.debug('Registered mucjoinsucc hook: %s.%s' % (f,name))
+      if getattr(func,'_jabberbot_mucjoinfail',False):
+        self.muc_join_fail_cmds[f+'.'+name] = self.__bind(func)
+        self.log.debug('Registered mucjoinfail hook: %s.%s' % (f,name))
+      if getattr(func,'_jabberbot_msgcallback',False):
+        self.msg_cmds[f+'.'+name] = self.__bind(func)
+        self.log.debug('Registered msg hook: %s.%s' % (f,name))
+      if getattr(func,'_jabberbot_prescallback',False):
+        self.pres_cmds[f+'.'+name] = self.__bind(func)
+        self.log.debug('Registered pres hook: %s.%s' % (f,name))
+
+  def __bind(self,func):
+
+    return func.__get__(self,JabberBot)
 
 ################################################################################
 # Basic XMPP                                                                   #
@@ -279,6 +348,7 @@ class JabberBot(object):
     and registers handlers
     """
     if not self.conn:
+      self.log.debug('Attempting to connect using JID "%s"...' % self.jid)
       conn = xmpp.Client(self.jid.getDomain(), debug=self.__debug)
 
       #connection attempt
@@ -346,7 +416,11 @@ class JabberBot(object):
     """Join the specified multi-user chat room or changes nickname
 
     If username is NOT provided fallback to node part of JID"""
-      
+
+    for x in self.__muc_pending:
+      if x[1]==room:
+        return
+    
     # TODO fix namespacestrings and history settings
     NS_MUC = 'http://jabber.org/protocol/muc'
     
@@ -373,6 +447,7 @@ class JabberBot(object):
 
     # result is None for timeout
     if not result:
+      self.log.error('Error joining room "%s" (timeout)' % room)
       raise MUCJoinFailure('timeout')
 
     # check for error
@@ -386,14 +461,16 @@ class JabberBot(object):
     self.log.info('Success joining room "%s"' % room)
 
   def _muc_join_success(self,room):
-    """Override to do stuff on joining a room"""
+    """execute callbacks on successfull MUC join"""
     
-    pass
+    for func in self.muc_join_succ_cmds.values():
+      func(room)
 
   def _muc_join_failure(self,room,error):
-    """Override to do stuff on failing to join a room"""
+    """execute callbacks on successfull MUC join"""
     
-    pass
+    for func in self.muc_join_fail_cmds.values():
+      func(room,error)
 
   def muc_rejoin(self,room):
     """Rejoin the last joined room"""
@@ -698,6 +775,10 @@ class JabberBot(object):
         presence.getType(), presence.getShow(), \
         presence.getStatus()
 
+    # run plugin hooks
+    for func in self.pres_cmds.values():
+      func(presence)
+
     # keep track of "real" JIDs in a MUC
     if len(self.get_current_mucs()) and jid.getStripped() in self.get_current_mucs():
       try:
@@ -821,20 +902,14 @@ class JabberBot(object):
           (room in self.get_current_mucs() and jid.getResource()==self.mucs[room]['nick'])):
         return
 
-    self.log.debug("*** props = %s" % props)
-    self.log.debug("*** jid = %s" % jid)
-    self.log.debug("*** username = %s" % username)
-    self.log.debug("*** type = %s" % typ)
-    self.log.debug("*** text = %s" % text)
-
     # remove nick_name for only_direct or cmd_prefix
     text = self.get_cmd(mess)
-    if text is None:
-      return
 
-    # If a message format is not supported (eg. encrypted),
-    # txt will be None
-    if not text:
+    # Run plugin hooks
+    for func in self.msg_cmds.values():
+      func(mess,text)
+    
+    if text is None:
       return
 
     # Ignore messages from users not seen by this bot
@@ -846,6 +921,12 @@ class JabberBot(object):
 
     # Remember the last-talked-in message thread for replies
     self.__threads[jid] = mess.getThread()
+    
+    self.log.debug("*** props = %s" % props)
+    self.log.debug("*** jid = %s" % jid)
+    self.log.debug("*** username = %s" % username)
+    self.log.debug("*** type = %s" % typ)
+    self.log.debug("*** text = %s" % text)
 
     if ' ' in text:
       command, args = text.split(' ', 1)
@@ -868,6 +949,7 @@ class JabberBot(object):
       # In private chat, it's okay for the bot to always respond.
       # In group chat, the bot should silently ignore commands it
       # doesn't understand or aren't handled by unknown_command().
+      self.log.info('Unknown command "%s"' % cmd)
       if typ == 'groupchat':
         default_reply = None
       else:
@@ -1110,6 +1192,8 @@ class JabberBot(object):
           # wait then reconnect
           time.sleep(self.__reconnect_wait)
           self.conn = None
+          for room in self.get_current_mucs():
+            self.mucs[room]['status'] = self.MUC_PARTED
 
     # catch all exceptions, add to log, then quit
     except Exception as e:
