@@ -204,3 +204,12 @@ def cleanhtml(text):
      text = text.replace(code,codes[code])
    
    return text
+
+def load_module(name,path):
+  """return the loaded module after closing the file"""
+
+  found = imp.find_module(name,[path])
+  try:
+    mod = imp.load_module(name,*found)
+  finally:
+    found[0].close()

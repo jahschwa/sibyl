@@ -6,8 +6,9 @@
 import sys,logging,re,os,imp,inspect
 
 # in-project
-from jabberbot import JabberBot,botcmd
+from jabberbot import JabberBot
 from config import Config
+from util import load_module
 
 ################################################################################
 # Decorators                                                                   #
@@ -38,8 +39,7 @@ class SibylBot(JabberBot):
     files = [x for x in os.listdir(self.cmd_dir) if x.endswith('.py')]
     for f in files:
       f = f.split('.')[0]
-      found = imp.find_module(f,[self.cmd_dir])
-      mod = imp.load_module(f,*found)
+      mod = util.load_module(f,self.cmd_dir)
       for (name,func) in inspect.getmembers(mod,inspect.isfunction):
         if getattr(func,'_sibylbot_dec_conf',False):
           opts = func(self)

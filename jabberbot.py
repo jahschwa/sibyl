@@ -266,8 +266,7 @@ class JabberBot(object):
     
     for f in files:
       f = f.split('.')[0]
-      found = imp.find_module(f,[self.cmd_dir])
-      mod = imp.load_module(f,*found)
+      mod = self.__load_module(f,self.cmd_dir)
       self.__load_funcs(mod,f)
     self.__load_funcs(self,'jabberbot')
 
@@ -291,6 +290,14 @@ class JabberBot(object):
             s = 'Registered %s hook: %s.%s' % (hook,fil,name)
           dic[fname] = self.__bind(func)
           self.log.debug(s)
+
+def load_module(name,path):
+
+  found = imp.find_module(name,[path])
+  try:
+    mod = imp.load_module(name,*found)
+  finally:
+    found[0].close()
 
   def __bind(self,func):
 
