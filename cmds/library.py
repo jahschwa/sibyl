@@ -6,7 +6,7 @@ from smbclient import SambaClient,SambaClientError
 
 from sibyl.jabberbot import botcmd,botfunc,botinit
 from sibyl.sibylbot import botconf
-from util import *
+from sibyl.util import *
 
 @botconf
 def conf(bot):
