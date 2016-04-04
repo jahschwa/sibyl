@@ -32,21 +32,12 @@ class Config(object):
 #-------------------------------------------------------------------------------
 ('username',    (None,               True,   None,             None)),
 ('password',    (None,               True,   None,             None)),
-('rpi_ip',      (None,               True,   self.valid_ip,    None)),
 ('nick_name',   ('Sibyl',            False,  None,             None)),
 ('log_level',   (logging.INFO,       False,  None,             self.parse_log)),
 ('log_file',    ('sibyl.log',        False,  self.valid_file,  None)),
-('lib_file',    ('sibyl_lib.pickle', False,  self.valid_file,  None)),
-('bm_file',     ('sibyl_bm.txt',     False,  self.valid_file,  None)),
-('note_file',   ('sibyl_note.txt',   False,  self.valid_file,  None)),
-('xbmc_user',   (None,               False,  None,             None)),
-('xbmc_pass',   (None,               False,  None,             None)),
-('audio_dirs',  ([],                 False,  self.valid_lib,   self.parse_lib)),
-('video_dirs',  ([],                 False,  self.valid_lib,   self.parse_lib)),
 ('bw_list',     ([('w','*','*')],    False,  self.valid_bw,    self.parse_bw)),
 ('chat_ctrl',   (False,              False,  None,             self.parse_bool)),
 ('link_echo',   (False,              False,  None,             self.parse_bool)),
-('max_matches', (10,                 False,  None,             self.parse_int)),
 
 #jabberbot options
 #-------------------------------------------------------------------------------
@@ -54,6 +45,7 @@ class Config(object):
 ('debug',       (False,              False,  None,             self.parse_bool)),
 ('rooms',       ([],                 False,  None,             self.parse_room)),
 ('priv_domain', (True,               False,  None,             self.parse_bool)),
+('cmd_dir',     ('cmds',             False,  self.valid_dir,   None)),
 ('cmd_prefix',  (None,               False,  None,             None)),
 ('port',        (5222,               False,  None,             self.parse_int)),
 ('ping_freq',   (0,                  False,  None,             self.parse_int)),
@@ -64,7 +56,7 @@ class Config(object):
 
     ])
     
-    self.opts = self.get_default()
+    self.opts = None
     self.bot = bot
     self.conf_file = bot.conf_file
     util.can_write_file(self.conf_file,delete=True)
@@ -72,11 +64,36 @@ class Config(object):
       self.write_default_conf()
     self.log_msgs = []
 
+  def __bind(self,func):
+
+    return func.__get__(self,Config)
+
   def get_default(self):
     """return a dict of defaults in the form {opt:value}"""
 
     return odict([(opt,value[self.DEF]) for (opt,value) in self.OPTS.iteritems()])
 
+  def add_opts(self,opts):
+    """add several new options"""
+
+    for opt in opts:
+      self.add_opt(opt)
+
+  def add_opt(self,opt):
+    """add the option to our dictionary for parsing"""
+
+    name = opt['name']
+    default = opt.get('default',None)
+    req = opt.get('req',False)
+    valid = opt.get('valid',None)
+    if valid:
+      valid = self.__bind(valid)
+    parse = opt.get('parse',None)
+    if parse:
+      parse = self.__bind(parse)
+    
+    self.OPTS[name] = (default,req,valid,parse)
+    
   def reload(self):
     """load opts from config file into bot"""
 
@@ -107,6 +124,7 @@ class Config(object):
   def __update(self):
     """update self.opts from config file"""
 
+    self.opts = self.get_default()
     opts = self.__read()
     self.__parse(opts)
     self.__validate(opts)
@@ -192,23 +210,6 @@ class Config(object):
     except:
       return False
 
-  def valid_lib(self,lib):
-    """return True if the lib contains valid directories or samba shares"""
-
-    for (i,l) in enumerate(lib):
-      if isinstance(l,str):
-        if not os.path.isdir(l):
-          self.log('warning','path "'+l+'" is not a valid directory')
-          return False
-      elif isinstance(l,dict):
-        if 'server' not in l.keys():
-          self.log('warning','key "server" missing from item '+str(i+1))
-          return False
-        if 'share' not in l.keys():
-          self.log('warning','key "share" missing from item '+str(i+1))
-          return False
-    return True
-
   def valid_bw(self,bw):
     """return True if the bw list is valid"""
 
@@ -217,6 +218,15 @@ class Config(object):
         self.log('warning','Invalid color "%s" in "bw_list"' % color)
         return False
     return True
+
+  def valid_dir(self,cmd):
+    """return True if the directory exists"""
+
+    try:
+      os.listdir(os.path.abspath(cmd))
+      return True
+    except:
+      return False
 
 ################################################################################
 # Parse functions                                                              #
@@ -252,27 +262,6 @@ class Config(object):
               'debug'    : logging.DEBUG}
     
     return levels[val]
-
-  def parse_lib(self,opt,val):
-    """parse the lib into a list"""
-
-    val = val.replace('\n','')
-    entries = util.split_strip(val,';')
-    lib = []
-    for entry in entries:
-      if entry=='':
-        continue
-      if ',' in entry:
-        params = util.split_strip(entry,',')
-        item = {'server':params[0], 'share':params[1], 'username':None, 'password':None}
-        if len(params)>2:
-          item['username'] = params[2]
-        if len(params)>3:
-          item['password'] = params[3]
-      else:
-        item = entry
-      lib.append(item)
-    return lib
 
   def parse_bw(self,opt,val):
     """parse and fully expand the bw_list"""
@@ -320,6 +309,11 @@ class Config(object):
     for (lvl,msg) in self.log_msgs:
       lvl = self.parse_log(None,lvl)
       self.bot.log.log(lvl,msg)
+    self.clear_log()
+
+  def clear_log(self):
+    """clear the log"""
+    
     self.log_msgs = []
 
 ################################################################################

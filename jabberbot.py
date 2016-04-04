@@ -58,42 +58,46 @@ __license__ = 'GNU General Public License version 3 or later'
 ################################################################################
 
 def botcmd(func,name=None):
-  """Decorator for bot commands"""
+  """Decorator for bot chat commands"""
 
-  setattr(func, '_jabberbot_command', True)
-  setattr(func, '_jabberbot_command_name', name or func.__name__)
+  setattr(func, '_jabberbot_dec_chat', True)
+  setattr(func, '_jabberbot_dec_chat_name', name or func.__name__)
   return func
 
 def botfunc(func):
   """Decorator for bot helper functions"""
 
-  setattr(func, '_jabberbot_function', True)
+  setattr(func, '_jabberbot_dec_func', True)
   return func
 
 def botinit(func):
-  """Decorator for bot helper functions"""
+  """Decorator for bot initialisation hooks"""
 
-  setattr(func, '_jabberbot_init', True)
+  setattr(func, '_jabberbot_dec_init', True)
   return func
 
-def botmucjoinsuccess(func):
+def botmucs(func):
+  """Decorator for success joining a room hooks"""
 
-  setattr(func, '_jabberbot_mucjoinsucc', True)
+  setattr(func, '_jabberbot_dec_mucs', True)
   return func
 
-def botmucjoinfailure(func):
+def botmucf(func):
+  """Decorator for failure to join a room hooks"""
 
-  setattr(func, '_jabberbot_mucjoinfail', True)
+  setattr(func, '_jabberbot_dec_mucf', True)
   return func
 
 def botmsg(func):
+  """Decorator for message received hooks"""
 
-  setattr(func, '_jabberbot_msgcallback', True)
+  setattr(func, '_jabberbot_dec_msg', True)
   return func
 
 def botpres(func):
+  """Decorator for presence received hooks"""
 
-  setattr(func, '_jabberbot_prescallback', True)
+  setattr(func, '_jabberbot_dec_pres', True)
   return func
 
 ################################################################################
@@ -256,15 +260,10 @@ class JabberBot(object):
     self.only_direct = only_direct
     self.cmd_prefix = cmd_prefix
 
-    # Load commands and functions
-    self.commands = {}
-    self.init_cmds = {}
-    self.muc_join_succ_cmds = {}
-    self.muc_join_fail_cmds = {}
-    self.msg_cmds = {}
-    self.pres_cmds = {}
-    
+    # Load hooks from self.cmd_dir
+    self.hooks = {x:{} for x in ['chat','init','mucs','mucf','msg','pres']}
     files = [x for x in os.listdir(self.cmd_dir) if x.endswith('.py')]
+    
     for f in files:
       f = f.split('.')[0]
       found = imp.find_module(f,[self.cmd_dir])
@@ -273,39 +272,35 @@ class JabberBot(object):
     self.__load_funcs(self,'jabberbot')
 
     # Run plugin init hooks
-    for cmd in self.init_cmds:
-      self.log.debug('Running init hook: %s' % cmd)
-      self.init_cmds[cmd]()
+    self.__run_hooks('init')
 
-  def __load_funcs(self,mod,f):
-
+  def __load_funcs(self,mod,fil):
+    
     for (name,func) in inspect.getmembers(mod,inspect.isfunction):
-      if getattr(func,'_jabberbot_command',False):
-        fname = getattr(func, '_jabberbot_command_name')
-        self.commands[fname] = self.__bind(func)
-        self.log.debug('Registered command: %s.%s = %s' % (f,name,fname))
-      if getattr(func,'_jabberbot_init',False):
-        self.init_cmds[f+'.'+name] = self.__bind(func)
-        self.log.debug('Registered init hook: %s.%s' % (f,name))
-      if getattr(func,'_jabberbot_function',False):
+      
+      if getattr(func,'_jabberbot_dec_func',False):
         setattr(self,name,self.__bind(func))
-        self.log.debug('Registered function: %s.%s' % (f,name))
-      if getattr(func,'_jabberbot_mucjoinsucc',False):
-        self.muc_join_succ_cmds[f+'.'+name] = self.__bind(func)
-        self.log.debug('Registered mucjoinsucc hook: %s.%s' % (f,name))
-      if getattr(func,'_jabberbot_mucjoinfail',False):
-        self.muc_join_fail_cmds[f+'.'+name] = self.__bind(func)
-        self.log.debug('Registered mucjoinfail hook: %s.%s' % (f,name))
-      if getattr(func,'_jabberbot_msgcallback',False):
-        self.msg_cmds[f+'.'+name] = self.__bind(func)
-        self.log.debug('Registered msg hook: %s.%s' % (f,name))
-      if getattr(func,'_jabberbot_prescallback',False):
-        self.pres_cmds[f+'.'+name] = self.__bind(func)
-        self.log.debug('Registered pres hook: %s.%s' % (f,name))
+        self.log.debug('Registered function: %s.%s' % (fil,name))
+
+      for (hook,dic) in self.hooks.items():
+        if getattr(func,'_jabberbot_dec_'+hook,False):
+          fname = getattr(func,'_jabberbot_dec_'+hook+'_name',None)
+          s = 'Registered %s command: %s.%s = %s' % (hook,fil,name,fname)
+          if fname is None:
+            fname = fil+'.'+name
+            s = 'Registered %s hook: %s.%s' % (hook,fil,name)
+          dic[fname] = self.__bind(func)
+          self.log.debug(s)
 
   def __bind(self,func):
 
     return func.__get__(self,JabberBot)
+
+  def __run_hooks(self,hook):
+    
+    for (name,func) in self.hooks[hook].items():
+      self.log.debug('Running %s hook: %s' % (hook,name))
+      func()
 
 ################################################################################
 # Basic XMPP                                                                   #
@@ -463,14 +458,12 @@ class JabberBot(object):
   def _muc_join_success(self,room):
     """execute callbacks on successfull MUC join"""
     
-    for func in self.muc_join_succ_cmds.values():
-      func(room)
+    self.__run_hooks('mucs')
 
   def _muc_join_failure(self,room,error):
     """execute callbacks on successfull MUC join"""
     
-    for func in self.muc_join_fail_cmds.values():
-      func(room,error)
+    self.__run_hooks('mucf')
 
   def muc_rejoin(self,room):
     """Rejoin the last joined room"""
@@ -776,8 +769,7 @@ class JabberBot(object):
         presence.getStatus()
 
     # run plugin hooks
-    for func in self.pres_cmds.values():
-      func(presence)
+    self.__run_hooks('pres')
 
     # keep track of "real" JIDs in a MUC
     if len(self.get_current_mucs()) and jid.getStripped() in self.get_current_mucs():
@@ -906,8 +898,7 @@ class JabberBot(object):
     text = self.get_cmd(mess)
 
     # Run plugin hooks
-    for func in self.msg_cmds.values():
-      func(mess,text)
+    self.__run_hooks('msg')
     
     if text is None:
       return
@@ -935,9 +926,9 @@ class JabberBot(object):
     cmd = command.lower()
     self.log.debug("*** cmd = %s" % cmd)
 
-    if cmd in self.commands:
+    if cmd in self.hooks['chat']:
         try:
-          reply = self.commands[cmd](mess, args)
+          reply = self.hooks['chat'][cmd](mess, args)
         except Exception, e:
           self.log.exception('An error happened while processing '\
             'a message ("%s") from %s: %s"' %
@@ -1010,7 +1001,7 @@ class JabberBot(object):
       usage = '\n'.join(sorted([
         '%s: %s' % (name, (command.__doc__ or \
           '(undocumented)').strip().split('\n', 1)[0])
-        for (name, command) in self.commands.iteritems() \
+        for (name, command) in self.hooks['chat'].iteritems() \
           if name != 'help' \
           and not command._jabberbot_command_hidden
       ]))
@@ -1019,8 +1010,8 @@ class JabberBot(object):
     else:
       description = ''
       args = self.remove_prefix(args)
-      if args in self.commands:
-        usage = (self.commands[args].__doc__ or \
+      if args in self.hooks['chat']:
+        usage = (self.hooks['chat'][args].__doc__ or \
           'undocumented').strip()
       else:
         usage = self.MSG_HELP_UNDEFINED_COMMAND
@@ -1154,7 +1145,7 @@ class JabberBot(object):
         self.log.info('Room : %s/%s' % (room['room'],(room['nick'] if room['nick'] else self.get_default_nick())))
     else:
       self.log.info('Room : None')
-    self.log.info('Cmds : %i' % len(self.commands))
+    self.log.info('Cmds : %i' % len(self.hooks['chat']))
     self.log.info('Log  : %s' % logging.getLevelName(self.log.getEffectiveLevel()))
     self.log.info('')
     self.log.info('-'*50)
