@@ -8,7 +8,7 @@ import sys,logging,re,os,imp,inspect
 # in-project
 from jabberbot import JabberBot,botcmd
 from config import Config
-from util import load_module
+import util
 
 ################################################################################
 # Decorators                                                                   #
