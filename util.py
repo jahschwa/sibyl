@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os,requests,json
+import os,requests,json,imp
 
 def split_strip(s,sep=' '):
   """split the string into a list and strip all entries"""
