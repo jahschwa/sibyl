@@ -197,6 +197,8 @@ class JabberBot(object):
     e.g. cmd_prefix = '!' means: Type "!info" for the "info" command.
     """
 
+    self.log = logging.getLogger(__name__)
+
     self.MUC_CODES = {self.MUC_PARTED   : ('parted',None),
                       self.MUC_OK       : ('OK',None),
                       self.MUC_ERR      : ('unknown',self.log.error),
@@ -248,7 +250,6 @@ class JabberBot(object):
     self.__handlers = (handlers or [('message', self.callback_message),
           ('presence', self.callback_presence)])
 
-    self.log = logging.getLogger(__name__)
     self.catch_except = catch_except
     self.cmd_dir = os.path.abspath(cmd_dir)
     
@@ -262,24 +263,25 @@ class JabberBot(object):
 
     # Load hooks from self.cmd_dir
     self.hooks = {x:{} for x in ['chat','init','mucs','mucf','msg','pres']}
-    files = [x for x in os.listdir(self.cmd_dir) if x.endswith('.py')]
-    
+    self.__load_funcs(self,'jabberbot',silent=True)
+
+    files = [x for x in os.listdir(self.cmd_dir) if x.endswith('.py')]    
     for f in files:
       f = f.split('.')[0]
       mod = self.__load_module(f,self.cmd_dir)
       self.__load_funcs(mod,f)
-    self.__load_funcs(self,'jabberbot')
 
     # Run plugin init hooks
     self.__run_hooks('init')
 
-  def __load_funcs(self,mod,fil):
+  def __load_funcs(self,mod,fil,silent=False):
     
-    for (name,func) in inspect.getmembers(mod,inspect.isfunction):
+    for (name,func) in inspect.getmembers(mod,inspect.isroutine):
       
       if getattr(func,'_jabberbot_dec_func',False):
         setattr(self,name,self.__bind(func))
-        self.log.debug('Registered function: %s.%s' % (fil,name))
+        if not silent:
+          self.log.debug('Registered function: %s.%s' % (fil,name))
 
       for (hook,dic) in self.hooks.items():
         if getattr(func,'_jabberbot_dec_'+hook,False):
@@ -289,25 +291,26 @@ class JabberBot(object):
             fname = fil+'.'+name
             s = 'Registered %s hook: %s.%s' % (hook,fil,name)
           dic[fname] = self.__bind(func)
-          self.log.debug(s)
+          if not silent:
+            self.log.debug(s)
 
-def load_module(name,path):
+  def __load_module(self,name,path):
 
-  found = imp.find_module(name,[path])
-  try:
-    mod = imp.load_module(name,*found)
-  finally:
-    found[0].close()
+    found = imp.find_module(name,[path])
+    try:
+      return imp.load_module(name,*found)
+    finally:
+      found[0].close()
 
   def __bind(self,func):
 
     return func.__get__(self,JabberBot)
 
-  def __run_hooks(self,hook):
+  def __run_hooks(self,hook,*args):
     
     for (name,func) in self.hooks[hook].items():
       self.log.debug('Running %s hook: %s' % (hook,name))
-      func()
+      func(*args)
 
 ################################################################################
 # Basic XMPP                                                                   #
@@ -465,12 +468,12 @@ def load_module(name,path):
   def _muc_join_success(self,room):
     """execute callbacks on successfull MUC join"""
     
-    self.__run_hooks('mucs')
+    self.__run_hooks('mucs',room)
 
   def _muc_join_failure(self,room,error):
     """execute callbacks on successfull MUC join"""
     
-    self.__run_hooks('mucf')
+    self.__run_hooks('mucf',room,error)
 
   def muc_rejoin(self,room):
     """Rejoin the last joined room"""
@@ -776,7 +779,7 @@ def load_module(name,path):
         presence.getStatus()
 
     # run plugin hooks
-    self.__run_hooks('pres')
+    self.__run_hooks('pres',presence)
 
     # keep track of "real" JIDs in a MUC
     if len(self.get_current_mucs()) and jid.getStripped() in self.get_current_mucs():
@@ -905,7 +908,7 @@ def load_module(name,path):
     text = self.get_cmd(mess)
 
     # Run plugin hooks
-    self.__run_hooks('msg')
+    self.__run_hooks('msg',mess,text)
     
     if text is None:
       return

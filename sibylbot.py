@@ -62,17 +62,15 @@ class SibylBot(JabberBot):
     self.log.info('')
     self.log.critical('Reading config file "%s"...' % self.conf_file)
 
-    if result!=Config.SUCCESS:
-      if result==Config.FAIL:
-        self.log.critical('Unable to parse config file; exiting')
-      else:
-        self.log.critical('Parsed config file with warnings')
+    if result==Config.FAIL:
+      self.log.critical('Unable to parse config file; exiting')
+    elif result==Config.ERRORS:
+      self.log.critical('Parsed config file with warnings')
       self.log.info('')
     
     # log config errors and check for success
     self.conf.process_log()
     if result==Config.FAIL:
-      print ('Unable to parse config file "%s"; see "%s" for details' % (self.conf_file,self.log_file))
       sys.exit(1)
     self.log.info('Success parsing config file')
 
@@ -82,6 +80,7 @@ class SibylBot(JabberBot):
         debug = self.debug,
         rooms = self.rooms,
         privatedomain = self.priv_domain,
+        cmd_dir = self.cmd_dir,
         cmd_prefix = self.cmd_prefix,
         port = self.port,
         ping_freq = self.ping_freq,
@@ -91,7 +90,7 @@ class SibylBot(JabberBot):
         catch_except = self.catch_except)
 
     # init redo command
-    bot.last_cmd = {}
+    self.last_cmd = {}
 
     # variable to retain MUC JID for certain command purposes
     self.last_jid = None
@@ -162,22 +161,22 @@ class SibylBot(JabberBot):
 # Commands                                                                     #
 ################################################################################
 
-@botcmd
-def redo(bot,mess,args):
-  """redo last command - redo [args]"""
+  @botcmd
+  def redo(bot,mess,args):
+    """redo last command - redo [args]"""
+  
+    # this is a dummy function so it gets displayed in the help command
+    # the real logic is at the end of callback_message()
+    return
 
-  # this is a dummy function so it gets displayed in the help command
-  # the real logic is at the end of callback_message()
-  return
+  @botcmd
+  def git(bot,mess,args):
+    """return a link to the github page"""
 
-@botcmd
-def git(bot,mess,args):
-  """return a link to the github page"""
+    return 'https://github.com/TheSchwa/sibyl'
 
-  return 'https://github.com/TheSchwa/sibyl'
+  @botcmd
+  def hello(bot,mess,args):
+    """reply if someone says hello"""
 
-@botcmd
-def hello(bot,mess,args):
-  """reply if someone says hello"""
-
-  return 'Hello world!'
+    return 'Hello world!'

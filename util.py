@@ -210,6 +210,6 @@ def load_module(name,path):
 
   found = imp.find_module(name,[path])
   try:
-    mod = imp.load_module(name,*found)
+    return imp.load_module(name,*found)
   finally:
     found[0].close()

@@ -48,13 +48,13 @@ def parse_lib(self,opt,val):
   """parse the lib into a list"""
 
   val = val.replace('\n','')
-  entries = util.split_strip(val,';')
+  entries = split_strip(val,';')
   lib = []
   for entry in entries:
     if entry=='':
       continue
     if ',' in entry:
-      params = util.split_strip(entry,',')
+      params = split_strip(entry,',')
       item = {'server':params[0], 'share':params[1], 'username':None, 'password':None}
       if len(params)>2:
         item['username'] = params[2]

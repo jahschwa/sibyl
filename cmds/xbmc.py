@@ -144,7 +144,7 @@ def info(bot,mess,args):
     status = 'paused'
 
   playlists = ['Audio','Video','Picture']
-  return playlists[pid]+' '+status+' at '+time2str(current)+'/'+time2str(total)+' - "'+name+'"'
+  return playlists[pid]+' '+status+' at '+util.time2str(current)+'/'+util.time2str(total)+' - "'+name+'"'
 
 @botcmd
 def play(bot,mess,args):
@@ -327,7 +327,7 @@ def stream(bot,mess,args):
         tim['minutes'] = int(sec/60)
         sec -= 60*tim['minutes']
       tim['seconds'] = sec
-      tim = time2str(tim)
+      tim = util.time2str(tim)
 
     # remove feature, playlist, etc info from end and get vid
     if '&' in msg:
@@ -337,7 +337,7 @@ def stream(bot,mess,args):
     # retrieve video info from webpage
     html = requests.get('http://youtube.com/watch?v='+vid).text
     title = html[html.find('<title>')+7:html.find(' - YouTube</title>')]
-    title = cleanhtml(title)
+    title = util.cleanhtml(title)
     channel = html.find('class="yt-user-info"')
     start = html.find('>',channel+1)
     start = html.find('>',start+1)+1
@@ -415,7 +415,7 @@ def random(bot,mess,args):
   if args=='':
     _matches = bot.lib_audio_file
   else:
-    _matches = matches(bot.lib_audio_file,name)
+    _matches = util.matches(bot.lib_audio_file,name)
 
   if len(_matches)==0:
     return 'Found 0 matches'
@@ -485,13 +485,13 @@ def resume(bot,mess,args):
 def xbmc(bot,method,params=None):
   """wrapper method to always provide IP to static method"""
 
-  return xbmc(bot.rpi_ip,method,params,bot.xbmc_user,bot.xbmc_pass)
+  return util.xbmc(bot.rpi_ip,method,params,bot.xbmc_user,bot.xbmc_pass)
 
 @botfunc
 def xbmc_active_player(bot):
   """wrapper method to always provide IP to static method"""
 
-  return xbmc_active_player(bot.rpi_ip,bot.xbmc_user,bot.xbmc_pass)
+  return util.xbmc_active_player(bot.rpi_ip,bot.xbmc_user,bot.xbmc_pass)
 
 @botfunc
 def playpause(bot,target):
@@ -528,17 +528,17 @@ def files(bot,args,dirs,pid):
     name = args[:-1]
 
   # find matches and respond if len(matches)!=1
-  _matches = matches(dirs,name)
+  _matches = util.matches(dirs,name)
 
   if len(_matches)==0:
     return 'Found 0 matches'
 
   # default to top dir if every match is a sub dir
-  _matches = reducetree(_matches)
+  _matches = util.reducetree(_matches)
 
   if len(_matches)>1:
     if bot.max_matches<1 or len(_matches)<=bot.max_matches:
-      return 'Found '+str(len(_matches))+' matches: '+list2str(_matches)
+      return 'Found '+str(len(_matches))+' matches: '+util.list2str(_matches)
     else:
       return 'Found '+str(len(_matches))+' matches'
 
@@ -567,14 +567,14 @@ def file(bot,args,dirs):
   name = args.split(' ')
 
   # find matches and respond if len(matches)!=1
-  _matches = matches(dirs,name)
+  _matches = util.matches(dirs,name)
 
   if len(_matches)==0:
     return 'Found 0 matches'
 
   if len(_matches)>1:
     if bot.max_matches<1 or len(_matches)<=bot.max_matches:
-      return 'Found '+str(len(_matches))+' matches: '+list2str(_matches)
+      return 'Found '+str(len(_matches))+' matches: '+util.list2str(_matches)
     else:
       return 'Found '+str(len(_matches))+' matches'
 

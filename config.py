@@ -160,7 +160,7 @@ class Config(object):
         if func:
           try:
             opts[opt] = func(opt,opts[opt])
-          except:
+          except Exception as e:
             self.log('warning','Error parsing "%s"; using default' % opt)
             del opts[opt]
 
