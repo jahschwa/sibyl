@@ -96,7 +96,7 @@ def library(bot,mess,args):
     bot.lib_audio_dir = d['lib_audio_dir']
     bot.lib_audio_file = d['lib_audio_file']
 
-    n = len(bot.lib_audio_dir)+len(bot.lib_video_dir)
+    n = len(bot.lib_audio_file)+len(bot.lib_video_file)
     s = 'Library loaded from "'+bot.lib_file+'" with '+str(n)+' files'
     bot.log.info(s)
     return s

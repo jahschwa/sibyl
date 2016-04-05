@@ -60,6 +60,11 @@ class SibylBot(JabberBot):
     self.log.info('')
     self.log.critical('SibylBot starting...')
     self.log.info('')
+    self.log.info('Conf : '+os.path.abspath(self.conf_file))
+    self.log.info('PID  : %s' % os.getpid())
+    self.log.info('')
+    self.log.info('-'*50)
+    self.log.info('')
     self.log.critical('Reading config file "%s"...' % self.conf_file)
 
     if result==Config.FAIL:
@@ -110,7 +115,7 @@ class SibylBot(JabberBot):
     self.last_jid = usr
     # convert MUC JIDs to real JIDs
     if (mess.getType()=='groupchat') and (usr in self.real_jids):
-      usr = self.real_jids[usr]
+      usr = str(self.real_jids[usr])
 
     if cmd:
 
@@ -152,7 +157,7 @@ class SibylBot(JabberBot):
           if self.only_direct and not cmd.startswith(nick):
             cmd = (nick+' '+cmd)
         mess.setBody(cmd)
-      else:
+      elif cmd_name!='last':
         self.last_cmd[frm.getStripped()] = cmd
 
     return super(SibylBot,self).callback_message(conn,mess)

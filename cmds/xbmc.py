@@ -4,7 +4,7 @@ import random
 
 from sibyl.jabberbot import botcmd,botfunc,botinit
 from sibyl.sibylbot import botconf
-from sibyl.util import *
+import sibyl.util as util
 
 @botconf
 def conf(bot):

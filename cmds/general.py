@@ -11,7 +11,7 @@ from sibyl.util import getcell
 def last(bot,mess,args):
   """display last command (from any chat)"""
 
-  return bot.last_cmd
+  return bot.last_cmd.get(mess.getFrom().getStripped(),'No past commands')
 
 @botcmd
 def echo(bot,mess,args):
@@ -121,8 +121,11 @@ def wiki(bot,mess,args):
   return unicode(title)+' - '+unicode(url)+'\n'+unicode(text)
 
 @botcmd
-def logging(bot,mess,args):
+def log(bot,mess,args):
   """set the log level - log (critical|error|warning|info|debug|clear)"""
+
+  if args=='':
+    return 'Current level: '+logging.getLevelName(bot.log.getEffectiveLevel()).lower()
 
   if args=='clear':
     with open(bot.log_file,'w') as f:
@@ -134,9 +137,7 @@ def logging(bot,mess,args):
              'info'     : logging.INFO,
              'debug'    : logging.DEBUG})
 
-  level = 'warning'
-  if args in levels.keys():
-    level = args
+  level = levels.get(args,'info')
 
   bot.log.setLevel(levels[level])
   return 'Logging level set to: '+level

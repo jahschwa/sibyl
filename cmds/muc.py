@@ -15,7 +15,7 @@ def all(bot,mess,args):
     return "I'm not in any rooms!"
 
   room = bot.last_muc
-  frm = bot.last_jid
+  frm = mess.getFrom()
   cmd = args.split(' ')
   if cmd[0] in bot.get_current_mucs():
     room = cmd[0]
@@ -38,6 +38,7 @@ def all(bot,mess,args):
   bot.say(None,s+'[ '+args+' ] '+frm)
 
 @botcmd
+@botfunc
 def say(bot,mess,args):
   """if in a MUC, say this in it"""
 
@@ -56,6 +57,7 @@ def say(bot,mess,args):
   bot.send_message(msg)
 
 @botcmd
+@botfunc
 def join(bot,mess,args):
   """join a MUC - [roomJID nick pass]"""
 
@@ -97,7 +99,7 @@ def leave(bot,mess,args):
     return 'I am not in any rooms!'
 
   room = bot.last_muc
-  frm = bot.last_jid
+  frm = mess.getFrom()
   cmd = args.split(' ')
   if len(cmd)>0 and cmd[0].strip():
     if cmd[0] in bot.get_active_mucs():
