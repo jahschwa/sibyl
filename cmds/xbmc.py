@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import random
+import random,requests
 
 from sibyl.jabberbot import botcmd,botfunc,botinit
 from sibyl.sibylbot import botconf
