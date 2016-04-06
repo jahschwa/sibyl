@@ -57,11 +57,12 @@ __license__ = 'GNU General Public License version 3 or later'
 # Decorators                                                                   #
 ################################################################################
 
-def botcmd(func,name=None):
+def botcmd(func,name=None,hidden=False):
   """Decorator for bot chat commands"""
 
   setattr(func, '_jabberbot_dec_chat', True)
   setattr(func, '_jabberbot_dec_chat_name', name or func.__name__)
+  setattr(func, '_jabberbot_dec_chat_hidden', hidden)
   return func
 
 def botfunc(func):
@@ -1013,7 +1014,7 @@ class JabberBot(object):
           '(undocumented)').strip().split('\n', 1)[0])
         for (name, command) in self.hooks['chat'].iteritems() \
           if name != 'help' \
-          and not command._jabberbot_command_hidden
+          and not command._jabberbot_dec_chat_hidden
       ]))
       usage = '\n\n' + '\n\n'.join(filter(None,
         [usage, self.MSG_HELP_TAIL % {'helpcommand': 'help'}]))
