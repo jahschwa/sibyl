@@ -1,22 +1,18 @@
 OVERHAUL list:
 
  - abstract out chat protocol (some sort of plugin framework)
- - create actual config file and processing
- - framework for custom functions
- - possibly revisit BW-list
  - redo DOCS following config rework
  - review logging levels for everything
 
 TODO list:
 
- - add list support for user and cmd in bw_list
+ - make run.py read config file from command line
+ - comment everything
  - add ping command
  - add isup command
  - add remind command
  - add tell command
  - add stalk command
- - make redo command per chat instead of global
- - edit example config to include note_file
  - add subtitle logic for files without them
 
 MAYBE list:
