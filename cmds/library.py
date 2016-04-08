@@ -16,14 +16,14 @@ def conf(bot):
             'default' : 'sibyl_lib.pickle',
             'valid' : bot.conf.valid_file},
           {'name' : 'max_matches',
-            'def' : 10,
+            'default' : 10,
             'parse' : bot.conf.parse_int},
           {'name' : 'audio_dirs',
-            'def' : [],
+            'default' : [],
             'valid' : valid_lib,
             'parse' : parse_lib},
           {'name' : 'video_dirs',
-            'def' : [],
+            'default' : [],
             'valid' : valid_lib,
             'parse' : parse_lib}]
 
