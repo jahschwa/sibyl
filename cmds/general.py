@@ -138,6 +138,5 @@ def log(bot,mess,args):
              'debug'    : logging.DEBUG})
 
   level = levels.get(args,'info')
-
-  bot.log.setLevel(levels[level])
+  bot.log.setLevel(level)
   return 'Logging level set to: '+level
