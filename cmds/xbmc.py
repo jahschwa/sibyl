@@ -211,6 +211,7 @@ def jump(bot,mess,args):
     return 'Playlist position must be an integer greater than 0'
 
 @botcmd
+@botfunc
 def seek(bot,mess,args):
   """go to a specific time - seek [hh:]mm:ss"""
 
