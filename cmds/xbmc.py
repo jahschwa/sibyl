@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import random
+import random,requests
 
 from sibyl.jabberbot import botcmd,botfunc,botinit
 from sibyl.sibylbot import botconf
@@ -211,6 +211,7 @@ def jump(bot,mess,args):
     return 'Playlist position must be an integer greater than 0'
 
 @botcmd
+@botfunc
 def seek(bot,mess,args):
   """go to a specific time - seek [hh:]mm:ss"""
 
