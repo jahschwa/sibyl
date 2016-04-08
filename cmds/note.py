@@ -21,8 +21,8 @@ def init(bot):
   if os.path.isfile(bot.note_file):
     bot.notes = note_parse(bot)
   else:
-    with open(self.note_file,'w') as f:
-      self.notes = []
+    with open(bot.note_file,'w') as f:
+      bot.notes = []
 
 @botcmd
 def note(bot,mess,args):
