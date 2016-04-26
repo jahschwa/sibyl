@@ -378,6 +378,7 @@ def stream(bot,mess,args):
     return 'Unsupported URL'
 
 @botcmd
+@botfunc
 def videos(bot,mess,args):
   """search and open a folder as a playlist - videos [include -exclude] [track#]"""
 
@@ -390,6 +391,7 @@ def video(bot,mess,args):
   return bot.file(args,bot.lib_video_file)
 
 @botcmd
+@botfunc
 def audios(bot,mess,args):
   """search and open a folder as a playlist - audios [include -exclude] [track#]"""
 
@@ -402,6 +404,7 @@ def audio(bot,mess,args):
   return bot.file(args,bot.lib_audio_file)
 
 @botcmd
+@botfunc
 def fullscreen(bot,mess,args):
   """toggle fullscreen"""
 
