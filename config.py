@@ -49,6 +49,7 @@ class Config(object):
 ('cmd_prefix',  (None,               False,  None,             None)),
 ('port',        (5222,               False,  None,             self.parse_int)),
 ('ping_freq',   (0,                  False,  None,             self.parse_int)),
+('except_reply',(False,              False,  None,             self.parse_bool)),
 ('ping_timeout',(3,                  False,  None,             self.parse_int)),
 ('only_direct', (True,               False,  None,             self.parse_bool)),
 ('recon_wait',  (60,                 False,  None,             self.parse_int)),

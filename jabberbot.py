@@ -163,7 +163,7 @@ class JabberBot(object):
 
   def __init__(self, username, password, res=None, debug=False, rooms=None,
       privatedomain=True, acceptownmsgs=False, handlers=None, cmd_dir='cmds',
-      cmd_prefix=None, server=None, port=5222, ping_freq=300,
+      cmd_prefix=None, server=None, port=5222, ping_freq=300, except_reply=False,
       ping_timeout=3, only_direct=True, reconnect_wait=60, catch_except=True):
     """Initializes the jabber bot and sets up commands.
 
@@ -945,6 +945,8 @@ class JabberBot(object):
             'a message ("%s") from %s: %s"' %
             (text, jid, traceback.format_exc(e)))
           reply = self.MSG_ERROR_OCCURRED
+          if self.except_reply:
+            reply = traceback.format_exc(e).split('\n')[-2]
         if reply:
           self.send_simple_reply(mess, reply, private)
     else:
