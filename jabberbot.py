@@ -57,13 +57,19 @@ __license__ = 'GNU General Public License version 3 or later'
 # Decorators                                                                   #
 ################################################################################
 
-def botcmd(func,name=None,hidden=False):
+def botcmd(*args,**kwargs):
   """Decorator for bot chat commands"""
 
-  setattr(func, '_jabberbot_dec_chat', True)
-  setattr(func, '_jabberbot_dec_chat_name', name or func.__name__)
-  setattr(func, '_jabberbot_dec_chat_hidden', hidden)
-  return func
+  def decorate(func,name=None,hidden=False):
+    setattr(func, '_jabberbot_dec_chat', True)
+    setattr(func, '_jabberbot_dec_chat_name', name or func.__name__)
+    setattr(func, '_jabberbot_dec_chat_hidden', hidden)
+    return func
+
+  if len(args):
+    return decorate(args[0],**kwargs)
+  else:
+    return lambda func: decorate(func,**kwargs)
 
 def botfunc(func):
   """Decorator for bot helper functions"""

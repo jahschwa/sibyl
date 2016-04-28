@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import random,requests
+import random,requests,json
 
 from sibyl.jabberbot import botcmd,botfunc,botinit
 from sibyl.sibylbot import botconf
@@ -440,6 +440,22 @@ def random(bot,mess,args):
   bot.run_cmd('fullscreen','on')
 
   return 'Playing "'+_matches[rand]+'"'
+
+@botcmd(name='xbmc')
+def xbmc_chat(bot,mess,args):
+  """send raw JSON request - xbmc method [params]"""
+
+  if len(args)==0:
+    return 'http://http://kodi.wiki/view/JSON-RPC_API/v6'
+  args = args.split(' ')
+  params = None
+  if len(args)>1:
+    params = json.loads(' '.join(args[1:]))
+    
+  result = bot.xbmc(args[0],params)
+  if 'error' in result:
+    return str(result['error'])
+  return str(result['result'])
 
 @botfunc
 def xbmc(bot,method,params=None):
