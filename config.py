@@ -138,7 +138,7 @@ class Config(object):
       lines.append(val)
     else:
       del lines[start]
-      while not self.is_opt_line(lines[start]):
+      while (start<len(lines)) and (not self.is_opt_line(lines[start])):
         del lines[start]
       lines.insert(start,val)
     with open(self.bot.conf_file,'w') as f:
