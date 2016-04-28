@@ -19,7 +19,7 @@ def init(bot):
   """initialize bookmark dict and last played str for bookmarking"""
   
   if os.path.isfile(bot.bm_file):
-    bot.bm_store = bot.bm_parse()
+    bot.bm_store = bm_parse(bot)
   else:
     with open(bot.bm_file,'w') as f:
       bot.bm_store = {}
@@ -39,7 +39,7 @@ def bookmark(bot,mess,args):
     name = bot.last_played[1]
     args = args[1:]
     if len(args)>0:
-      name = args[0]
+      name = str(args[0])
 
     # get info for bookmark
     pid = bot.last_played[0]
@@ -53,13 +53,13 @@ def bookmark(bot,mess,args):
 
     # note that the position is stored 0-indexed
     bot.bm_store[name] = {'path':path,'add':add,'time':t,'pid':pid,'pos':pos,'file':fil}
-    bot.bm_update(name,bot.bm_store[name])
+    bm_update(bot,name,bot.bm_store[name])
     return 'Bookmark added for "'+name+'" item '+str(pos+1)+' at '+t
 
   elif args[0]=='remove':
     if len(args)==1:
       return 'To remove all bookmarks use "bookmarks remove *"'
-    if not bot.bm_remove(args[1]):
+    if not bm_remove(bot,args[1]):
       return 'Bookmark "'+name+'" not found'
     return
 
@@ -86,11 +86,60 @@ def bookmark(bot,mess,args):
     t = item['time']
     fil = item['file']
     entries.append('"'+m+'" at item '+str(pos+1)+' and time '+t+' which is "'+fil+'"')
+  if len(entries)==0:
+    return 'Found 0 bookmarks'
   if len(entries)==1:
     return 'Found 1 bookmark: '+str(entries[0])
   return 'Found '+str(len(entries))+' bookmarks: '+list2str(entries)
 
-@botfunc
+@botcmd
+def resume(bot,mess,args):
+  """resume playing a playlist - resume [name] [next]"""
+
+  # if there are no bookmarks return
+  if len(bot.bm_store)==0:
+    return 'No bookmarks'
+
+  # check for "next" as last arg
+  opts = args.strip().split(' ')
+  start_next = (opts[-1]=='next')
+  if start_next:
+    opts = opts[:-1]
+    args = ' '.join(opts)
+
+  # check if a name was passed
+  name = bm_recent(bot)
+  if len(args)>0:
+    name = args
+
+  # get info from bookmark
+  if name not in bot.bm_store.keys():
+    return 'No bookmark named "'+name+'"'
+  item = bot.bm_store[name]
+  path = item['path']
+  pid = item['pid']
+  pos = item['pos']
+  t = item['time']
+
+  # open the directory as a playlist
+  if start_next:
+    pos += 1
+
+  # note that the user-facing functions assume 1-indexing
+  args = '"'+path+'" '+str(pos+1)
+  if pid==0:
+    result = bot.audios(None,args)
+  elif pid==1:
+    result = bot.videos(None,args)
+  else:
+    return 'Error in bookmark for "'+name+'": invalid pid'+str(pid)
+
+  if not start_next:
+    bot.seek(None,t)
+    result += ' at '+t
+
+  return result
+
 def bm_parse(bot):
   """read the bm_file into a dict"""
 
@@ -100,23 +149,20 @@ def bm_parse(bot):
 
   # tab-separated each line is: name path pid position file time added
   for l in lines:
-    (name,props) = bot.bm_unformat(l)
+    (name,props) = bm_unformat(l)
     d[name] = props
 
   bot.log.info('Parsed '+str(len(d))+' bookmarks from "'+bot.bm_file+'"')
-  bot.bm_store = d
   return d
 
-@botfunc
 def bm_update(bot,name,props):
   """add or modify the entry for name with props in dict and file
   returns True if name was modified or False if name was added"""
 
-  result = bot.bm_remove(name)
-  bot.bm_add(name,props)
+  result = bm_remove(bot,name)
+  bm_add(bot,name,props)
   return result
 
-@botfunc
 def bm_add(bot,name,props):
   """add the entry for name with props to dict and file. Note
   that this function could add duplicates without proper checking"""
@@ -125,9 +171,8 @@ def bm_add(bot,name,props):
 
   # the bookmark file should always end in a newline
   with open(bot.bm_file,'a') as f:
-    f.write(bot.bm_format(name,props)+'\n')
+    f.write(bm_format(name,props)+'\n')
 
-@botfunc
 def bm_remove(bot,name):
   """remove the entry for name from dict and file if it exists
   returns False if name was not found or True if name was removed"""
@@ -156,8 +201,7 @@ def bm_remove(bot,name):
   # return True if name was removed
   return True
 
-@botfunc
-def bm_format(bot,name,props):
+def bm_format(name,props):
   """return props as a string formatted for the bm_file"""
 
   order = ['path','pid','pos','file','time','add']
@@ -165,8 +209,7 @@ def bm_format(bot,name,props):
     name += ('\t'+str(props[prop]))
   return name
 
-@botfunc
-def bm_unformat(bot,line):
+def bm_unformat(line):
   """return the name and props from the line as a tuple"""
 
   line = line.strip()
@@ -179,7 +222,6 @@ def bm_unformat(bot,line):
   # name is str, props is dict
   return (name,props)
 
-@botfunc
 def bm_recent(bot):
   """return the most recent bookmark from the dict"""
 

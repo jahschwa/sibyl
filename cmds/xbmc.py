@@ -437,54 +437,6 @@ def random(bot,mess,args):
 
   return 'Playing "'+_matches[rand]+'"'
 
-@botcmd
-def resume(bot,mess,args):
-  """resume playing a playlist - resume [name] [next]"""
-
-  # if there are no bookmarks return
-  if len(bot.bm_store)==0:
-    return 'No bookmarks'
-
-  # check for "next" as last arg
-  opts = args.strip().split(' ')
-  start_next = (opts[-1]=='next')
-  if start_next:
-    opts = opts[:-1]
-    args = ' '.join(opts)
-
-  # check if a name was passed
-  name = bot.bm_recent()
-  if len(args)>0:
-    name = args
-
-  # get info from bookmark
-  if name not in bot.bm_store.keys():
-    return 'No bookmark named "'+name+'"'
-  item = bot.bm_store[name]
-  path = item['path']
-  pid = item['pid']
-  pos = item['pos']
-  t = item['time']
-
-  # open the directory as a playlist
-  if start_next:
-    pos += 1
-
-  # note that the user-facing functions assume 1-indexing
-  args = '"'+path+'" '+str(pos+1)
-  if pid==0:
-    result = bot.audios(None,args)
-  elif pid==1:
-    result = bot.videos(None,args)
-  else:
-    return 'Error in bookmark for "'+name+'": invalid pid'+str(pid)
-
-  if not start_next:
-    bot.seek(None,t)
-    result += ' at '+t
-
-  return result
-
 @botfunc
 def xbmc(bot,method,params=None):
   """wrapper method to always provide IP to static method"""

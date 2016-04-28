@@ -196,6 +196,15 @@ class Config(object):
   def valid_ip(self,s):
     """return True if s is a valid ip"""
 
+    # account for port
+    if ':' in s:
+      s = s.split(':')
+      if len(s)>2:
+        return False
+      if not s[1].isdigit():
+        return False
+      s = s[0]
+    
     try:
       socket.inet_aton(s)
       return True
