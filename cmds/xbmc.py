@@ -404,9 +404,15 @@ def audio(bot,mess,args):
 
 @botcmd
 def fullscreen(bot,mess,args):
-  """toggle fullscreen"""
+  """control fullscreen - fullscreen [toggle|on|off]"""
 
-  bot.xbmc('GUI.SetFullscreen',{'fullscreen':'toggle'})
+  args = args.lower()
+  opt = 'toggle'
+  if args=='on':
+    opt = True
+  if args=='off':
+    opt = False
+  bot.xbmc('GUI.SetFullscreen',{'fullscreen':opt})
 
 @botcmd
 def random(bot,mess,args):
@@ -431,7 +437,7 @@ def random(bot,mess,args):
     bot.log.error(s)
     return s
 
-  bot.xbmc('GUI.SetFullscreen',{'fullscreen':True})
+  bot.run_cmd('fullscreen','on')
 
   return 'Playing "'+_matches[rand]+'"'
 
@@ -505,7 +511,7 @@ def files(bot,args,dirs,pid):
     return s
 
   bot.xbmc('Player.Open',{'item':{'playlistid':pid,'position':num}})
-  bot.xbmc('GUI.SetFullscreen',{'fullscreen':True})
+  bot.run_cmd('fullscreen','on')
 
   # set last_played for bookmarking
   bot.last_played = (pid,_matches[0])
@@ -536,7 +542,7 @@ def _file(bot,args,dirs):
     bot.log.error(s)
     return s
 
-  bot.xbmc('GUI.SetFullscreen',{'fullscreen':True})
+  bot.run_cmd('fullscreen','on')
 
   # clear last_played
   bot.last_played = None
