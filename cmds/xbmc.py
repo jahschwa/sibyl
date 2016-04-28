@@ -275,6 +275,7 @@ def hop(bot,mess,args):
 def stream(bot,mess,args):
   """stream from [YouTube, Twitch (Live)] - stream url"""
 
+  agent = {'User-agent':'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:46.0) Gecko/20100101 Firefox/46.0'}
   msg = args
 
   # remove http:// https:// www. from start
@@ -336,7 +337,7 @@ def stream(bot,mess,args):
     vid = msg[msg.find('watch?v=')+8:]
 
     # retrieve video info from webpage
-    html = requests.get('http://youtube.com/watch?v='+vid).text
+    html = requests.get('http://youtube.com/watch?v='+vid,headers=agent).text
     title = html[html.find('<title>')+7:html.find(' - YouTube</title>')]
     title = util.cleanhtml(title)
     channel = html.find('class="yt-user-info"')
@@ -359,7 +360,7 @@ def stream(bot,mess,args):
   elif 'twitch' in msg.lower():
 
     vid = msg[msg.find('twitch.tv/')+10:]
-    html = requests.get('http://twitch.tv/'+vid).text
+    html = requests.get('http://twitch.tv/'+vid,headers=agent).text
 
     stream = html.find("property='og:title'")
     stop = html.rfind("'",0,stream)
