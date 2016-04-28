@@ -150,13 +150,13 @@ def info(bot,mess,args):
 def play(bot,mess,args):
   """if xbmc is paused, resume playing"""
 
-  bot.playpause(0)
+  playpause(bot,0)
 
 @botcmd
 def pause(bot,mess,args):
   """if xbmc is playing, pause"""
 
-  bot.playpause(1)
+  playpause(bot,1)
 
 @botcmd
 def stop(bot,mess,args):
@@ -211,7 +211,6 @@ def jump(bot,mess,args):
     return 'Playlist position must be an integer greater than 0'
 
 @botcmd
-@botfunc
 def seek(bot,mess,args):
   """go to a specific time - seek [hh:]mm:ss"""
 
@@ -349,7 +348,7 @@ def stream(bot,mess,args):
     # send xbmc request and seek if given custom start time
     bot.xbmc('Player.Open',{'item':{'file':'plugin://plugin.video.youtube/play/?video_id='+vid}})
     if tim:
-      bot.seek(None,tim)
+      bot.run_cmd('seek',tim)
 
     # respond to the user with video info
     s = 'Streaming "'+title+'" by "'+channel+'" from YouTube'
@@ -359,7 +358,8 @@ def stream(bot,mess,args):
 
   elif 'twitch' in msg.lower():
 
-    vid = msg[msg.find('twitch.tv/')+10:]
+    url = msg[msg.find('twitch.tv/')+10:]
+    vid = url.split('/')[0]
     html = requests.get('http://twitch.tv/'+vid,headers=agent).text
 
     stream = html.find("property='og:title'")
@@ -372,40 +372,37 @@ def stream(bot,mess,args):
     start = html.rfind("'",0,stop)+1
     title = html[start:stop]
 
-    response = bot.xbmc('Player.Open',{'item':{'file':'plugin://plugin.video.twitch/playLive/'+vid}})
+    response = bot.xbmc('Player.Open',{'item':{'file':'plugin://plugin.video.twitch/playLive/'+url}})
     return 'Streaming "'+title+'" by "'+stream+'" from Twitch Live'
 
   else:
     return 'Unsupported URL'
 
 @botcmd
-@botfunc
 def videos(bot,mess,args):
   """search and open a folder as a playlist - videos [include -exclude] [track#]"""
 
-  return bot.files(args,bot.lib_video_dir,1)
+  return files(bot,args,bot.lib_video_dir,1)
 
 @botcmd
 def video(bot,mess,args):
   """search and play a single video - video [include -exclude]"""
 
-  return bot.file(args,bot.lib_video_file)
+  return _file(bot,args,bot.lib_video_file)
 
 @botcmd
-@botfunc
 def audios(bot,mess,args):
   """search and open a folder as a playlist - audios [include -exclude] [track#]"""
 
-  return bot.files(args,bot.lib_audio_dir,0)
+  return files(bot,args,bot.lib_audio_dir,0)
 
 @botcmd
 def audio(bot,mess,args):
   """search and play a single audio file - audio [include -exclude]"""
 
-  return bot.file(args,bot.lib_audio_file)
+  return _file(bot,args,bot.lib_audio_file)
 
 @botcmd
-@botfunc
 def fullscreen(bot,mess,args):
   """toggle fullscreen"""
 
@@ -450,7 +447,6 @@ def xbmc_active_player(bot):
 
   return util.xbmc_active_player(bot.rpi_ip,bot.xbmc_user,bot.xbmc_pass)
 
-@botfunc
 def playpause(bot,target):
   """helper function for play() and pause()"""
 
@@ -465,7 +461,6 @@ def playpause(bot,target):
   if speed==target:
     bot.xbmc('Player.PlayPause',{"playerid":pid})
 
-@botfunc
 def files(bot,args,dirs,pid):
   """helper function for videos() and audios()"""
 
@@ -517,8 +512,7 @@ def files(bot,args,dirs,pid):
 
   return 'Playlist from "'+_matches[0]+'" starting with #'+str(num+1)
 
-@botfunc
-def file(bot,args,dirs):
+def _file(bot,args,dirs):
   """helper function for video() and audio()"""
 
   name = args.split(' ')

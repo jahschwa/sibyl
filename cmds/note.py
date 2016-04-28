@@ -60,7 +60,7 @@ def note(bot,mess,args):
     if args[1]=='':
       return 'Note body cannot be blank'
     bot.notes.append(args[1])
-    bot.note_write()
+    note_write(bot)
     return 'Added note #'+str(len(bot.notes))+': '+args[1]
 
   # remove the specified note number from bot.notes and rewrite bot.note_file
@@ -75,7 +75,7 @@ def note(bot,mess,args):
 
     body = bot.notes[num]
     del bot.notes[num]
-    bot.note_write()
+    note_write(bot)
     return 'Removed note #'+str(num+1)+': '+body
 
   # otherwise show notes if they exist
@@ -109,7 +109,6 @@ def note(bot,mess,args):
     s += '(Note #'+str(i+1)+'): '+bot.notes[i]+', '
   return s[:-2]
 
-@botfunc
 def note_parse(bot):
   """read the note file into a list"""
 
@@ -120,7 +119,6 @@ def note_parse(bot):
   bot.log.info('Read '+str(len(notes))+' notes from "'+bot.note_file+'"')
   return notes
 
-@botfunc
 def note_write(bot):
   """write bot.notes to bot.note_file"""
 

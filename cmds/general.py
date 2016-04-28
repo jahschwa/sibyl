@@ -44,7 +44,7 @@ def die(bot,mess,args):
 
 @botcmd
 def reboot(bot,mess,args):
-  """restart sibyl"""
+  """restart sibyl (currently only works with init.d)"""
 
   if not bot.chat_ctrl:
     return 'chat_ctrl disabled'

@@ -35,10 +35,9 @@ def all(bot,mess,args):
   else:
     frm = str(frm)
 
-  bot.say(None,s+'[ '+args+' ] '+frm)
+  bot.run_cmd('say',s+'[ '+args+' ] '+frm)
 
 @botcmd
-@botfunc
 def say(bot,mess,args):
   """if in a MUC, say this in it"""
 
@@ -57,7 +56,6 @@ def say(bot,mess,args):
   bot.send_message(msg)
 
 @botcmd
-@botfunc
 def join(bot,mess,args):
   """join a MUC - [roomJID nick pass]"""
 
@@ -65,7 +63,7 @@ def join(bot,mess,args):
     return 'chat_ctrl disabled'
 
   if args=='':
-    bot.rejoin(None,None)
+    bot.run_cmd('rejoin',None)
   args = args.split(' ')
   if len(args)<2:
     args.append(bot.nick_name)
@@ -89,7 +87,7 @@ def rejoin(bot,mess,args):
   if bot.mucs[room]['pass'] is not None:
     args += (' '+bot.mucs[room]['pass'])
 
-  return bot.join(mess,args)
+  return bot.run_cmd('join',args,mess)
 
 @botcmd
 def leave(bot,mess,args):
@@ -158,16 +156,15 @@ def link_echo(bot,mess,cmd):
 def _muc_join_success(bot,room):
   """override method to notify user of join success"""
   
-  bot._send_muc_result(room,'Success joining room "%s"' % room)
+  _send_muc_result(bot,room,'Success joining room "%s"' % room)
 
 @botmucf
 def _muc_join_failure(bot,room,error):
   """override method to notify user of join failure"""
   
   error = bot.MUC_JOIN_ERROR[error]
-  bot._send_muc_result(room,'Failed to join room "%s" (%s)' % (room,error))
+  _send_muc_result(bot,room,'Failed to join room "%s" (%s)' % (room,error))
 
-@botfunc
 def _send_muc_result(bot,room,msg):
   """helper method for notifying user of result"""
   

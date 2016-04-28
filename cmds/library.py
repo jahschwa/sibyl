@@ -27,24 +27,24 @@ def conf(bot):
             'valid' : valid_lib,
             'parse' : parse_lib}]
 
-def valid_lib(self,lib):
+def valid_lib(conf,lib):
   """return True if the lib contains valid directories or samba shares"""
 
   for (i,l) in enumerate(lib):
     if isinstance(l,str):
       if not os.path.isdir(l):
-        self.log('warning','path "'+l+'" is not a valid directory')
+        conf.log('warning','path "'+l+'" is not a valid directory')
         return False
     elif isinstance(l,dict):
       if 'server' not in l.keys():
-        self.log('warning','key "server" missing from item '+str(i+1))
+        conf.log('warning','key "server" missing from item '+str(i+1))
         return False
       if 'share' not in l.keys():
-        self.log('warning','key "share" missing from item '+str(i+1))
+        conf.log('warning','key "share" missing from item '+str(i+1))
         return False
   return True
 
-def parse_lib(self,opt,val):
+def parse_lib(conf,opt,val):
   """parse the lib into a list"""
 
   val = val.replace('\n','')
@@ -70,7 +70,7 @@ def init(bot):
   """create libraries"""
   
   if os.path.isfile(bot.lib_file):
-    bot.library(None,'load')
+    bot.run_cmd('library','load')
   else:
     bot.lib_last_rebuilt = time.asctime()
     bot.lib_last_elapsed = 0
@@ -78,10 +78,9 @@ def init(bot):
     bot.lib_audio_file = None
     bot.lib_video_dir = None
     bot.lib_video_file = None
-    bot.library(None,'rebuild')
+    bot.run_cmd('library','rebuild')
 
 @botcmd
-@botfunc
 def library(bot,mess,args):
   """control media library - library (info|load|rebuild|save)"""
 
@@ -127,12 +126,12 @@ def library(bot,mess,args):
     # time the rebuild and update library vars
     start = time.time()
     bot.lib_last_rebuilt = time.asctime()
-    bot.lib_video_dir = bot.find('dir',bot.video_dirs)
-    bot.lib_video_file = bot.find('file',bot.video_dirs)
-    bot.lib_audio_dir = bot.find('dir',bot.audio_dirs)
-    bot.lib_audio_file = bot.find('file',bot.audio_dirs)
+    bot.lib_video_dir = find(bot,'dir',bot.video_dirs)
+    bot.lib_video_file = find(bot,'file',bot.video_dirs)
+    bot.lib_audio_dir = find(bot,'dir',bot.audio_dirs)
+    bot.lib_audio_file = find(bot,'file',bot.audio_dirs)
     bot.lib_last_elapsed = int(time.time()-start)
-    result = bot.library(None,'save')
+    result = bot.run_cmd('library','save')
 
     s = 'Library rebuilt in '+sec2str(bot.lib_last_elapsed)
     bot.log.info(s)
@@ -169,7 +168,6 @@ def search(bot,mess,args):
 
   return 'Found '+str(len(_matches))+' match: '+str(_matches[0])
 
-@botfunc
 def find(bot,fd,dirs):
   """helper function for library()"""
 

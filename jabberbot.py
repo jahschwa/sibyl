@@ -313,6 +313,11 @@ class JabberBot(object):
       self.log.debug('Running %s hook: %s' % (hook,name))
       func(*args)
 
+  def run_cmd(self,cmd,args,mess=None):
+    """run a chat command manually"""
+
+    return self.hooks['chat'][cmd](mess,args)
+
 ################################################################################
 # Basic XMPP                                                                   #
 ################################################################################
