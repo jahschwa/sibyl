@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import random,requests,json
+import random,requests,json,os
 
 from sibyl.jabberbot import botcmd,botfunc,botinit
 from sibyl.sibylbot import botconf
@@ -150,7 +150,18 @@ def info(bot,mess,args):
 def play(bot,mess,args):
   """if xbmc is paused, resume playing"""
 
-  playpause(bot,0)
+  if len(args)==0:
+    playpause(bot,0)
+    return
+
+  if os.path.isfile(args):
+    result = bot.xbmc('Player.Open',{'item':{'file':args}})
+    if 'error' in result:
+      s = 'Unable to open: '+args
+      bot.log.error(s)
+      return s
+    return bot.run_cmd('info',None)
+  return 'Invalid file'
 
 @botcmd
 def pause(bot,mess,args):
