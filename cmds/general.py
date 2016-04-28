@@ -4,8 +4,81 @@ import sys,os,subprocess,json,logging,socket
 
 import requests
 
-from sibyl.jabberbot import botcmd,botfunc
+from sibyl.jabberbot import botcmd,botinit
 from sibyl.util import getcell
+
+@botinit
+def init(bot):
+  """initialise config change tracking variable"""
+
+  bot.conf_diff = {}
+
+@botcmd
+def config(bot,mess,args):
+  """view and edit config - config (show|set|save|diff) (opt|*) [value]"""
+
+  if not bot.chat_ctrl:
+    return "chat_ctrl not enabled"
+  
+  args = args.split(' ')
+  if args[0] not in ('show','set','save','diff'):
+    args.insert(0,'show')
+  cmd = args[0]
+  opt = '*'
+  if len(args)>1 and args[1]!='':
+    opt = args[1]
+
+  if opt=='*' and cmd=='show':
+    return str(bot.conf.opts)
+  if opt not in bot.conf.opts and opt!='*':
+    return 'Invalid opt'
+  if opt in ('username','password'):
+    return 'You may not access that option via chat!'
+
+  if cmd=='show':
+    return opt+' = '+str(bot.conf.opts[opt])
+
+  if cmd=='diff':
+    if len(bot.conf_diff)==0:
+      return 'No differences between bot and config file'
+    if opt in ('','*'):
+      return str(bot.conf_diff.keys())
+    if opt not in bot.conf.opts:
+      return 'Invalud opt'
+    if opt not in bot.conf_diff:
+      return 'Opt "'+opt+'" has not changed from config file'
+    return 'Opt "'+opt+'" was "'+bot.conf_diff[opt][0]+'" but is now "'+bot.conf.opts[opt]+'"'
+  
+  if cmd=='set':
+    if opt=='*':
+      return 'Invalid opt'
+    old = bot.conf.opts[opt]
+    if bot.conf.set_opt(opt,args[2]):
+      bot.conf_diff[opt] = (old,args[2])
+      return 'Set opt "'+opt+'" to "'+args[2]+'"'
+    else:
+      return 'Invalid value for opt "'+opt+'"'
+
+  # logic for 'save' command
+  if len(args)>2:
+    value = ' '.join(args[2:])
+  elif opt in bot.conf_diff:
+    value = bot.conf_diff[opt][1]
+  elif opt!='*':
+    return 'Invalid value'
+
+  if opt=='*':
+    for opt in bot.conf_diff:
+      bot.conf.save_opt(opt,bot.conf_diff[opt][1])
+    opts = bot.conf_diff.keys()
+    bot.conf_diff = {}
+    return 'Saved opts: '+str(opts)
+  
+  if bot.conf.save_opt(opt,value):
+    if opt in bot.conf_diff:
+      del bot.conf_diff[opt]
+    return 'Saved opt "'+opt+'" to be "'+value+'"'
+  return 'Invalid value for opt "'+opt+'"'
 
 @botcmd
 def last(bot,mess,args):

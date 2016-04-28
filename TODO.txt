@@ -1,11 +1,12 @@
 OVERHAUL list:
 
  - abstract out chat protocol (some sort of plugin framework)
- - redo DOCS following config rework
+ ! redo DOCS following config rework
  - review logging levels for everything
 
 TODO list:
 
+ ! add auto-bw-list entries for chat_ctrl commands
  - make run.py read config file from command line
  - comment everything
  - add ping command
@@ -23,6 +24,7 @@ MAYBE list:
 
 DOC list:
 
+ ! add general config file explanation
  - add reconnect_wait option
  - add ping_freq option
  - add command_prefix option

@@ -94,7 +94,72 @@ class Config(object):
       parse = self.__bind(parse)
     
     self.OPTS[name] = (default,req,valid,parse)
-    
+
+  def set_opt(self,opt,val):
+    """check if the opt is valid and set it in the bot"""
+
+    # parse
+    try:
+      func = self.OPTS[opt][self.PARSE]
+      if func:
+        val = func(opt,val)
+    except:
+      return False
+
+    # validate
+    func = self.OPTS[opt][self.VALID]
+    if func:
+      if not func(val):
+        return False
+
+    # set
+    self.opts[opt] = val
+    self.bot.__setattr__(opt,val)
+    return True
+
+  def save_opt(self,opt,val):
+    """call set_opt then save it to the config file"""
+
+    if not self.set_opt(opt,val):
+      return False
+
+    val = (opt+' = '+val+' ;;; '+time.asctime()+'\n')
+    with open(self.bot.conf_file,'r') as f:
+      lines = f.readlines()
+
+    start = -1
+    for (i,line) in enumerate(lines):
+      line = line.strip()
+      if line.startswith(opt):
+        start = i
+        break
+
+    if start==-1:
+      lines.append(val)
+    else:
+      del lines[start]
+      while not self.is_opt_line(lines[start]):
+        del lines[start]
+      lines.insert(start,val)
+    with open(self.bot.conf_file,'w') as f:
+      f.writelines(lines)
+    return True
+
+  def is_opt_line(self,line):
+    """return True if this line contains an option"""
+
+    line = line.strip()
+    if line.startswith('#') or line.startswith(';'):
+      return False
+
+    set_char = line.find('=')
+    com_char = line.find(' ;')
+    if set_char==-1:
+      return False
+    if com_char==-1:
+      return True
+    return set_char<com_char
+
   def reload(self):
     """load opts from config file into bot"""
 
