@@ -1,0 +1,142 @@
+################################################################################
+#
+# Lines starting with "#" or ";" are comments. You can also add in-line comments
+# using " ;" after an option.
+#
+# Options are specified one per line with "opt = value".
+#
+# If an option isn't recognized, it will be ignored. You can use these as
+# custom variables to make some defintions easier. For example:
+#
+#     users = alice,bob
+#     cmds = play,pause
+#     bw_list = b %(users)s *; w %(users)s %(cmds)s
+#
+# The value for an option can span multiple lines.
+#
+# Unknown options will appear as INFO in the log, and invalid values as WARN.
+#
+# For full specifications read the python docs on SafeConfigParser:
+#     https://docs.python.org/2/library/configparser.html
+#
+################################################################################
+
+# Required options - login details for XMPP account
+username =
+password = 
+
+# Default nick to use in MUCs
+#nick_name = Sibyl
+
+# Log level can be: critical, error, warning, info, debug
+#log_level = info
+
+# File used for logging; note the default uses relative paths
+#log_file = sibyl.log
+
+# Black and white list to allow/forbid users from running certain commands.
+# Format is: w * *; b user cmd; w user1,user2 cmd1,cmd2;
+# The entry "w * *" is ALWAYS added as the first rule during bot initialisation.
+# The last matching rule for a given user and cmd is used.
+# A rule matches a user if the given string appears anywhere in the JID.
+#bw_list = w * *
+
+# Allow control of "admin" type chat commands like join, kill, and config
+#chat_ctrl = False
+
+# Reply to links with the page title
+#link_echo = False
+
+################################################################################
+# JabberBot options
+################################################################################
+
+# XMPP resource; default is the class name of the bot.
+#resource = SibylBot
+
+# Print XMPPPY stanza debug info to the terminal
+#debug = False
+
+# Join these MUCs on startup. Default is None.
+# Format is: room,nick,pass; room; room,nick; room,,pass
+#rooms = 
+
+# Only accept subscriptions from the specified domain; can be either "True" to
+# use the domain specified by "username", a string specifying a domain, or
+# "False" to accept all subscribe requests.
+#priv_domain = True
+
+# Directory to search for bot commands. Note the default uses relative path.
+#cmd_dir = cmds
+
+# Character sequence used to give the bot a command in a MUC. Default is None.
+#cmd_prefix = 
+
+# Port to connect to the XMPP server.
+#port = 5222
+
+# Interval (seconds) to ping the server to check for disconnect. 0 means never
+#ping_freq = 0
+
+# Reply in chat with a brief exception information instead of generic error
+# message when a command throws an exception. Can be "True" or "False".
+#except_reply = False
+
+# Timeout for pings. Only matters if "ping_freq" is greater than 0
+#ping_timeout = 3
+
+# Only respond to commands in a MUC if they start with our nick. This can be
+# active at the same time as "cmd_prefix" without issue.
+#only_direct = True
+
+# Time to wait (seconds) before reconnecting after a disconnect.
+#recon_wait = 60
+
+# Catch all exceptions and log them without killing the bot. Should only be set
+# to "False" for debugging purposes.
+#catch_except = True
+
+################################################################################
+# bookmark options
+################################################################################
+
+# File in which to store bookmarks. Format is tab-delineated text file.
+#bm_file = sibyl_bm.txt
+
+################################################################################
+# library options
+################################################################################
+
+# File in which to store library contents. Format is python pickle.
+#lib_file = sibyl_lib.pickle
+
+# Maximum number of matches to reply with in chat when searching the library.
+# A value of 0 means no limit. Note that some servers will kick the bot for
+# sending very long replies.
+#max_matches = 10
+
+# Directories to search for audio and video files to add to the library.
+# Format for regular directories: /path/to/dir1; /path/to/dir2
+# Format for samba shares: server1,share1; server2,share2,username,password
+# Default for both options is None.
+#audio_dirs =
+#video_dirs =
+
+################################################################################
+# note options
+################################################################################
+
+# File in which to store notes. Format is tab-delineated text file.
+#not_file = sibyl_note.txt
+
+################################################################################
+# xbmc options
+################################################################################
+
+# IP address where the XBMC/Kodi/OSMC/etc. web interface is running.
+# Format is "IP:PORT" where port defaults to 80.
+#rpi_ip = 127.0.0.1
+
+# Username and password to use to access the web interface. Default is None.
+#xbmc_user =
+#xbmc_pass = 
