@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
 
-(setsid python run.py & echo $! > /var/run/sibyl/sibyl.pid)
+dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+(setsid python "$dir/run.py" & echo $! > /var/run/sibyl/sibyl.pid)
