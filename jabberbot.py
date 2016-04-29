@@ -271,15 +271,23 @@ class JabberBot(object):
     # Load hooks from self.cmd_dir
     self.hooks = {x:{} for x in ['chat','init','mucs','mucf','msg','pres']}
     self.__load_funcs(self,'jabberbot',silent=True)
-
-    files = [x for x in os.listdir(self.cmd_dir) if x.endswith('.py')]    
-    for f in files:
-      f = f.split('.')[0]
-      mod = self.__load_module(f,self.cmd_dir)
-      self.__load_funcs(mod,f)
+    self.__load_plugins(self.cmd_dir)
 
     # Run plugin init hooks
     self.__run_hooks('init')
+
+  def __load_plugins(self,d):
+    """recursively load all plugins from all sub-directories"""
+
+    files = [x for x in os.listdir(d) if x.endswith('.py')]    
+    for f in files:
+      f = f.split('.')[0]
+      mod = self.__load_module(f,d)
+      self.__load_funcs(mod,f)
+
+    dirs = [os.path.join(d,x) for x in os.listdir(d) if os.path.isdir(os.path.join(d,x))]
+    for x in dirs:
+      self.__load_plugins(x)
 
   def __load_funcs(self,mod,fil,silent=False):
     
