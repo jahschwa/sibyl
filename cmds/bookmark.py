@@ -11,7 +11,7 @@ def conf(bot):
   """add config options"""
 
   return [{'name':'bm_file',
-          'default':'sibyl_bm.txt',
+          'default':'data/sibyl_bm.txt',
           'valid':bot.conf.valid_file}]
 
 @botinit

@@ -13,7 +13,7 @@ def conf(bot):
   """add config options"""
 
   return [{'name' : 'lib_file',
-            'default' : 'sibyl_lib.pickle',
+            'default' : 'data/sibyl_lib.pickle',
             'valid' : bot.conf.valid_file},
           {'name' : 'max_matches',
             'default' : 10,

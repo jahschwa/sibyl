@@ -32,7 +32,7 @@ password =
 #log_level = info
 
 # File used for logging; note the default uses relative paths
-#log_file = sibyl.log
+#log_file = data/sibyl.log
 
 # Black and white list to allow/forbid users from running certain commands.
 # Format is: w * *; b user cmd; w user1,user2 cmd1,cmd2;
@@ -101,14 +101,14 @@ password =
 ################################################################################
 
 # File in which to store bookmarks. Format is tab-delineated text file.
-#bm_file = sibyl_bm.txt
+#bm_file = data/sibyl_bm.txt
 
 ################################################################################
 # library options
 ################################################################################
 
 # File in which to store library contents. Format is python pickle.
-#lib_file = sibyl_lib.pickle
+#lib_file = data/sibyl_lib.pickle
 
 # Maximum number of matches to reply with in chat when searching the library.
 # A value of 0 means no limit. Note that some servers will kick the bot for
@@ -127,7 +127,7 @@ password =
 ################################################################################
 
 # File in which to store notes. Format is tab-delineated text file.
-#not_file = sibyl_note.txt
+#note_file = data/sibyl_note.txt
 
 ################################################################################
 # xbmc options

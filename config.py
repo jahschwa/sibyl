@@ -34,7 +34,7 @@ class Config(object):
 ('password',    (None,               True,   None,             None)),
 ('nick_name',   ('Sibyl',            False,  None,             None)),
 ('log_level',   (logging.INFO,       False,  None,             self.parse_log)),
-('log_file',    ('sibyl.log',        False,  self.valid_file,  None)),
+('log_file',    ('data/sibyl.log',   False,  self.valid_file,  None)),
 ('bw_list',     ([('w','*','*')],    False,  self.valid_bw,    self.parse_bw)),
 ('chat_ctrl',   (False,              False,  None,             self.parse_bool)),
 ('link_echo',   (False,              False,  None,             self.parse_bool)),
