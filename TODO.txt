@@ -6,6 +6,7 @@ OVERHAUL list:
 
 TODO list:
 
+ ! add dependencies to cmds framework
  ! add auto-bw-list entries for chat_ctrl commands
  - make run.py read config file from command line
  - comment everything
