@@ -25,9 +25,6 @@
 username =
 password = 
 
-# Default nick to use in MUCs
-#nick_name = Sibyl
-
 # Log level can be: critical, error, warning, info, debug
 #log_level = info
 
@@ -95,6 +92,9 @@ password =
 # Catch all exceptions and log them without killing the bot. Should only be set
 # to "False" for debugging purposes.
 #catch_except = True
+
+# Default nick to use in MUCs
+#nick_name = Sibyl
 
 ################################################################################
 # bookmark options

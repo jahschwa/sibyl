@@ -32,7 +32,6 @@ class Config(object):
 #-------------------------------------------------------------------------------
 ('username',    (None,               True,   None,             None)),
 ('password',    (None,               True,   None,             None)),
-('nick_name',   ('Sibyl',            False,  None,             None)),
 ('log_level',   (logging.INFO,       False,  None,             self.parse_log)),
 ('log_file',    ('data/sibyl.log',   False,  self.valid_file,  None)),
 ('bw_list',     ([('w','*','*')],    False,  self.valid_bw,    self.parse_bw)),
@@ -53,7 +52,8 @@ class Config(object):
 ('ping_timeout',(3,                  False,  None,             self.parse_int)),
 ('only_direct', (True,               False,  None,             self.parse_bool)),
 ('recon_wait',  (60,                 False,  None,             self.parse_int)),
-('catch_except',(True,               False,  None,             self.parse_bool))
+('catch_except',(True,               False,  None,             self.parse_bool)),
+('nick_name',   ('Sibyl',            False,  None,             None))
 
     ])
     

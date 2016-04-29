@@ -169,8 +169,9 @@ class JabberBot(object):
 
   def __init__(self, username, password, res=None, debug=False, rooms=None,
       privatedomain=True, acceptownmsgs=False, handlers=None, cmd_dir='cmds',
-      cmd_prefix=None, server=None, port=5222, ping_freq=300, except_reply=False,
-      ping_timeout=3, only_direct=True, reconnect_wait=60, catch_except=True):
+      cmd_prefix=None, server=None, port=5222, ping_freq=300,
+      ping_timeout=3, only_direct=True, reconnect_wait=60, catch_except=True,
+      except_reply=False, nick_name='JabberBot'):
     """Initializes the jabber bot and sets up commands.
 
     username and password should be clear ;)
@@ -241,6 +242,7 @@ class JabberBot(object):
     self.rooms = rooms
     if not self.rooms:
       self.rooms = []
+    self.nick_name = nick_name
     self.real_jids = {}
     self.mucs = {}
     self.last_muc = None
@@ -435,7 +437,7 @@ class JabberBot(object):
   def get_default_nick(self):
     """Return a default nick name"""
 
-    return self.__username.split('@')[0]
+    return self.nick_name
 
   def muc_join_room(self, room, username=None, password=None):
     """Join the specified multi-user chat room or changes nickname

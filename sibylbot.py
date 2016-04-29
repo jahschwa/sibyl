@@ -92,7 +92,9 @@ class SibylBot(JabberBot):
         ping_timeout = self.ping_timeout,
         only_direct = self.only_direct,
         reconnect_wait = self.recon_wait,
-        catch_except = self.catch_except)
+        catch_except = self.catch_except,
+        except_reply = self.except_reply,
+        nick_name = self.nick_name)
 
     # init redo command
     self.last_cmd = {}
