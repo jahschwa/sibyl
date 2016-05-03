@@ -134,8 +134,8 @@ password =
 ################################################################################
 
 # IP address where the XBMC/Kodi/OSMC/etc. web interface is running.
-# Format is "IP:PORT" where port defaults to 80.
-#rpi_ip = 127.0.0.1
+# Format is IP:PORT or just IP (port defaults to 80).
+#xbmc_ip = 127.0.0.1
 
 # Username and password to use to access the web interface. Default is None.
 #xbmc_user =

@@ -10,7 +10,7 @@ import sibyl.util as util
 def conf(bot):
   """add config options"""
 
-  return [{'name' : 'rpi_ip',
+  return [{'name' : 'xbmc_ip',
             'def' : '127.0.0.1',
             'valid' : bot.conf.valid_ip},
           {'name' : 'xbmc_user'},
@@ -124,7 +124,13 @@ def info(bot,mess,args):
   """display info about currently playing file"""
 
   # abort if nothing is playing
-  pid = bot.xbmc_active_player()
+  result = bot.xbmc('Player.GetActivePlayers')['result']
+  if len(result)==0:
+    return 'Nothing playing'
+
+  pid = result[0]['playerid']
+  typ = result[0]['type']
+  
   if pid is None:
     return 'Nothing playing'
 
@@ -143,8 +149,7 @@ def info(bot,mess,args):
   if speed==0:
     status = 'paused'
 
-  playlists = ['Audio','Video','Picture']
-  return playlists[pid]+' '+status+' at '+util.time2str(current)+'/'+util.time2str(total)+' - "'+name+'"'
+  return typ.title()+' '+status+' at '+util.time2str(current)+'/'+util.time2str(total)+' - "'+name+'"'
 
 @botcmd
 def play(bot,mess,args):
@@ -472,13 +477,13 @@ def xbmc_chat(bot,mess,args):
 def xbmc(bot,method,params=None):
   """wrapper method to always provide IP to static method"""
 
-  return util.xbmc(bot.rpi_ip,method,params,bot.xbmc_user,bot.xbmc_pass)
+  return util.xbmc(bot.xbmc_ip,method,params,bot.xbmc_user,bot.xbmc_pass)
 
 @botfunc
 def xbmc_active_player(bot):
   """wrapper method to always provide IP to static method"""
 
-  return util.xbmc_active_player(bot.rpi_ip,bot.xbmc_user,bot.xbmc_pass)
+  return util.xbmc_active_player(bot.xbmc_ip,bot.xbmc_user,bot.xbmc_pass)
 
 def playpause(bot,target):
   """helper function for play() and pause()"""

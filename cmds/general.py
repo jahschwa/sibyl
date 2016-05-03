@@ -101,7 +101,7 @@ def network(bot,mess,args):
   myip = s.getsockname()[0]
   s.close()
 
-  piip = getattr(bot,'rpi_ip',None)
+  piip = getattr(bot,'xbmc_ip',None)
   exip = requests.get('http://ipecho.net/plain').text.strip()
 
   return 'My IP - '+myip+' --- RPi IP - '+str(piip)+' --- External IP - '+exip
