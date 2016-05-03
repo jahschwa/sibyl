@@ -332,7 +332,8 @@ class JabberBot(object):
   def __run_hooks(self,hook,*args):
     
     for (name,func) in self.hooks[hook].items():
-      self.log.debug('Running %s hook: %s' % (hook,name))
+      if hook!='idle':
+        self.log.debug('Running %s hook: %s' % (hook,name))
       func(*args)
 
   def run_cmd(self,cmd,args,mess=None):
