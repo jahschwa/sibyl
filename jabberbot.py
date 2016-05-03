@@ -107,6 +107,12 @@ def botpres(func):
   setattr(func, '_jabberbot_dec_pres', True)
   return func
 
+def botidle(func):
+  """Decorator for idle hooks (executed once per second)"""
+
+  setattr(func, '_jabberbot_dec_idle', True)
+  return func
+
 ################################################################################
 # Custom exceptions                                                            #
 ################################################################################
@@ -271,7 +277,7 @@ class JabberBot(object):
     self.cmd_prefix = cmd_prefix
 
     # Load hooks from self.cmd_dir
-    self.hooks = {x:{} for x in ['chat','init','mucs','mucf','msg','pres']}
+    self.hooks = {x:{} for x in ['chat','init','mucs','mucf','msg','pres','idle']}
     self.__load_funcs(self,'jabberbot',silent=True)
     self.__load_plugins(self.cmd_dir)
 
@@ -1063,6 +1069,8 @@ class JabberBot(object):
     self._idle_ping()
     self._join_muc()
     self._rejoin_muc()
+
+    self.__run_hooks('idle')
 
   def _idle_ping(self):
     """Pings the server, calls on_ping_timeout() on no response.
