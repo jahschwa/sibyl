@@ -473,6 +473,26 @@ def xbmc_chat(bot,mess,args):
     return str(result['error'])
   return str(result['result'])
 
+@botcmd
+def shuffle(bot,mess,args):
+  """change shuffle - shuffle [check|on|off]"""
+
+  pid = bot.xbmc_active_player()
+  
+  if args[0]=='on':
+    bot.xbmc('Player.SetShuffle',{'playerid':pid,'shuffle':True})
+    return 'Enabled shuffle'
+
+  if args[0]=='off':
+    bot.xbmc('Player.SetShuffle',{'playerid':pid,'shuffle':False})
+    return 'Disabled shuffle'
+
+  params = {'playerid':pid,'properties':['shuffled']}
+  result = bot.xbmc('Player.GetProperties',params)['shuffled']
+  if result:
+    return 'Shuffle is enabled'
+  return 'Shuffle is disabled'
+
 @botfunc
 def xbmc(bot,method,params=None):
   """wrapper method to always provide IP to static method"""
