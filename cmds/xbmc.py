@@ -488,7 +488,7 @@ def shuffle(bot,mess,args):
     return 'Disabled shuffle'
 
   params = {'playerid':pid,'properties':['shuffled']}
-  result = bot.xbmc('Player.GetProperties',params)['shuffled']
+  result = bot.xbmc('Player.GetProperties',params)['result']['shuffled']
   if result:
     return 'Shuffle is enabled'
   return 'Shuffle is disabled'
