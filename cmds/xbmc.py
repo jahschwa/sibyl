@@ -479,11 +479,11 @@ def shuffle(bot,mess,args):
 
   pid = bot.xbmc_active_player()
   
-  if args[0]=='on':
+  if args=='on':
     bot.xbmc('Player.SetShuffle',{'playerid':pid,'shuffle':True})
     return 'Enabled shuffle'
 
-  if args[0]=='off':
+  if args=='off':
     bot.xbmc('Player.SetShuffle',{'playerid':pid,'shuffle':False})
     return 'Disabled shuffle'
 
