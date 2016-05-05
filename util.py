@@ -129,29 +129,31 @@ def rlistfiles(path):
       allfiles.append(os.path.join(cur_path,filename))
   return allfiles
 
-def rsambadir(smb,path):
+def rsambadir(ctx,path):
   """recursively list directories"""
-
+  
   alldirs = []
-  items = smb.listdir(path)
-  for item in items:
-    cur_path = os.path.join(path,item)
-    if smb.isdir(cur_path):
-      alldirs.append(str('smb:'+smb.path+cur_path)+'/')
-      alldirs.extend(rsambadir(smb,cur_path))
+  d = ctx.opendir(path)
+  contents = d.getdents()
+  for c in contents:
+    if '(Dir)' in str(c) and c.name!='.' and c.name!='..':
+      cur_path = path+'/'+c.name
+      alldirs.append(cur_path+'/')
+      alldirs.extend(rsambadir(ctx,cur_path))
   return alldirs
 
-def rsambafiles(smb,path):
+def rsambafiles(ctx,path):
   """recursively list files"""
-
+  
   allfiles = []
-  items = smb.listdir(path)
-  for item in items:
-    cur_path = os.path.join(path,item)
-    if smb.isfile(cur_path):
-      allfiles.append(str('smb:'+smb.path+cur_path))
-    elif smb.isdir(cur_path):
-      allfiles.extend(rsambafiles(smb,cur_path))
+  d = ctx.opendir(path)
+  contents = d.getdents()
+  for c in contents:
+    cur_path = path+'/'+c.name
+    if '(File)' in str(c):
+      allfiles.append(cur_path)
+    elif '(Dir)' in str(c) and c.name!='.' and c.name!='..':
+      allfiles.extend(rsambafiles(ctx,cur_path))
   return allfiles
 
 def checkall(l,s):
@@ -188,10 +190,23 @@ def reducetree(paths):
   """if all paths are sub-dirs of a common root, return the root"""
 
   shortest = sorted(paths,key=len)[0]
+  parent = None
+  # also check for the parent directory of the shortest path
+  if ((shortest.startswith('smb://') and len(shortest.split('/'))>5)
+      or (not shortest.startswith('smb://') and shortest!='/')):
+    parent = shortest[:shortest.rfind('/',0,-1)+1]
+
+  short = True
+  par = (parent is not None)
   for path in paths:
-    if not path.startswith(shortest):
-      return paths
-  return [shortest]
+    short = (short and path.startswith(shortest))
+    par = (par and path.startswith(parent))
+
+  if short:
+    return [shortest]
+  if par:
+    return [parent]
+  return paths
 
 def cleanhtml(text):
    """replace common html codes with actual characters"""

@@ -3,12 +3,13 @@ OVERHAUL list:
  - abstract out chat protocol (some sort of plugin framework)
  ! redo DOCS following config rework
  - review logging levels for everything
+ ! implement unicode support
 
 TODO list:
 
+ ! add config to enable/disable plugins
  ! add dependencies to cmds framework
  ! add auto-bw-list entries for chat_ctrl commands
- - make run.py read config file from command line
  - comment everything
  - add ping command
  - add isup command
@@ -22,10 +23,11 @@ MAYBE list:
  - switch from real JID dict to on execute requests
  - allow user to set requests timeout (currently 60s)
  - read and search media tags (e.g. title, album, artist from mp3)
+ - allow searching xbmc library
+ - daemonize inside python
 
 DOC list:
 
- ! add general config file explanation
  - add reconnect_wait option
  - add ping_freq option
  - add command_prefix option

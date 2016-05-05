@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-import os,pickle,time
+import os,pickle,time,traceback
 
-from smbclient import SambaClient,SambaClientError
+import smbc
 
 from sibyl.jabberbot import botcmd,botfunc,botinit
 from sibyl.sibylbot import botconf
@@ -126,15 +126,27 @@ def library(bot,mess,args):
     # time the rebuild and update library vars
     start = time.time()
     bot.lib_last_rebuilt = time.asctime()
-    bot.lib_video_dir = find(bot,'dir',bot.video_dirs)
-    bot.lib_video_file = find(bot,'file',bot.video_dirs)
-    bot.lib_audio_dir = find(bot,'dir',bot.audio_dirs)
-    bot.lib_audio_file = find(bot,'file',bot.audio_dirs)
+
+    libs = [('lib_video_dir','dir',bot.video_dirs),
+            ('lib_video_file','file',bot.video_dirs),
+            ('lib_audio_dir','dir',bot.audio_dirs),
+            ('lib_audio_file','file',bot.audio_dirs)]
+    errors = []
+    for lib in libs:
+      (r,e) = find(bot,lib[1],lib[2])
+      setattr(bot,lib[0],r)
+      for x in e:
+        if x not in errors:
+          bot.log.error(x[1])
+          errors.append(x)
+    
     bot.lib_last_elapsed = int(time.time()-start)
     result = bot.run_cmd('library','save')
 
     s = 'Library rebuilt in '+sec2str(bot.lib_last_elapsed)
     bot.log.info(s)
+    if errors:
+      s += ' with errors (see log): '+str([x[0] for x in errors])
     return s
 
   # default prints some info
@@ -182,6 +194,7 @@ def find(bot,fd,dirs):
       paths.append(path)
 
   result = []
+  errors = []
 
   # find all matching directories or files depending on fd parameter
   for path in paths:
@@ -191,28 +204,27 @@ def find(bot,fd,dirs):
       else:
         contents = rlistfiles(path)
       for entry in contents:
-        try:
-          result.append(str(entry))
-        except UnicodeError:
-          bot.log.error('Unicode error parsing path "'+entry+'"')
-    except OSError:
-      bot.log.error('Unable to traverse "'+path+'"')
+        result.append(entry)
+    except Exception as e:
+      msg = 'Unable to traverse "%s": %s' % (path,traceback.format_exc(e).split('\n')[-2])
+      errors.append((path,msg))
 
   # same as above but for samba shares
   for path in smbpaths:
     try:
-      smb = SambaClient(**path)
+      smb = smbc.Context()
+      if path['username']:
+        smb.functionAuthData = lambda se,sh,w,u,p: (w,path['username'],path['password'])
+      share = 'smb://'+path['server']+'/'+path['share']
+      smb.opendir(share[:share.rfind('/')])
       if fd=='dir':
-        contents = rsambadir(smb,'/')
+        contents = rsambadir(smb,share)
       else:
-        contents = rsambafiles(smb,'/')
-      smb.close()
+        contents = rsambafiles(smb,share)
       for entry in contents:
-        try:
-          result.append(str(entry))
-        except UnicodeError:
-          bot.log.error('Unicode error parsing path "'+entry+'"')
-    except SambaClientError:
-      bot.log.error('Unable to traverse "smb://'+path['server']+'/'+path['share']+'"')
+        result.append(entry)
+    except Exception as e:
+      msg = 'Unable to traverse "%s": %s' % (share,traceback.format_exc(e).split('\n')[-2])
+      errors.append((share,msg))
 
-  return result
+  return (result,errors)
