@@ -68,7 +68,7 @@ You can add folders to `video_dirs` and `audio_dirs` in order to search them usi
 Also be aware that root cannot read `sshfs` mounts from other users by default. If this is a problem with your setup, you have to specify `sshfs -o allow_root ...` when you mount the share as a non-root user. I do not recommend running sibyl as root.
 
 ## Init Script
-For Debian and derivates I include an init script, `sibyl.init` and the actual execution script `sibyl`. Note that if you want to use these you may have to change the `DAEMON` variable in `sibyl.init`. In my setup, `sibyl.init` is in `/etc/init.d/`, `sibyl` is in `/home/pi/bin`, and `sibyl.py` is in `/home/pi/bin`. You have to rename `sibyl.init` to `sibyl` for compliance with Debian's init system.
+For Debian and derivates I include an init script, `sibyl.init` and the actual execution script `sibyl`. You will have to change the `DAEMON` variable in `sibyl.init` to the absolute path of `sibyl.sh`. You have to rename `sibyl.init` to `sibyl` and place it in `/etc/init.d` for compliance with Debian's init system. If your distro uses systemd, you may have to run `sudo systemctl daemon-reload`. If your distro does not use systemd, to enable auto-start on boot, run `sudo update-rc.d sibyl defaults`.
 
 ## Logging
 By default, sibyl logs to `data/sibyl.log` which can be changed with the `log_file` option. To enable debug logging, simply set the config option `log_level = debug`. To print XMPP stanzas to the terminal, set `debug = True`.
