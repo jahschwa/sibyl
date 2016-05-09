@@ -16,8 +16,8 @@ You'll need the following installed in order to use sibyl:
 The following are optional but not having them may render some commands broken:
  - [cec-client][5] - HDMI CEC client for tv commands
 
-One-line for Ubuntu/Debian:
-    sudo apt install python-xmpp python-requests python-smbc python-lxml python-dnspython
+One-liner for Ubuntu/Debian:
+ - `sudo apt install python-xmpp python-requests python-smbc python-lxml python-dnspython`
 
 ## Setup
 Setup is very easy, all you really have to do is make a config file.
