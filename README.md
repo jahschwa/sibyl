@@ -30,7 +30,7 @@ Setup is very easy, all you really have to do is make a config file.
  6. If starting Sibyl from the command line, add its parent directory to your `PYTHONPATH`
  7. Start the bot with `python run.py`
 
-Here is the minimum config file (excluding `rooms` which is optional):
+If you'd rather not have comments cluttering your config, here is an example minimum config file (note `rooms` is actually optional):
 
 ```
 username = sibyl@server.com
