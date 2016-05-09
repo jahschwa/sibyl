@@ -1,6 +1,8 @@
 # sibyl
 an XMPP bot for controlling XBMC/Kodi
 
+*IMPORTANT: The wiki is currently outdated. Updates coming soon.*
+
 ## Intro
 This is my personal XMPP bot made mostly for controlling XBMC on my Raspberry Pi. I find the `videos`, `seek`, `info`, `bookmark`, and `resume` commands to be very handy. This is tested on RaspBMC and OSMC, but should work on anything if you resolve the dependencies and setup python correctly. Sibyl does not support windows, although you could probably get it working via cygwin. Sibyl imports chat commands from python files in the directory specified by the `cmd_dir` config option, which by default is `cmds`. This repository comes with several plugins that most uers should find useful. For command explanations and other info check out [the wiki][1]. Currently sibyl is built assuming the bot is running on the same device that is running XBMC (e.g. an RPi).
 
@@ -69,7 +71,7 @@ Also be aware that root cannot read `sshfs` mounts from other users by default. 
 For Debian and derivates I include an init script, `sibyl.init` and the actual execution script `sibyl`. Note that if you want to use these you may have to change the `DAEMON` variable in `sibyl.init`. In my setup, `sibyl.init` is in `/etc/init.d/`, `sibyl` is in `/home/pi/bin`, and `sibyl.py` is in `/home/pi/bin`. You have to rename `sibyl.init` to `sibyl` for compliance with Debian's init system.
 
 ## Logging
-By default, sibyl logs to `data/sibyl.log` which can be changed with the `log_file` option. To enable debug logging, simply set the config option `log_lvl = debug`. To print XMPP stanzas to the terminal, set `debug = True`.
+By default, sibyl logs to `data/sibyl.log` which can be changed with the `log_file` option. To enable debug logging, simply set the config option `log_level = debug`. To print XMPP stanzas to the terminal, set `debug = True`.
 
 ## Contact Me
 If you have a bug report or feature request, use github's issue tracker. For other stuff, you can join my Sibyl XMPP room `sibyl@conference.jahschwa.com`, the IRC channel `chat.freenode.net#sibyl`, or contact me at [haas.josh.a@gmail.com][8].
