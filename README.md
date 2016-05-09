@@ -2,35 +2,39 @@
 an XMPP bot for controlling XBMC/Kodi
 
 ## Intro
-This is my personal XMPP bot made mostly for controlling XBMC on my Raspberry Pi. I find the `videos`, `seek`, `info`, `bookmark`, and `resume` commands to be very handy. This is tested on RaspBMC, but should work on anything if you resolve the dependencies and setup python correctly. The code is in the `sibylbot.py` as a library, and an example script `sibyl.py` is shown for running the bot. For command explanations and other info check out [the wiki][1]. Currently sibyl is built assuming the bot is running on the same device that is running XBMC (e.g. an RPi).
+This is my personal XMPP bot made mostly for controlling XBMC on my Raspberry Pi. I find the `videos`, `seek`, `info`, `bookmark`, and `resume` commands to be very handy. This is tested on RaspBMC and OSMC, but should work on anything if you resolve the dependencies and setup python correctly. Sibyl does not support windows, although you could probably get it working via cygwin. The code is in the `sibylbot.py` as a library, and an example script `sibyl.py` is shown for running the bot. For command explanations and other info check out [the wiki][1]. Currently sibyl is built assuming the bot is running on the same device that is running XBMC (e.g. an RPi).
 
 ## Dependencies
 You'll need the following installed in order to use sibyl:
  - [xmpppy][10] - XMPP python API - `git clone https://github.com/normanr/xmpppy.git`
  - [requests][3] - HTTP request and wrapper library - `pip install requests`
- - [pysmbclient][4] - crude `smbclient` wrapper - `pip install pysmbclient`
+ - [smbc][4] - python samba bindings - `pip install pysmbc`
  - [lxml][9] - xml and html parsing - `pip install lxml`
- - [JSON-RPC][6] - enable the web server in XBMC
+ - [dns][11] - required for requests - `pip install dnspython`
+ - [JSON-RPC][6] - you have to enable the web server in XBMC
 
 The following are optional but not having them may render some commands broken:
  - [cec-client][5] - HDMI CEC client for tv commands
 
-**NOTE:** You can install `xmpppy` via `pip`, but I've had problems with that in the past. I recommend you install from `git` repo. Or Debian/Ubuntu should be fine with `sudo apt-get install python-xmpp`.
-
-**NOTE:** Sibyl uses a modified version of [JabberBot][2] included in this repo. Do not use Sibyl will the default JabberBot available in your distro or from `pip`.
+One-line for Ubuntu/Debian:
+    sudo apt install python-xmpp python-requests python-smbc python-lxml python-dnspython
 
 ## Setup
-Below is a minimum working example, but most users will want to take a look at `sibyl.py` or `sibyl_adv.py` for more details on common use cases.
+Setup is very easy, all you really have to do is make a config file.
+
+ 1. Install dependencies (see above)
+ 2. Copy `sibyl.conf.default` to `sibyl.conf` and edit the new file
+ 3. Set the required options `username` and `password`
+ 4. If you want the bot to join a room set `rooms` in the `JabberBot` section
+ 5. If starting Sibyl from the command line, add its parent directory to your `PYTHONPATH`
+ 6. Start the bot with `python run.py`
+
+Here is the minimum config file (excluding `rooms` which is optional):
 
 ```
-from sibylbot import SibylBot
-
-USERNAME = 'sibyl@xmpp.com'
-PASSWORD = 'password'
-RPI_IP = '192.168.1.314'
-
-bot = SibylBot(USERNAME,PASSWORD,rpi_ip=RPI_IP)
-bot.run_forever()
+username = sibyl@server.com
+password = wordpass
+rooms = room@conference.server.com
 ```
 
 ## JabberBot
@@ -75,3 +79,4 @@ If you have a bug report or feature request, use github's issue tracker. For oth
  [8]: mailto:haas.josh.a@gmail.com
  [9]: http://lxml.de/
  [10]: http://xmpppy.sourceforge.net/
+ [11]: http://www.dnspython.org/
