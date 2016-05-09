@@ -22,12 +22,13 @@ One-liner for Ubuntu/Debian:
 ## Setup
 Setup is very easy, all you really have to do is make a config file.
 
- 1. Install dependencies (see above)
- 2. Copy `sibyl.conf.default` to `sibyl.conf` and edit the new file
- 3. Set the required options `username` and `password`
- 4. If you want the bot to join a room set `rooms` in the `JabberBot` section
- 5. If starting Sibyl from the command line, add its parent directory to your `PYTHONPATH`
- 6. Start the bot with `python run.py`
+ 1. Clone the repository with `git clone https://github.com/TheSchwa/sibyl.git`
+ 2. Install dependencies (see above)
+ 3. Enter the `sibyl` directory and copy `sibyl.conf.default` to `sibyl.conf`
+ 4. Edit `sibyl.conf` and set the required options `username` and `password`
+ 5. If you want the bot to join a room set `rooms` in the `JabberBot` section
+ 6. If starting Sibyl from the command line, add its parent directory to your `PYTHONPATH`
+ 7. Start the bot with `python run.py`
 
 Here is the minimum config file (excluding `rooms` which is optional):
 
