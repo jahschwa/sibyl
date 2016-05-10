@@ -430,8 +430,8 @@ def fullscreen(bot,mess,args):
     opt = False
   bot.xbmc('GUI.SetFullscreen',{'fullscreen':opt})
 
-@botcmd
-def random(bot,mess,args):
+@botcmd(name='random')
+def random_chat(bot,mess,args):
   """play random song - random [include -exclude]"""
 
   # check if a search term was passed
