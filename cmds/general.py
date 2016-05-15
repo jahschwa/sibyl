@@ -134,15 +134,14 @@ def tv(bot,mess,args):
   # sanitize args
   args = ''.join([s for s in args if s.isalpha()])
 
-  cmd = ['echo',args+' 0']
-  cec = ['cec-client','-s']
+  PIPE = subprocess.PIPE
+  p = subprocess.Popen(['cec-client','-s'],stdin=PIPE,stdout=PIPE,stderr=PIPE)
+  (out,err) = p.communicate(args+' 0')
 
-  # execute echo command and pipe output to PIPE
-  p = subprocess.Popen(cmd,stdout=subprocess.PIPE)
-
-  # execute cec-client using PIPE as input and sending output to /dev/null
-  DEVNULL = open(os.devnull,'wb')
-  subprocess.call(cec,stdin=p.stdout,stdout=DEVNULL,close_fds=True)
+  if err:
+    return err
+  if 'connection opened' not in out:
+    return 'Unknown error'
 
 @botcmd
 def ups(bot,mess,args):
