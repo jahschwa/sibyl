@@ -163,29 +163,24 @@ class Config(object):
   def reload(self):
     """load opts from config file into bot"""
 
-    try:
-      self.__update()
+    self.__update()
 
-      errors = []
-      for opt in self.opts:
-        if self.OPTS[opt][self.REQ] and not self.opts[opt]:
-          self.log('critical','Missing required option "%s"' % opt)
-          errors.append(opt)
-      if len(errors):
-        raise ValueError('Missing required options %s' % errors)
-      
-      self.__load()
+    errors = []
+    for opt in self.opts:
+      if self.OPTS[opt][self.REQ] and not self.opts[opt]:
+        self.log('critical','Missing required option "%s"' % opt)
+        errors.append(opt)
 
-      warnings = [x for x in self.log_msgs if x[0]>=logging.WARNING]
-      if len(warnings):
-        return self.ERRORS
-      else:
-        return self.SUCCESS
-      
-    except:
-      self.bot.log_file = self.OPTS['log_file'][self.DEF]
-      self.bot.log_level = self.OPTS['log_level'][self.DEF]
+    self.__load()
+
+    if len(errors):
       return self.FAIL
+
+    warnings = [x for x in self.log_msgs if x[0]>=logging.WARNING]
+    if len(warnings):
+      return self.ERRORS
+    else:
+      return self.SUCCESS
 
   def __update(self):
     """update self.opts from config file"""
@@ -201,10 +196,10 @@ class Config(object):
 
     config = cp.SafeConfigParser()
     try:
-      result = config.readfp(FakeSecHead(open(self.conf_file)))
+      config.readfp(FakeSecHead(open(self.conf_file)))
     except:
-      self.log('critical','Error parsing config file')
-      raise IOError
+      self.log.critical('Unable to read/parse config file')
+      return {}
     
     secs = config.sections()
     for sec in secs:

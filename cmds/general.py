@@ -4,8 +4,8 @@ import sys,os,subprocess,json,logging,socket
 
 import requests
 
-from sibyl.jabberbot import botcmd,botinit
-from sibyl.util import getcell
+from jabberbot import botcmd,botinit
+from util import getcell
 
 @botinit
 def init(bot):

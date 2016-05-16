@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 
-dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-export PYTHONPATH="$dir/.."
-cd "$dir"
+cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 (setsid python run.py -d &)
 
 sleep 2

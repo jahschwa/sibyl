@@ -2,16 +2,16 @@
 
 import random,requests,json,os
 
-from sibyl.jabberbot import botcmd,botfunc,botinit
-from sibyl.sibylbot import botconf
-import sibyl.util as util
+from jabberbot import botcmd,botfunc,botinit
+from sibylbot import botconf
+import util
 
 @botconf
 def conf(bot):
   """add config options"""
 
   return [{'name' : 'xbmc_ip',
-            'def' : '127.0.0.1',
+            'default' : '127.0.0.1',
             'valid' : bot.conf.valid_ip},
           {'name' : 'xbmc_user'},
           {'name' : 'xbmc_pass'}]

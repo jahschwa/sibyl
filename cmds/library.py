@@ -4,9 +4,9 @@ import os,pickle,time,traceback
 
 import smbc
 
-from sibyl.jabberbot import botcmd,botfunc,botinit
-from sibyl.sibylbot import botconf
-from sibyl.util import *
+from jabberbot import botcmd,botfunc,botinit
+from sibylbot import botconf
+from util import *
 
 @botconf
 def conf(bot):

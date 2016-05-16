@@ -65,17 +65,20 @@ class SibylBot(JabberBot):
     self.log.info('')
     self.log.info('-'*50)
     self.log.info('')
-    self.log.critical('Reading config file "%s"...' % self.conf_file)
+    self.log.info('Reading config file "%s"...' % self.conf_file)
 
-    if result==Config.FAIL:
-      self.log.critical('Unable to parse config file; exiting')
-    elif result==Config.ERRORS:
-      self.log.critical('Parsed config file with warnings')
-      self.log.info('')
-    
     # log config errors and check for success
     self.conf.process_log()
     if result==Config.FAIL:
+      self.log.critical('Error parsing config file; exiting')
+    elif result==Config.ERRORS:
+      self.log.warning('Parsed config file with warnings')
+      self.log.info('')
+    
+    if result==Config.FAIL:
+      print '\n   *** Fatal error: unusable config file (see log) ***\n'
+      print '   Config file: %s' % os.path.abspath(self.conf_file)
+      print '   Log file:    %s\n' % os.path.abspath(self.log_file)
       sys.exit(1)
     self.log.info('Success parsing config file')
 
@@ -152,7 +155,7 @@ class SibylBot(JabberBot):
         cmd = self.last_cmd.get(frm.getStripped(),'echo Nothing to redo')
         if len(args)>1:
           cmd += (' '+' '.join(args[1:]))
-          self.last_cmd = cmd
+          self.last_cmd[frm.getStripped()] = cmd
         if mess.getType()=='groupchat':
           room = frm.getStripped()
           nick = self.mucs[room]['nick']

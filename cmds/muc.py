@@ -5,7 +5,7 @@ import re
 import requests
 from lxml.html import fromstring
 
-from sibyl.jabberbot import botcmd,botfunc,botinit,botmucs,botmucf,botmsg
+from jabberbot import botcmd,botfunc,botinit,botmucs,botmucf,botmsg
 
 @botcmd
 def all(bot,mess,args):
