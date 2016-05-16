@@ -126,13 +126,13 @@ def resume(bot,mess,args):
     pos += 1
 
   # note that the user-facing functions assume 1-indexing
-  args = '"'+path+'" '+str(pos+1)
+  args = '"'+path+'" #'+str(pos+1)
   if pid==0:
     result = bot.run_cmd('audios',args)
   elif pid==1:
     result = bot.run_cmd('videos',args)
   else:
-    return 'Error in bookmark for "'+name+'": invalid pid'+str(pid)
+    return 'Error in bookmark for "'+name+'": invalid pid'+pid
 
   if not start_next:
     bot.run_cmd('seek',t)

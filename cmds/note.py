@@ -46,7 +46,10 @@ def note(bot,mess,args):
   if args[0]=='playing':
     args[0] = 'add'
 
-    pid = bot.xbmc_active_player()
+    active = bot.xbmc_active_player()
+    if not active:
+      return 'Nothing playing; note not added'
+    (pid,typ) = active
     result = bot.xbmc('Player.GetProperties',{'playerid':pid,'properties':['time']})
     t = str(time2str(result['result']['time']))
 

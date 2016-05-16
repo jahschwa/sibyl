@@ -39,10 +39,16 @@ def xbmc(ip,method,params=None,user=None,pword=None):
 def xbmc_active_player(ip,user=None,pword=None):
   """return the id of the currently active player or None"""
 
-  j = xbmc(ip,'Player.GetActivePlayers',user=user,pword=pword)
-  if len(j['result'])==0:
+  result = xbmc(ip,'Player.GetActivePlayers',user=user,pword=pword)['result']
+  if len(result)==0:
     return None
-  return j['result'][0]['playerid']
+
+  pid = result[0]['playerid']
+  typ = result[0]['type']
+  if typ not in ('audio','video'):
+    return None
+  
+  return (pid,typ)
 
 def matches(lib,args):
   """helper function for search(), files(), and file()"""

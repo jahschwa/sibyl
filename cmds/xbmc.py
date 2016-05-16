@@ -59,9 +59,10 @@ def subtitles(bot,mess,args):
   """change the subtitles - subtitles (info|on|off|next|prev|set) [index]"""
 
   args = args.split(' ')
-  pid = bot.xbmc_active_player()
-  if pid!=1:
+  active = bot.xbmc_active_player()
+  if not active or active[1]!='video':
     return 'No video playing'
+  (pid,typ) = active
 
   if args[0]=='prev':
     args[0] = 'previous'
@@ -70,12 +71,12 @@ def subtitles(bot,mess,args):
     bot.xbmc('Player.SetSubtitle',{'playerid':pid,'subtitle':args[0]})
     if args[0]=='off':
       return
-    subs = bot.xbmc('Player.GetProperties',{'playerid':1,
+    subs = bot.xbmc('Player.GetProperties',{'playerid':pid,
         'properties':['currentsubtitle']})
     subs = subs['result']['currentsubtitle']
     return 'Subtitle: '+str(subs['index'])+'-'+subs['language']+'-'+subs['name']
 
-  subs = bot.xbmc('Player.GetProperties',{'playerid':1,
+  subs = bot.xbmc('Player.GetProperties',{'playerid':pid,
       'properties':['subtitles','currentsubtitle']})
   cur = subs['result']['currentsubtitle']
   subs = subs['result']['subtitles']
@@ -109,6 +110,9 @@ def subtitles(bot,mess,args):
         sub.append(subs[i])
         continue
 
+  if not len(sub):
+    return 'No subtitles'
+
   s = 'Subtitles: '
   for x in sub:
     if x['index']==cur['index']:
@@ -124,15 +128,10 @@ def info(bot,mess,args):
   """display info about currently playing file"""
 
   # abort if nothing is playing
-  result = bot.xbmc('Player.GetActivePlayers')['result']
-  if len(result)==0:
+  active = bot.xbmc_active_player()
+  if not active:
     return 'Nothing playing'
-
-  pid = result[0]['playerid']
-  typ = result[0]['type']
-  
-  if pid is None:
-    return 'Nothing playing'
+  (pid,typ) = active
 
   # get file name
   result = bot.xbmc('Player.GetItem',{'playerid':pid})
@@ -179,9 +178,10 @@ def stop(bot,mess,args):
   """if xbmc is playing, stop"""
 
   # abort if nothing is playing
-  pid = bot.xbmc_active_player()
-  if pid is None:
-    return None
+  active = bot.xbmc_active_player()
+  if active is None:
+    return 'Nothing playing'
+  (pid,typ) = active
 
   bot.xbmc('Player.Stop',{"playerid":pid})
 
@@ -190,12 +190,11 @@ def prev(bot,mess,args):
   """go to previous playlist item"""
 
   # abort if nothing is playing
-  pid = bot.xbmc_active_player()
-  if pid is None:
-    return None
+  active = bot.xbmc_active_player()
+  if active is None:
+    return 'Nothing playing'
+  (pid,typ) = active
 
-  # the first call goes to 0:00, the second actually goes back in playlist
-  bot.xbmc('Player.GoTo',{'playerid':pid,'to':'previous'})
   bot.xbmc('Player.GoTo',{'playerid':pid,'to':'previous'})
 
 @botcmd
@@ -203,9 +202,10 @@ def next(bot,mess,args):
   """go to next playlist item"""
 
   # abort if nothing is playing
-  pid = bot.xbmc_active_player()
-  if pid is None:
-    return None
+  active = bot.xbmc_active_player()
+  if active is None:
+    return 'Nothing playing'
+  (pid,typ) = active
 
   bot.xbmc('Player.GoTo',{'playerid':pid,'to':'next'})
 
@@ -214,9 +214,10 @@ def jump(bot,mess,args):
   """jump to an item# in the playlist - jump #"""
 
   # abort if nothing is playing
-  pid = bot.xbmc_active_player()
-  if pid is None:
-    return None
+  active = bot.xbmc_active_player()
+  if active is None:
+    return 'Nothing playing'
+  (pid,typ) = active
 
   # try to parse the arg to an int
   try:
@@ -231,9 +232,10 @@ def seek(bot,mess,args):
   """go to a specific time - seek [hh:]mm:ss"""
 
   # abort if nothing is playing
-  pid = bot.xbmc_active_player()
-  if pid is None:
-    return None
+  active = bot.xbmc_active_player()
+  if active is None:
+    return 'Nothing playing'
+  (pid,typ) = active
 
   # try to parse the arg as a time
   try:
@@ -256,9 +258,10 @@ def restart(bot,mess,args):
   """start playing again from 0:00"""
 
   # abort if nothing is playing
-  pid = bot.xbmc_active_player()
-  if pid is None:
-    return None
+  active = bot.xbmc_active_player()
+  if active is None:
+    return 'Nothing playing'
+  (pid,typ) = active
 
   bot.xbmc('Player.Seek',{'playerid':pid,'value':{'seconds':0}})
 
@@ -267,9 +270,10 @@ def hop(bot,mess,args):
   """move forward or back - hop [small|big] [back|forward]"""
 
   # abort if nothing is playing
-  pid = bot.xbmc_active_player()
-  if pid is None:
-    return None
+  active = bot.xbmc_active_player()
+  if active is None:
+    return 'Nothing playing'
+  (pid,typ) = active
 
   # check for 'small' (default) and 'big'
   s = ''
@@ -477,7 +481,10 @@ def xbmc_chat(bot,mess,args):
 def shuffle(bot,mess,args):
   """change shuffle - shuffle [check|on|off]"""
 
-  pid = bot.xbmc_active_player()
+  active = bot.xbmc_active_player()
+  if active is None:
+    return 'Nothing playing'
+  (pid,typ) = active
   
   if args=='on':
     bot.xbmc('Player.SetShuffle',{'playerid':pid,'shuffle':True})
@@ -509,9 +516,10 @@ def playpause(bot,target):
   """helper function for play() and pause()"""
 
   # return None if nothing is playing
-  pid = bot.xbmc_active_player()
-  if pid is None:
-    return None
+  active = bot.xbmc_active_player()
+  if active is None:
+    return 'Nothing playing'
+  (pid,typ) = active
 
   # check player status before sending PlayPause command
   speed = bot.xbmc('Player.GetProperties',{'playerid':pid,'properties':["speed"]})
