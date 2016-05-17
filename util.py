@@ -50,7 +50,7 @@ def xbmc_active_player(ip,user=None,pword=None):
   
   return (pid,typ)
 
-def matches(lib,args):
+def matches(lib,args,sort=True):
   """helper function for search(), files(), and file()"""
 
   # implement quote blocking
@@ -83,7 +83,9 @@ def matches(lib,args):
         matches.append(entry)
     except:
       pass
-  matches.sort()
+
+  if sort:
+    matches.sort()
   return matches
 
 def time2str(t):
@@ -234,3 +236,35 @@ def load_module(name,path):
     return imp.load_module(name,*found)
   finally:
     found[0].close()
+
+def xbmc_sorted(files):
+  """sort a list of files as xbmc does (i think) so episodes are correct"""
+  
+  return sorted(files,cmp=xbmc_cmp)
+
+def xbmc_cmp(a,b):
+  """compare function for xbmc_sort"""
+
+  a = a.lower()
+  b = b.lower()
+  if a==b:
+    return 0
+  ia = 0
+  ib = 0
+  while ia<len(a) and ib<len(b):
+    if a[ia].isdigit() and b[ib].isdigit():
+      astr = ''
+      bstr = ''
+      while a[ia].isdigit():
+        astr += a[ia]
+        ia += 1
+      while b[ib].isdigit():
+        bstr += b[ib]
+        ib += 1
+      if astr!=bstr:
+        return int(astr)-int(bstr)
+    if a[ia]!=b[ib]:
+      return (1 if a[ia]>b[ib] else -1)
+    ia += 1
+    ib += 1
+  return (1 if len(a)<len(b) else -1)

@@ -400,7 +400,7 @@ def stream(bot,mess,args):
 
 @botcmd
 def videos(bot,mess,args):
-  """search and open a folder as a playlist - videos [include -exclude] [track#]"""
+  """open a folder as a playlist - videos [include -exclude] [#track] [@match]"""
 
   return files(bot,args,bot.lib_video_dir,1)
 
@@ -412,7 +412,7 @@ def video(bot,mess,args):
 
 @botcmd
 def audios(bot,mess,args):
-  """search and open a folder as a playlist - audios [include -exclude] [track#]"""
+  """open a folder as a playlist - audios [include -exclude] [#track] [@match]"""
 
   return files(bot,args,bot.lib_audio_dir,0)
 
@@ -527,23 +527,32 @@ def playpause(bot,target):
   if speed==target:
     bot.xbmc('Player.PlayPause',{"playerid":pid})
 
-def files(bot,args,dirs,pid):
+def files(bot,cmd,dirs,pid):
   """helper function for videos() and audios()"""
 
-  # check for item# as last arg
-  args = args.split(' ')
+  # check for item# as last arg and @ for item match string
+  args = cmd.split(' ')
+  last = args[-1]
   num = None
-  try:
-    num = int(args[-1])-1
-  except ValueError:
-    pass
+  search = None
+  if '@' in cmd:
+    i = cmd.find('@')
+    if i==0:
+      return 'Missing required search term before @match'
+    args = cmd[:i].strip().split(' ')
+    search = cmd[i+1:].strip().split(' ')
+  elif last.startswith('#'):
+    try:
+      num = int(last[1:])-1
+    except ValueError:
+      pass
 
   # default is 0 if not specified
-  if num is None:
-    num = 0
-    name = args
-  else:
+  name = args
+  if num is not None:
     name = args[:-1]
+  elif search is None:
+    num = 0
 
   # find matches and respond if len(matches)!=1
   _matches = util.matches(dirs,name)
@@ -570,13 +579,28 @@ def files(bot,args,dirs,pid):
     bot.log.error(s)
     return s
 
+  msg = ''
+  
+  # find first item matching @search
+  if search:
+    params = {'playlistid':pid,'properties':['file']}
+    items = bot.xbmc('Playlist.GetItems',params)['result']['items']
+    items = [x['file'] for x in items]
+    item_matches = util.matches(items,search,False)
+    if len(item_matches):
+      num = items.index(item_matches[0])
+      msg += 'Found matching item "%s" --- ' % os.path.basename(item_matches[0])
+    else:
+      num = 0
+      msg += 'No item matching "%s" --- ' % ' '.join(search)
+
   bot.xbmc('Player.Open',{'item':{'playlistid':pid,'position':num}})
   bot.run_cmd('fullscreen','on')
 
   # set last_played for bookmarking
   bot.last_played = (pid,_matches[0])
 
-  return 'Playlist from "'+_matches[0]+'" starting with #'+str(num+1)
+  return msg+'Playlist from "'+_matches[0]+'" starting with #'+str(num+1)
 
 def _file(bot,args,dirs):
   """helper function for video() and audio()"""
