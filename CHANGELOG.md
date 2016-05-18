@@ -4,11 +4,18 @@ To the full project is at the [Github Repo](https://github.com/TheSchwa/Sibyl).
 This project adheres to [Semantic Versioning](http://semver.org).
 This change log follows guidelines at [this site](http://keepachangelog.com/).
 
-## [Unreleased]
+## [v6.0.0] - RELEASEDATE
 ### Added
-- Chat plug-in framework
-- XMPP plug-in (based on Jabberbot)
-- Matrix plug-in
+- Chat plug-in framework that reads from "protocols" directory
+- Custom protocol-agnostic msg and presence classes with methods
+- XMPP plug-in (based on Jabberbot) at protocols/xmpp.py
+- Matrix plug-in at protocols/matrix.py
+
+### Removed
+- Refactored jabberbot.py into protocols/xmpp.py and sibylbot.py
+
+### Changed
+- All decorators are now in sibylbot.py
 
 ## [v5.0.0-beta] - 2016-05-18
 ### Added
