@@ -1,6 +1,7 @@
-# sibyl
+# Sibyl
 an XMPP bot for controlling XBMC/Kodi
 
+**IMPORTANT: Sibly is in Alpha. Updates may break existing configurations**
 **IMPORTANT: The wiki is currently outdated. Updates coming soon.**
 
 ## Intro
@@ -59,16 +60,19 @@ Sibyl interfaces with XBMC using its JSON-RPC web interface. In order to use it,
 Sibyl uses the `cec-client` bash script to give commands over HDMI-CEC to an attached TV. This should be installed on most Pi distros by default. If not, debian derivatives can install with `sudo apt-get install cec-client`. For the CEC commands to work, the bot must be running on the Pi itself. Also note that `cec-client` may not be found depending on your environment. On my Pi it's located at `/home/pi/.xbmc-current/xbmc-bin/bin/cec-client`. Depending on your distro, the user running Sibyl might need to be a member of the `videos` group or similar to run `cec-client`.
 
 ## Search Directories
-You can add folders to `video_dirs` and `audio_dirs` in order to search them using the `search`, `audio`, `audios`, `video`, and `videos` commands. You can add the following as list items:
+You can add folders to `video_dirs` and `audio_dirs` in order to search them using the `search`, `audio`, `audios`, `video`, and `videos` commands. This functionality is provided by the `library.py` plug-in. You can add the following as list items:
   - local directory, example: `/media/flashdrive/videos`
   - samba share as `server,share`, example: `mediaserver,videos`
   - samba share as `server,share,user,pass`, example: `mediaserver,videos,pi,1234`
 
-
 Also be aware that root cannot read `sshfs` mounts from other users by default. If this is a problem with your setup, you have to specify `sshfs -o allow_root ...` when you mount the share as a non-root user. I do not recommend running sibyl as root.
 
 ## Init Script
-For Debian and derivates I include an init script, `sibyl.init` and the actual execution script `sibyl`. You will have to change the `DAEMON` variable in `sibyl.init` to the absolute path of `sibyl.sh`. You have to rename `sibyl.init` to `sibyl` and place it in `/etc/init.d` for compliance with Debian's init system. If your distro uses systemd, you may have to run `sudo systemctl daemon-reload`. If your distro does not use systemd, to enable auto-start on boot, run `sudo update-rc.d sibyl defaults`.
+For Debian and derivates I include an init script, `sibyl.init` and the actual execution script `sibyl.sh`. You will have to change the `DAEMON` variable in `sibyl.init` to the absolute path of `sibyl.sh`. You have to rename `sibyl.init` to `sibyl` and place it in `/etc/init.d` for compliance with Debian's init system. If your distro uses systemd, you may have to run `sudo systemctl daemon-reload`. If your distro does not use systemd, to enable auto-start on boot, run `sudo update-rc.d sibyl defaults`.
+
+As currently configured, the init script starts the bot with the user `sibyl`. You can make this user for example with `sudo adduser sibyl` and then clone the repo into that user's home directory. If you don't want the script to start as the `sibyl` user, change `-c sibyl`  to `-c user` from the below line in the init script. If you remove `-c sibyl` entirely, the bot will run as root. Despite my attempts to keep Sibyl safe, I do not recommend running it as root. Do so at your own risk.
+
+`if start-stop-daemon --start --quiet -c sibyl --oknodo --pidfile $PIDFILE --exec $DAEMON ; then`
 
 ## Logging
 By default, sibyl logs to `data/sibyl.log` which can be changed with the `log_file` option. To enable debug logging, simply set the config option `log_level = debug`. To print XMPP stanzas to the terminal, set `debug = True`.
