@@ -2,8 +2,7 @@
 
 import os,time
 
-from jabberbot import botcmd,botfunc,botinit
-from sibylbot import botconf
+from decorators import *
 from util import *
 
 @botconf

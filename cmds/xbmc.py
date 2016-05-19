@@ -2,8 +2,7 @@
 
 import random,requests,json,os
 
-from jabberbot import botcmd,botfunc,botinit
-from sibylbot import botconf
+from decorators import *
 import util
 
 @botconf

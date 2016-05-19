@@ -53,7 +53,11 @@ class Config(object):
 ('only_direct', (True,               False,  None,             self.parse_bool)),
 ('recon_wait',  (60,                 False,  None,             self.parse_int)),
 ('catch_except',(True,               False,  None,             self.parse_bool)),
-('nick_name',   ('Sibyl',            False,  None,             None))
+('nick_name',   ('Sibyl',            False,  None,             None)),
+
+#temp
+('server',(None,False,None,None)),
+('xmpp_debug',(None,False,None,None))
 
     ])
     

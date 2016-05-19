@@ -4,7 +4,7 @@ import sys,os,subprocess,json,logging,socket
 
 import requests
 
-from jabberbot import botcmd,botinit
+from decorators import *
 from util import getcell
 
 @botinit
