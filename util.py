@@ -53,33 +53,11 @@ def xbmc_active_player(ip,user=None,pword=None):
 def matches(lib,args,sort=True):
   """helper function for search(), files(), and file()"""
 
-  # implement quote blocking
-  name = []
-  quote = False
-  s = ''
-  for arg in args:
-    if arg.startswith('"') and arg.endswith('"'):
-      name.append(arg[1:-1])
-    elif arg.startswith('"'):
-      quote = True
-      s += arg[1:]
-    elif arg.endswith('"'):
-      quote = False
-      s += (' '+arg[:-1])
-      name.append(s)
-      s = ''
-    elif quote:
-      s += (' '+arg)
-    else:
-      name.append(arg)
-  if quote:
-    name.append(s.replace('"',''))
-
   # find matches
   matches = []
   for entry in lib:
     try:
-      if checkall(name,entry):
+      if checkall(args,entry):
         matches.append(entry)
     except:
       pass
@@ -87,6 +65,37 @@ def matches(lib,args,sort=True):
   if sort:
     matches.sort()
   return matches
+
+def get_args(args,lower=False):
+  """get space-separated args accounting for quotes"""
+
+  l = []
+  quote = False
+  to_lower = lower
+  s = ''
+  for c in args:
+    if c==' ':
+      if quote:
+        s += c
+      elif s:
+        l.append(s)
+        s = ''
+    elif c=='"':
+      if quote:
+        quote = False
+        to_lower = lower
+      else:
+        quote = True
+        to_lower = False
+    else:
+      if to_lower:
+        s += c.lower()
+      else:
+        s += c
+  if s:
+    l.append(s)
+
+  return l
 
 def time2str(t):
   """change the time dict to a string"""
@@ -118,6 +127,31 @@ def sec2str(t):
   s -= 60*m
 
   return time2str({'hours':h,'minutes':m,'seconds':s})
+
+def str2time(t):
+  """change the string to a time dict"""
+
+  c1 = t.find(':')
+  c2 = t.rfind(':')
+  s = int(t[c2+1:])
+  h = 0
+  if c1==c2:
+    m = int(t[:c1])
+  else:
+    m = int(t[c1+1:c2])
+    h = int(t[:c1])
+
+  return {'hours':h,'minutes':m,'seconds':s}
+
+def time2sec(t):
+  """change the time dict to seconds"""
+
+  return 3600*t['hours']+60*t['minutes']+t['seconds']
+
+def str2sec(t):
+  """change the string to seconds"""
+
+  return time2sec(str2time(t))
 
 def rlistdir(path):
   """list folders recursively"""

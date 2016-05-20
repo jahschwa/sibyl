@@ -3,7 +3,7 @@
 import os,time
 
 from decorators import *
-from util import *
+import util
 
 @botconf
 def conf(bot):
@@ -11,7 +11,10 @@ def conf(bot):
 
   return [{'name':'bm_file',
           'default':'data/sibyl_bm.txt',
-          'valid':bot.conf.valid_file}]
+          'valid':bot.conf.valid_file},
+          {'name':'resume_next',
+          'default':False,
+          'parse':bot.conf.parse_bool}]
 
 @botinit
 def init(bot):
@@ -28,7 +31,9 @@ def init(bot):
 def bookmark(bot,mess,args):
   """manage bookmarks - bookmarks [show|set|remove] [name]"""
 
-  args = args.split(' ')
+  if not args:
+    args = ['show']
+
   if args[0]=='set':
     # check if last_played is set
     if bot.last_played is None:
@@ -45,7 +50,7 @@ def bookmark(bot,mess,args):
     path = bot.last_played[1]
     result = bot.xbmc('Player.GetProperties',{'playerid':pid,'properties':['position','time']})
     pos = result['result']['position']
-    t = str(time2str(result['result']['time']))
+    t = str(util.time2str(result['result']['time']))
     add = time.time()
     result = bot.xbmc('Player.GetItem',{'playerid':pid,'properties':['file']})
     fil = os.path.basename(str(result['result']['item']['file']))
@@ -89,27 +94,32 @@ def bookmark(bot,mess,args):
     return 'Found 0 bookmarks'
   if len(entries)==1:
     return 'Found 1 bookmark: '+str(entries[0])
-  return 'Found '+str(len(entries))+' bookmarks: '+list2str(entries)
+  return 'Found '+str(len(entries))+' bookmarks: '+util.list2str(entries)
 
 @botcmd
 def resume(bot,mess,args):
   """resume playing a playlist - resume [name] [next]"""
+
+  if not args:
+    args = ['']
 
   # if there are no bookmarks return
   if len(bot.bm_store)==0:
     return 'No bookmarks'
 
   # check for "next" as last arg
-  opts = args.strip().split(' ')
-  start_next = (opts[-1]=='next')
-  if start_next:
-    opts = opts[:-1]
-    args = ' '.join(opts)
+  start_next = (args[-1]=='next')
+  start_current = (args[-1]=='current')
+  
+  if start_next or start_current:
+    args = args[:-1]
+
+  start_next = (bot.resume_next and not start_current) or start_next
 
   # check if a name was passed
   name = bm_recent(bot)
-  if len(args)>0:
-    name = args
+  if args and args[0]:
+    name = ' '.join(args)
 
   # get info from bookmark
   if name not in bot.bm_store.keys():
@@ -125,7 +135,8 @@ def resume(bot,mess,args):
     pos += 1
 
   # note that the user-facing functions assume 1-indexing
-  args = '"'+path+'" #'+str(pos+1)
+  args = [path,'#'+str(pos+1)]
+
   if pid==0:
     result = bot.run_cmd('audios',args)
   elif pid==1:
@@ -133,8 +144,8 @@ def resume(bot,mess,args):
   else:
     return 'Error in bookmark for "'+name+'": invalid pid'+pid
 
-  if not start_next:
-    bot.run_cmd('seek',t)
+  if not start_next and util.str2sec(t)>10:
+    bot.run_cmd('seek',[t])
     result += ' at '+t
 
   return result

@@ -40,13 +40,19 @@ class JID(User):
 
   def parse(self,user,typ):
 
-    if typ=='groupchat':
+    if typ==Message.GROUP:
       (x,self.nick) = user.split('/')
       (self.room,self.conference) = x.split('@')
     else:
       if '/' in user:
         (user,self.resource) = user.split('/')
       (self.user,self.domain) = user.split('@')
+
+  def get_name(self):
+
+    if self.room:
+      return self.nick
+    return self.user
 
   def get_room(self):
 
@@ -104,7 +110,7 @@ class XMPP(Protocol):
 
   def __init__(self,bot,log):
 
-    self.types = {'presence':Message.STATUS,
+    self.TYPES = {'presence':Message.STATUS,
                   'chat':Message.PRIVATE,
                   'groupchat':Message.GROUP,
                   'error':Message.ERROR}
@@ -197,17 +203,38 @@ class XMPP(Protocol):
     
     self.__idle_proc()
 
-  def send(self,text,user):
+  def send(self,text,to):
 
     mess = self.__build_message(text)
-    mess.setTo(xmpp.JID( user.get_room() or str(user) ))
+
+    room = isinstance(to,str)
+    if not room:
+      room = to.get_room()
+      if room:
+        to = room
+        room = True
+      else:
+        to = str(to)
+        room = False
+    mess.setTo(xmpp.JID(to))
 
     typ = 'chat'
-    if user.get_room():
+    if room:
       typ = 'groupchat'
     mess.setType(typ)
 
     self.conn.send(mess)
+
+  def broadcast(self,text,room,frm=None):
+    """send a message to every user in a room"""
+
+    s = ''
+    for user in self.get_occupants(room):
+      if frm and frm!=user:
+        s += (user.get_name()+': ')
+
+    text = '%s[ %s ] %s' % (s,text,frm.get_name())
+    self.send(text,room)
 
   def join_room(self,room,nick=None,pword=None):
     """join a room and return True if joined successfully or False otherwise"""
@@ -252,10 +279,36 @@ class XMPP(Protocol):
       return self.get_current_mucs()
     return [room for room in self.mucs]
 
+  def get_occupants(self,room):
+    """return the Users in the given room, or None if we are not in the room"""
+
+    users = []
+    for jid in self.seen:
+      if ((room==jid.getStripped())
+          and (self.mucs[room]['nick']!=jid.getResource())):
+        users.append(JID(str(jid),Message.GROUP))
+
+    return users
+
   def get_nick(self,room):
     """return our nick in the given room"""
 
     return self.mucs[room]['nick']
+
+  def get_real(self,room,nick):
+    """return the real username of the given nick"""
+
+    jid = xmpp.JID(room+'/'+nick)
+    real = self.real_jids.get(jid,nick)
+    if real==nick:
+      return nick
+
+    return JID(str(real),Message.PRIVATE)
+
+  def new_user(self,user,typ):
+    """create a new user of this Protocol's User class"""
+
+    return JID(user,typ)
 
 ################################################################################
 # Internal callbacks                                                           #
@@ -303,13 +356,13 @@ class XMPP(Protocol):
         ["%s" % x for x in self.seen.keys()+self.real_jids.values()])
       return
 
+    typ = self.TYPES[typ]
     frm = JID(str(jid),typ)
     if jid in self.real_jids:
       real = self.real_jids[jid]
-      frm.set_real(JID(str(real),'chat'))
-    typ = self.types[typ]
+      frm.set_real(JID(str(real),Message.PRIVATE))
     
-    self.bot.callback(Message(typ,frm,text))
+    self.bot._cb_message(Message(typ,frm,text))
 
   def callback_presence(self,conn,pres):
     """run upon receiving a presence stanza to keep track of subscriptions"""
@@ -320,7 +373,7 @@ class XMPP(Protocol):
 
     # keep track of "real" JIDs in a MUC
     real = None
-    if len(self.get_current_mucs()) and jid.getStripped() in self.get_current_mucs():
+    if jid.getStripped() in self.get_current_mucs():
       try:
         real = pres.getTag('x').getTag('item').getAttr('jid')
         self.real_jids[jid] = xmpp.protocol.JID(real)
@@ -366,13 +419,13 @@ class XMPP(Protocol):
       'subscription: %s)' % (jid, typ, show, status, subscription))
 
     if typ == 'error':
-      self.log.error(presence.getError())
+      self.log.error(pres.getError())
       return
 
     # Catch kicked from the room
     room = jid.getStripped()
     if room in self.get_current_mucs() and jid.getResource()==self.mucs[room]['nick']:
-      code = presence.getStatusCode()
+      code = pres.getStatusCode()
       if code:
         code = int(code)
         if code not in self.MUC_CODES:
@@ -413,13 +466,16 @@ class XMPP(Protocol):
 
     typ = Message.STATUS
     jid_typ = 'chat'
+    real = None
     if jid.getStripped() in self.get_current_mucs():
-      frm = JID(str(jid),'groupchat')
+      jid_typ = 'groupchat'
       if jid in self.real_jids:
-        real = self.real_jids[jid]
-        frm.set_real(JID(str(real),'chat'))
+        real = JID(str(self.real_jids[jid]),Message.PRIVATE)
+    frm = JID(str(jid),jid_typ)
+    if real:
+      frm.set_real(real)
 
-    return Message(typ,frm,None,show,status)
+    self.bot._cb_message(Message(typ,frm,None,show,status))
 
   def status_type_changed(self, jid, new_status_type):
     """Callback for tracking status types (dnd, away, offline, ...)"""
@@ -497,8 +553,8 @@ class XMPP(Protocol):
   def __idle_proc(self):
 
     self.__idle_ping()
-    self.__join_muc()
-    self.__rejoin_muc()
+    self.__idle_join_muc()
+    self.__idle_rejoin_muc()
 
   def __idle_ping(self):
 
@@ -517,8 +573,8 @@ class XMPP(Protocol):
 # XEP-0045 Multi User Chat (MUC)                                               #
 ################################################################################
 
-  def __join_muc(self):
-    """do the actual muc joining if needed"""
+  def __idle_join_muc(self):
+    """join pending MUCs"""
     
     if len(self.__muc_pending):
       try:
@@ -532,7 +588,7 @@ class XMPP(Protocol):
           self.log.debug('Rejoining room "%s" in %i sec' % (room,self.reconnect_wait))
 
   def __muc_join(self,pres,room,nick,pword):
-    """join a muc and handle the result"""
+    """send XMPP stanzas to join a much and raise MUCJoinFailure if error"""
 
     self.log.debug('Attempting to join room "%s"' % room)
     self.last_muc = room
@@ -556,14 +612,14 @@ class XMPP(Protocol):
   def __muc_join_success(self,room):
     """execute callbacks on successfull MUC join"""
     
-    self.bot.join_room_success(room)
+    self.bot._cb_join_room_success(room)
 
   def __muc_join_failure(self,room,error):
     """execute callbacks on successfull MUC join"""
     
-    self.bot.join_room_failure(room,error)
+    self.bot._cb_join_room_failure(room,error)
 
-  def __rejoin_muc(self):
+  def __idle_rejoin_muc(self):
     """attempt to rejoin the MUC if needed"""
 
     t = time.time()

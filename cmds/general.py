@@ -19,9 +19,8 @@ def config(bot,mess,args):
 
   if not bot.chat_ctrl:
     return "chat_ctrl not enabled"
-  
-  args = args.split(' ')
-  if args[0] not in ('show','set','save','diff'):
+
+  if not args or args[0] not in ('show','set','save','diff'):
     args.insert(0,'show')
   cmd = args[0]
   opt = '*'
@@ -81,16 +80,10 @@ def config(bot,mess,args):
   return 'Invalid value for opt "'+opt+'"'
 
 @botcmd
-def last(bot,mess,args):
-  """display last command (from any chat)"""
-
-  return bot.last_cmd.get(mess.getFrom().getStripped(),'No past commands')
-
-@botcmd
 def echo(bot,mess,args):
   """echo some text"""
 
-  return args
+  return ' '.join(args)
 
 @botcmd
 def network(bot,mess,args):
@@ -101,10 +94,10 @@ def network(bot,mess,args):
   myip = s.getsockname()[0]
   s.close()
 
-  piip = getattr(bot,'xbmc_ip',None)
+  xbmc = getattr(bot,'xbmc_ip',None)
   exip = requests.get('http://ipecho.net/plain').text.strip()
 
-  return 'My IP - '+myip+' --- RPi IP - '+str(piip)+' --- External IP - '+exip
+  return 'My IP - '+myip+' --- XBMC IP - '+str(xbmc)+' --- External IP - '+exip
 
 @botcmd
 def die(bot,mess,args):
@@ -123,16 +116,19 @@ def reboot(bot,mess,args):
     return 'chat_ctrl disabled'
 
   DEVNULL = open(os.devnull,'wb')
-  subprocess.Popen(['service','sibyl','restart'],
+  subprocess.Popen(['sudo','-n','/etc/init.d/sibyl','restart'],
       stdout=DEVNULL,stderr=DEVNULL,close_fds=True)
-  sys.exit()
+  bot.quit('reboot by chat_ctrl')
 
 @botcmd
 def tv(bot,mess,args):
   """pass command to cec-client - tv (on|standby|as)"""
 
+  if not args:
+    args = ['pow']
+
   # sanitize args
-  args = ''.join([s for s in args if s.isalpha()])
+  args = ''.join([s for s in args[0] if s.isalpha()])
 
   PIPE = subprocess.PIPE
   p = subprocess.Popen(['cec-client','-s'],stdin=PIPE,stdout=PIPE,stderr=PIPE)
@@ -143,19 +139,27 @@ def tv(bot,mess,args):
   if 'connection opened' not in out:
     return 'Unknown error'
 
+  if args=='pow':
+    for line in out.split('\n'):
+      if 'power status:' in line:
+        return line
+
 @botcmd
 def ups(bot,mess,args):
   """get latest UPS tracking status - sibyl ups number"""
 
+  if not args:
+    return 'You must provide a tracking number'
+
   # account for connectivity issues
   try:
     url = ('http://wwwapps.ups.com/WebTracking/track?track=yes&trackNums='
-        + args + '&loc=en_us')
+        + args[0] + '&loc=en_us')
     page = requests.get(url).text
 
     # check for invalid tracking number
     if 'The number you entered is not a valid tracking number' in page:
-      return 'Invalid tracking number: "'+args+'"'
+      return 'Invalid tracking number: "'+args[0]+'"'
 
     # find and return some relevant info
     start = page.find('Activity')
@@ -173,9 +177,12 @@ def ups(bot,mess,args):
 def wiki(bot,mess,args):
   """return a link and brief from wikipedia - wiki title"""
 
+  if not args:
+    return 'You must provide a search term'
+
   # search using wikipedia's opensearch json api
   url = ('http://en.wikipedia.org/w/api.php?action=opensearch&search='
-      + args + '&format=json')
+      + ' '.join(args) + '&format=json')
   response = requests.get(url)
   result = json.loads(response.text)
   title = result[1][0]
@@ -196,10 +203,10 @@ def wiki(bot,mess,args):
 def log(bot,mess,args):
   """set the log level - log (critical|error|warning|info|debug|clear)"""
 
-  if args=='':
+  if not args:
     return 'Current level: '+logging.getLevelName(bot.log.getEffectiveLevel()).lower()
 
-  if args=='clear':
+  if args[0]=='clear':
     with open(bot.log_file,'w') as f:
       return 'Log cleared'
 
@@ -209,6 +216,6 @@ def log(bot,mess,args):
              'info'     : logging.INFO,
              'debug'    : logging.DEBUG})
 
-  level = levels.get(args,'info')
+  level = levels.get(args[0],'info')
   bot.log.setLevel(level)
   return 'Logging level set to: '+level

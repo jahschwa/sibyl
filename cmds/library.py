@@ -5,7 +5,7 @@ import os,pickle,time,traceback
 import smbc
 
 from decorators import *
-from util import *
+import util
 
 @botconf
 def conf(bot):
@@ -47,13 +47,13 @@ def parse_lib(conf,opt,val):
   """parse the lib into a list"""
 
   val = val.replace('\n','')
-  entries = split_strip(val,';')
+  entries = util.split_strip(val,';')
   lib = []
   for entry in entries:
     if entry=='':
       continue
     if ',' in entry:
-      params = split_strip(entry,',')
+      params = util.split_strip(entry,',')
       item = {'server':params[0], 'share':params[1], 'username':None, 'password':None}
       if len(params)>2:
         item['username'] = params[2]
@@ -69,7 +69,7 @@ def init(bot):
   """create libraries"""
   
   if os.path.isfile(bot.lib_file):
-    bot.run_cmd('library','load')
+    bot.run_cmd('library',['load'])
   else:
     bot.lib_last_rebuilt = time.asctime()
     bot.lib_last_elapsed = 0
@@ -77,14 +77,17 @@ def init(bot):
     bot.lib_audio_file = None
     bot.lib_video_dir = None
     bot.lib_video_file = None
-    bot.run_cmd('library','rebuild')
+    bot.run_cmd('library',['rebuild'])
 
 @botcmd
 def library(bot,mess,args):
   """control media library - library (info|load|rebuild|save)"""
 
+  if not args:
+    args = ['info']
+
   # read the library from a pickle and load it into sibyl
-  if args=='load':
+  if args[0]=='load':
     with open(bot.lib_file,'r') as f:
       d = pickle.load(f)
     bot.lib_last_rebuilt = d['lib_last_rebuilt']
@@ -100,7 +103,7 @@ def library(bot,mess,args):
     return s
 
   # save sibyl's library to a pickle
-  elif args=='save':
+  elif args[0]=='save':
     d = ({'lib_last_rebuilt':bot.lib_last_rebuilt,
           'lib_last_elapsed':bot.lib_last_elapsed,
           'lib_video_dir':bot.lib_video_dir,
@@ -115,12 +118,12 @@ def library(bot,mess,args):
     return s
 
   # rebuild the library by traversing all paths then save it
-  elif args=='rebuild':
+  elif args[0]=='rebuild':
 
     # when sibyl calls this method on init mess is None
     if mess is not None:
-      t = sec2str(bot.lib_last_elapsed)
-      bot.send_simple_reply(mess,'Working... (last rebuild took '+t+')')
+      t = util.sec2str(bot.lib_last_elapsed)
+      bot.protocol.send('Working... (last rebuild took '+t+')',mess.get_from())
 
     # time the rebuild and update library vars
     start = time.time()
@@ -140,9 +143,9 @@ def library(bot,mess,args):
           errors.append(x)
     
     bot.lib_last_elapsed = int(time.time()-start)
-    result = bot.run_cmd('library','save')
+    result = bot.run_cmd('library',['save'])
 
-    s = 'Library rebuilt in '+sec2str(bot.lib_last_elapsed)
+    s = 'Library rebuilt in '+util.sec2str(bot.lib_last_elapsed)
     bot.log.info(s)
     if errors:
       s += ' with errors (see log): '+str([x[0] for x in errors])
@@ -159,25 +162,26 @@ def library(bot,mess,args):
 def search(bot,mess,args):
   """search all paths for matches - search [include -exclude]"""
 
-  name = args.split(' ')
-  _matches = []
+  if not args:
+    args = ['/']
+  matches = []
 
   # search all library paths
   dirs = [bot.lib_video_dir,bot.lib_video_file,bot.lib_audio_dir,bot.lib_audio_file]
   for d in dirs:
-    _matches.extend(matches(d,name))
+    matches.extend(util.matches(d,args))
 
-  if len(_matches)==0:
+  if len(matches)==0:
     return 'Found 0 matches'
 
   # reply with matches based on max_matches setting
-  if len(_matches)>1:
-    if bot.max_matches<1 or len(_matches)<=bot.max_matches:
-      return 'Found '+str(len(_matches))+' matches: '+list2str(_matches)
+  if len(matches)>1:
+    if bot.max_matches<1 or len(matches)<=bot.max_matches:
+      return 'Found '+str(len(matches))+' matches: '+util.list2str(matches)
     else:
-      return 'Found '+str(len(_matches))+' matches'
+      return 'Found '+str(len(matches))+' matches'
 
-  return 'Found '+str(len(_matches))+' match: '+str(_matches[0])
+  return 'Found '+str(len(matches))+' match: '+str(matches[0])
 
 def find(bot,fd,dirs):
   """helper function for library()"""
@@ -199,9 +203,9 @@ def find(bot,fd,dirs):
   for path in paths:
     try:
       if fd=='dir':
-        contents = rlistdir(path)
+        contents = util.rlistdir(path)
       else:
-        contents = rlistfiles(path)
+        contents = util.rlistfiles(path)
       for entry in contents:
         result.append(entry)
     except Exception as e:
@@ -217,9 +221,9 @@ def find(bot,fd,dirs):
       share = 'smb://'+path['server']+'/'+path['share']
       smb.opendir(share[:share.rfind('/')])
       if fd=='dir':
-        contents = rsambadir(smb,share)
+        contents = util.rsambadir(smb,share)
       else:
-        contents = rsambafiles(smb,share)
+        contents = util.rsambafiles(smb,share)
       for entry in contents:
         result.append(entry)
     except Exception as e:

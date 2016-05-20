@@ -34,6 +34,10 @@ class User(object):
     pass
 
   @abstractmethod
+  def get_name(self):
+    pass
+
+  @abstractmethod
   def get_room(self):
     pass
 
@@ -191,8 +195,14 @@ class Protocol(object):
     pass
 
   @abstractmethod
-  def send(self,text,user):
-    """send a message with given text to given user"""
+  def send(self,text,to):
+    """send a message with given text to given User or room"""
+
+    pass
+
+  @abstractmethod
+  def broadcast(self,text,room,frm=None):
+    """send a message to every user in a room"""
 
     pass
 
@@ -221,7 +231,25 @@ class Protocol(object):
     pass
 
   @abstractmethod
+  def get_occupants(self,room):
+    """return the Users in the given room, or None if we are not in the room"""
+
+    pass
+
+  @abstractmethod
   def get_nick(self,room):
     """return our nick in the specified room"""
+
+    pass
+
+  @abstractmethod
+  def get_real(self,room,nick):
+    """return the real username of the given nick"""
+
+    pass
+
+  @abstractmethod
+  def new_user(self,user,typ):
+    """create a new user of this Protocol's User class"""
 
     pass

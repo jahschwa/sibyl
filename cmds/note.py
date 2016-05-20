@@ -3,7 +3,7 @@
 import os
 
 from decorators import *
-from util import *
+import util
 
 @botconf
 def conf(bot):
@@ -27,11 +27,9 @@ def init(bot):
 def note(bot,mess,args):
   """add a note - note (show|add|playing|remove) [body|num]"""
 
-  args = args.split(' ')
-
   # default behavior is "show"
-  if args[0]=='':
-    args[0] = 'show'
+  if not args:
+    args = ['show']
   if args[0] not in ['show','add','playing','remove']:
     args.insert(0,'show')
 
@@ -50,7 +48,7 @@ def note(bot,mess,args):
       return 'Nothing playing; note not added'
     (pid,typ) = active
     result = bot.xbmc('Player.GetProperties',{'playerid':pid,'properties':['time']})
-    t = str(time2str(result['result']['time']))
+    t = str(util.time2str(result['result']['time']))
 
     result = bot.xbmc('Player.GetItem',{'playerid':pid,'properties':['file']})
     fil = os.path.basename(str(result['result']['item']['file']))

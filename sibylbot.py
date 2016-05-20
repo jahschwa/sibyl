@@ -190,30 +190,25 @@ class SibylBot(object):
 
     self.__run_hooks('idle')
 
-  def join_room_success(self,room):
-    """execute callbacks on successfull MUC join"""
-    
-    self.__run_hooks('mucs',room)
-
-  def join_room_failure(self,room,error):
-    """execute callbacks on successfull MUC join"""
-    
-    self.__run_hooks('mucf',room,error)
-
-  def run_cmd(self,cmd,args,mess=None):
+  def run_cmd(self,cmd,args=None,mess=None):
     """run a chat command manually"""
 
+    if (args is not None) and (not isinstance(args,list)):
+      raise ValueError('The args to run_cmd must be list')
+
+    if args is None:
+      args = []
     return self.hooks['chat'][cmd](mess,args)
 
 ################################################################################
-# Message/status callback                                                      #
+# Callbacks for Protocols                                                      #
 ################################################################################
 
-  def callback(self,mess):
+  def _cb_message(self,mess):
     """figure out if the message is a command and respond"""
 
     frm = mess.get_from()
-    usr = str(frm)
+    usr = frm.get_base()
     real = frm.get_real()
     if real:
       real = real.get_base()
@@ -222,13 +217,16 @@ class SibylBot(object):
 
     typ = mess.get_type()
     text = mess.get_text()
+
+    # Execute status hooks and return
+    if typ==Message.STATUS:
+      self.__run_hooks('status',mess)
+      return
+    
     cmd = self.get_cmd(mess)
 
-    # Execute hooks, return if not PRIVATE or GROUP
-    if typ==Message.STATUS:
-      self.__run_hooks('pres',status)
-      return
-    elif typ==Message.PRIVATE:
+    # Execute hooks, return if ERROR
+    if typ==Message.PRIVATE:
       self.__run_hooks('priv',mess,cmd)
       self.__run_hooks('msg',mess,cmd)
     elif typ==Message.GROUP:
@@ -252,8 +250,7 @@ class SibylBot(object):
       if len(new.strip())>0:
         cmd += (' '+new.strip())
 
-    args = cmd.split(' ')
-    cmd_name = args[0]
+    (cmd_name,args) = self.get_args(cmd)
 
     # check if the command exists
     if cmd_name not in self.hooks['chat']:
@@ -265,7 +262,7 @@ class SibylBot(object):
           'command': cmd,
           'helpcommand': 'help',
         }
-      reply = self.unknown_command(mess, cmd, args)
+      reply = self.unknown_command(mess,cmd_name,args)
       if reply is None:
         reply = default_reply
       if reply:
@@ -286,21 +283,17 @@ class SibylBot(object):
 
     # redo command logic
     if cmd_name=='redo':
-      self.log.debug('Redo cmd; original msg: "'+msg+'"')
-      cmd = self.last_cmd.get(frm.get_base(),'echo Nothing to redo')
+      self.log.debug('Redo cmd; original msg: "'+text+'"')
+      cmd = self.last_cmd.get(usr,'echo Nothing to redo')
       if len(args)>1:
         cmd += (' '+' '.join(args[1:]))
-        self.last_cmd[frm.get_base()] = cmd
-      if mess.get_type()==Message.GROUP:
-        nick = self.protocol.get_nick(frm.get_room())
-        if self.only_direct and not cmd.startswith(nick):
-          cmd = (nick+' '+cmd)
-      mess.set_text(cmd)
+        self.last_cmd[usr] = cmd
+      (cmd_name,args) = self.get_args(cmd)
     elif cmd_name!='last':
-      self.last_cmd[frm.get_base()] = cmd
+      self.last_cmd[usr] = cmd
 
     # log command and message info
-    self.log.debug('*** cmd  = %s' % cmd_name)
+    self.log.info('*** cmd  = %s' % cmd_name)
     self.log.debug('*** from = %s' % frm)
     if real!=frm:
       self.log.debug('*** real = %s' % real)
@@ -321,10 +314,24 @@ class SibylBot(object):
     if reply:
       self.protocol.send(reply,frm)
 
+  def _cb_join_room_success(self,room):
+    """execute callbacks on successfull MUC join"""
+    
+    self.__run_hooks('mucs',room)
+
+  def _cb_join_room_failure(self,room,error):
+    """execute callbacks on successfull MUC join"""
+    
+    self.__run_hooks('mucf',room,error)
+
+################################################################################
+# Helper functions                                                             #
+################################################################################
+
   def get_cmd(self,mess):
     """return the body of mess with nick and prefix removed, or None if invalid"""
 
-    text = mess.get_text().lower()
+    text = mess.get_text()
     frm = mess.get_from()
 
     direct = False
@@ -357,12 +364,25 @@ class SibylBot(object):
       return text
     return text[len(self.cmd_prefix):]
 
+  def get_args(self,cmd):
+    """return the cmd_name and args in a tuple, accounting for quotes"""
+
+    args = cmd.split(' ')
+    name = args[0]
+    args = ' '.join(args[1:]).strip()
+
+    l = []
+    if args:
+      l = util.get_args(args)
+
+    return (name,l)
+
 ################################################################################
 # Commands                                                                     #
 ################################################################################
 
   @botcmd
-  def redo(bot,mess,args):
+  def redo(self,mess,args):
     """redo last command - redo [args]"""
   
     # this is a dummy function so it gets displayed in the help command
@@ -370,22 +390,26 @@ class SibylBot(object):
     return
 
   @botcmd
-  def git(bot,mess,args):
+  def last(self,mess,args):
+    """display last command (from any chat)"""
+
+    return self.last_cmd.get(mess.get_from().get_base(),'No past commands')
+
+  @botcmd
+  def git(self,mess,args):
     """return a link to the github page"""
 
     return 'https://github.com/TheSchwa/sibyl'
 
   @botcmd
-  def hello(bot,mess,args):
+  def hello(self,mess,args):
     """reply if someone says hello"""
 
     return 'Hello world!'
 
   @botcmd
-  def help(self, mess, args):
-    """   Returns a help string listing available options.
-
-    Automatically assigned to the "help" command."""
+  def help(self,mess,args):
+    """return help info about cmds - help [cmd]"""
     if not args:
       if self.__doc__:
         description = self.__doc__.strip()
@@ -396,14 +420,13 @@ class SibylBot(object):
         '%s: %s' % (name, (command.__doc__ or \
           '(undocumented)').strip().split('\n', 1)[0])
         for (name, command) in self.hooks['chat'].iteritems() \
-          if name != 'help' \
-          and not command._sibylbot_dec_chat_hidden
+          if not command._sibylbot_dec_chat_hidden
       ]))
       usage = '\n\n' + '\n\n'.join(filter(None,
         [usage, self.MSG_HELP_TAIL % {'helpcommand': 'help'}]))
     else:
       description = ''
-      args = self.remove_prefix(args)
+      args = self.remove_prefix(args[0])
       if args in self.hooks['chat']:
         usage = (self.hooks['chat'][args].__doc__ or \
           'undocumented').strip()
@@ -463,7 +486,7 @@ class SibylBot(object):
     """
     self.__finished = True
     if msg:
-      self.log.debug(msg)
+      self.log.critical(msg)
 
   def shutdown(self):
     """This function will be called when we're done serving
@@ -477,9 +500,9 @@ class SibylBot(object):
     """Connects to the server and handles messages."""
     self.protocol.connect(self.username,self.password)
     if self.protocol.is_connected():
-      self.log.info('bot connected. serving forever.')
+      self.log.info('bot connected; serving forever')
     else:
-      self.log.warn('could not connect to server - aborting.')
+      self.log.critical('could not connect to server - aborting.')
       return
 
     if connect_callback:
@@ -490,8 +513,7 @@ class SibylBot(object):
         self.protocol.process()
         self.__idle_proc()
       except KeyboardInterrupt:
-        self.log.info('bot stopped by user request. '\
-          'shutting down.')
+        self.log.critical('stopped by keyboard interrupt')
         break
 
     self.shutdown()
