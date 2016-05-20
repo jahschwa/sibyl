@@ -40,7 +40,7 @@ class Config(object):
 
 #jabberbot options
 #-------------------------------------------------------------------------------
-('resource',    (None,               False,  None,             None)),
+('resource',    ('SibylBot',         False,  None,             None)),
 ('debug',       (False,              False,  None,             self.parse_bool)),
 ('rooms',       ([],                 False,  None,             self.parse_room)),
 ('priv_domain', (True,               False,  None,             self.parse_bool)),
@@ -57,7 +57,7 @@ class Config(object):
 
 #temp
 ('server',(None,False,None,None)),
-('xmpp_debug',(None,False,None,None))
+('xmpp_debug',(False,False,None,None))
 
     ])
     

@@ -61,8 +61,10 @@ class SibylBot(object):
     result = self.conf.reload()
 
     # configure logging
-    logging.basicConfig(filename=self.log_file,format='%(asctime).19s | %(levelname).3s | %(message)s',level=self.log_level)
-    self.log = logging.getLogger()
+    logging.basicConfig(filename=self.log_file,
+        format='%(asctime).19s | %(name)-8.8s | %(levelname).3s | %(message)s',
+        level=self.log_level)
+    self.log = logging.getLogger('sibylbot')
 
     self.log.info('')
     self.log.info('-'*50)
@@ -71,8 +73,6 @@ class SibylBot(object):
     self.log.info('')
     self.log.info('Conf : '+os.path.abspath(self.conf_file))
     self.log.info('PID  : %s' % os.getpid())
-    self.log.info('')
-    self.log.info('-'*50)
     self.log.info('')
     self.log.info('Reading config file "%s"...' % self.conf_file)
 
@@ -109,7 +109,7 @@ class SibylBot(object):
         #~ nick_name = self.nick_name)
 
     # create protocol object
-    self.protocol = XMPP(self)
+    self.protocol = XMPP(self,logging.getLogger('xmpp'))
 
     # used to stop the bot cleanly
     self.__finished = False
@@ -121,12 +121,17 @@ class SibylBot(object):
     self.muc_pending = {}
 
     # Load hooks from self.cmd_dir
-    self.hooks = {x:{} for x in ['chat','init','mucs','mucf','msg','status','idle']}
+    self.hooks = {x:{} for x in
+        ['chat','init','mucs','mucf','msg','priv','group','status','idle']}
     self.__load_funcs(self,'sibylbot',silent=True)
     self.__load_plugins(self.cmd_dir)
 
     # Run plug-in init hooks
     self.__run_hooks('init')
+
+################################################################################
+# Plug-in framework                                                            #
+################################################################################
 
   def __load_plugins(self,d):
     """recursively load all plugins from all sub-directories"""
@@ -145,14 +150,14 @@ class SibylBot(object):
     
     for (name,func) in inspect.getmembers(mod,inspect.isroutine):
       
-      if getattr(func,'_jabberbot_dec_func',False):
+      if getattr(func,'_sibylbot_dec_func',False):
         setattr(self,name,self.__bind(func))
         if not silent:
           self.log.debug('Registered function: %s.%s' % (fil,name))
 
       for (hook,dic) in self.hooks.items():
-        if getattr(func,'_jabberbot_dec_'+hook,False):
-          fname = getattr(func,'_jabberbot_dec_'+hook+'_name',None)
+        if getattr(func,'_sibylbot_dec_'+hook,False):
+          fname = getattr(func,'_sibylbot_dec_'+hook+'_name',None)
           s = 'Registered %s command: %s.%s = %s' % (hook,fil,name,fname)
           if fname is None:
             fname = fil+'.'+name
@@ -195,6 +200,15 @@ class SibylBot(object):
     
     self.__run_hooks('mucf',room,error)
 
+  def run_cmd(self,cmd,args,mess=None):
+    """run a chat command manually"""
+
+    return self.hooks['chat'][cmd](mess,args)
+
+################################################################################
+# Message/status callback                                                      #
+################################################################################
+
   def callback(self,mess):
     """figure out if the message is a command and respond"""
 
@@ -210,78 +224,40 @@ class SibylBot(object):
     text = mess.get_text()
     cmd = self.get_cmd(mess)
 
+    # Execute hooks, return if not PRIVATE or GROUP
     if typ==Message.STATUS:
       self.__run_hooks('pres',status)
-    else:
+      return
+    elif typ==Message.PRIVATE:
+      self.__run_hooks('priv',mess,cmd)
       self.__run_hooks('msg',mess,cmd)
-
-    # execute commands
-    if cmd:
-      
-      # account for double cmd_prefix = redo (e.g. !!)
-      if self.cmd_prefix and cmd.startswith(self.cmd_prefix):
-        new = self.remove_prefix(cmd)
-        cmd = 'redo'
-        if len(new.strip())>0:
-          cmd += (' '+new.strip())
-
-      args = cmd.split(' ')
-      cmd_name = args[0]
-      
-      # check against bw_list
-      for rule in self.bw_list:
-        if (rule[1]!='*') and (rule[1] not in real):
-          continue
-        if rule[2]!='*' and rule[2]!=cmd_name:
-          continue
-        applied = rule
-
-      if applied[0]=='w':
-        self.log.debug('Allowed "'+real+'" to execute "'+cmd_name+'" with rule '+str(applied))
-      else:
-        self.log.debug('Denied "'+real+'" from executing "'+cmd_name+'" with rule '+str(applied))
-        self.protocol.send('You do not have permission to execute that command',frm)
-        return
-
-      # redo command logic
-      if cmd_name=='redo':
-        self.log.debug('Redo cmd; original msg: "'+msg+'"')
-        cmd = self.last_cmd.get(frm.get_base(),'echo Nothing to redo')
-        if len(args)>1:
-          cmd += (' '+' '.join(args[1:]))
-          self.last_cmd[frm.get_base()] = cmd
-        if mess.get_type()==Message.GROUP:
-          nick = self.protocol.get_nick(frm.get_room())
-          if self.only_direct and not cmd.startswith(nick):
-            cmd = (nick+' '+cmd)
-        mess.set_text(cmd)
-      elif cmd_name!='last':
-        self.last_cmd[frm.get_base()] = cmd
-
-    if ' ' in text:
-      command, args = text.split(' ', 1)
+    elif typ==Message.GROUP:
+      self.__run_hooks('group',mess,cmd)
+      self.__run_hooks('msg',mess,cmd)
+    elif typ==Message.ERROR:
+      self.__run_hooks('err',mess,cmd)
+      return
     else:
-      command, args = text, ''
-    cmd = command.lower()
-    self.log.debug("*** cmd = %s" % cmd)
+      self.log.error('Unknown message type "%s"' % typ)
+      return
 
-    if cmd in self.hooks['chat']:
-        try:
-          reply = self.hooks['chat'][cmd](mess, args)
-        except Exception, e:
-          self.log.exception('An error happened while processing '\
-            'a message ("%s") from %s: %s"' %
-            (text, frm, traceback.format_exc(e)))
-          reply = self.MSG_ERROR_OCCURRED
-          if self.except_reply:
-            reply = traceback.format_exc(e).split('\n')[-2]
-        if reply:
-          self.send(reply,frm)
-    else:
-      # In private chat, it's okay for the bot to always respond.
-      # In group chat, the bot should silently ignore commands it
-      # doesn't understand or aren't handled by unknown_command().
-      self.log.info('Unknown command "%s"' % cmd)
+    # If cmd is None, the msg was not a cmd directed at us
+    if not cmd:
+      return
+    
+    # account for double cmd_prefix = redo (e.g. !!)
+    if self.cmd_prefix and cmd.startswith(self.cmd_prefix):
+      new = self.remove_prefix(cmd)
+      cmd = 'redo'
+      if len(new.strip())>0:
+        cmd += (' '+new.strip())
+
+    args = cmd.split(' ')
+    cmd_name = args[0]
+
+    # check if the command exists
+    if cmd_name not in self.hooks['chat']:
+      self.log.info('Unknown command "%s"' % cmd_name)
       if typ==Message.GROUP:
         default_reply = None
       else:
@@ -293,12 +269,62 @@ class SibylBot(object):
       if reply is None:
         reply = default_reply
       if reply:
-        self.send(reply,frm)
+        self.protocol.send(reply,frm)
+      return
+    
+    # check against bw_list
+    for rule in self.bw_list:
+      if (rule[1]!='*') and (rule[1] not in real):
+        continue
+      if rule[2]!='*' and rule[2]!=cmd_name:
+        continue
+      applied = rule
+
+    if applied[0]=='b':
+      self.protocol.send('You do not have permission to execute that command',frm)
+      return
+
+    # redo command logic
+    if cmd_name=='redo':
+      self.log.debug('Redo cmd; original msg: "'+msg+'"')
+      cmd = self.last_cmd.get(frm.get_base(),'echo Nothing to redo')
+      if len(args)>1:
+        cmd += (' '+' '.join(args[1:]))
+        self.last_cmd[frm.get_base()] = cmd
+      if mess.get_type()==Message.GROUP:
+        nick = self.protocol.get_nick(frm.get_room())
+        if self.only_direct and not cmd.startswith(nick):
+          cmd = (nick+' '+cmd)
+      mess.set_text(cmd)
+    elif cmd_name!='last':
+      self.last_cmd[frm.get_base()] = cmd
+
+    # log command and message info
+    self.log.debug('*** cmd  = %s' % cmd_name)
+    self.log.debug('*** from = %s' % frm)
+    if real!=frm:
+      self.log.debug('*** real = %s' % real)
+    self.log.debug('*** type = %s' % Message.type_to_str(typ))
+    self.log.debug('*** text = %s' % text)
+    self.log.debug('*** b/w  = %s' % str(applied))
+
+    # execute the command
+    try:
+      reply = self.hooks['chat'][cmd_name](mess,args)
+    except Exception, e:
+      self.log.exception('An error happened while processing '\
+        'a message ("%s") from %s: %s"' %
+        (text,frm,traceback.format_exc(e)))
+      reply = self.MSG_ERROR_OCCURRED
+      if self.except_reply:
+        reply = traceback.format_exc(e).split('\n')[-2]
+    if reply:
+      self.protocol.send(reply,frm)
 
   def get_cmd(self,mess):
     """return the body of mess with nick and prefix removed, or None if invalid"""
 
-    text = mess.get_text()
+    text = mess.get_text().lower()
     frm = mess.get_from()
 
     direct = False
@@ -474,17 +500,17 @@ class SibylBot(object):
       disconnect_callback()
 
   def log_startup_msg(self,rooms=None):
-    """log a message to appear when the bot starts"""
+    """log a message to appear when the bot connects"""
 
     self.log.info('')
-    self.log.info('-'*50)
+    self.log.critical('SibylBot connecting...')
     self.log.info('')
-    self.log.critical('JabberBot starting...')
-    self.log.info('')
+    self.log.info('Chat : %s' % self.protocol.get_name())
     self.log.info('User : %s' % self.username)
     if rooms:
       for room in rooms:
-        self.log.info('Room : %s/%s' % (room['room'],(room['nick'] if room['nick'] else 'Sibyl')))
+        self.log.info('Room : %s/%s' %
+            (room['room'],(room['nick'] if room['nick'] else 'Sibyl')))
     else:
       self.log.info('Room : None')
     self.log.info('Cmds : %i' % len(self.hooks['chat']))

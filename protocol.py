@@ -95,6 +95,8 @@ class Message(object):
   GROUP = 2
   ERROR = 3
 
+  TYPES = ['STATUS','PRIVATE','GROUP','ERROR']
+
   def __init__(self,typ,frm,txt,show=None,status=None):
     """create a new Message"""
 
@@ -106,7 +108,7 @@ class Message(object):
     self.txt = txt
     self.show = show
     self.status = status
-    
+
   def get_from(self):
     """return the username of the sender"""
 
@@ -137,6 +139,14 @@ class Message(object):
 
     return self.status
 
+  @staticmethod
+  def type_to_str(typ):
+    """return a human-readable type"""
+
+    if typ not in range(0,4):
+      return 'INVALID'
+    return Message.TYPES[typ]
+
 ################################################################################
 # Protocol abstract class                                                      #
 ################################################################################
@@ -147,6 +157,12 @@ class Protocol(object):
   @abstractmethod
   def __init__(self,callback):
     """create a new object that calls "callback" upon receiving a msg"""
+
+    pass
+
+  @abstractmethod
+  def get_name(self):
+    """return the name of this protocol (e.g. 'XMPP')"""
 
     pass
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import logging,time
+import logging,time,re
 
 import xmpp
 from xmpp.protocol import SystemShutdown
@@ -102,7 +102,7 @@ class XMPP(Protocol):
                     'remote-server-not-found' : 'server not found',
                     'timeout'                 : 'timeout'}
 
-  def __init__(self,bot):
+  def __init__(self,bot,log):
 
     self.types = {'presence':Message.STATUS,
                   'chat':Message.PRIVATE,
@@ -110,7 +110,7 @@ class XMPP(Protocol):
                   'error':Message.ERROR}
 
     self.bot = bot
-    self.log = bot.log
+    self.log = log
     self.conn = None
 
     if bot.server is not None:
@@ -134,6 +134,10 @@ class XMPP(Protocol):
     self.last_muc = None
     self.last_ping = time.time()
     self.last_join = self.last_ping
+
+  def get_name(self):
+
+    return 'XMPP'
 
   def connect(self,user,pword):
 
@@ -196,7 +200,7 @@ class XMPP(Protocol):
   def send(self,text,user):
 
     mess = self.__build_message(text)
-    mess.setTo(xmpp.JID(str(user)))
+    mess.setTo(xmpp.JID( user.get_room() or str(user) ))
 
     typ = 'chat'
     if user.get_room():
@@ -298,12 +302,6 @@ class XMPP(Protocol):
       self.log.debug("I've seen: %s" %
         ["%s" % x for x in self.seen.keys()+self.real_jids.values()])
       return
-
-    self.log.debug("*** props = %s" % props)
-    self.log.debug("*** jid = %s" % jid)
-    self.log.debug("*** username = %s" % username)
-    self.log.debug("*** type = %s" % typ)
-    self.log.debug("*** text = %s" % text)
 
     frm = JID(str(jid),typ)
     if jid in self.real_jids:
