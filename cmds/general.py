@@ -31,7 +31,7 @@ def config(bot,mess,args):
     return str(bot.conf.opts)
   if opt not in bot.conf.opts and opt!='*':
     return 'Invalid opt'
-  if opt in ('username','password'):
+  if opt in ('chat_proto','username','password'):
     return 'You may not access that option via chat!'
 
   if cmd=='show':

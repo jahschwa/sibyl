@@ -8,6 +8,12 @@ from lxml.html import fromstring
 from decorators import *
 from protocol import Message
 
+@botconf
+def conf(bot):
+  """create the link_echo option"""
+
+  return {'name':'link_echo','default':False,'parse':bot.conf.parse_bool}
+
 @botinit
 def init(bot):
   """create the room_pending variable to enable chat responses"""

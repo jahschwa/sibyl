@@ -14,9 +14,7 @@ from decorators import botconf
 
 @botconf
 def conf(bot):
-  return [{'name':'username','default':None,'required':True},
-          {'name':'password','default':None,'required':True},
-          {'name':'resource','default':'sibyl'},
+  return [{'name':'resource','default':'sibyl'},
           {'name':'server','default':None},
           {'name':'port','default':5222,'parse':bot.conf.parse_int},
           {'name':'ping_freq','default':0,'parse':bot.conf.parse_int},

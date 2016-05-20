@@ -9,7 +9,6 @@ import sys,logging,re,os,imp,inspect,traceback
 from config import Config
 from protocol import Message
 from protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
-from protocols.sibyl_xmpp import XMPP
 from decorators import botcmd
 import util
 
@@ -47,14 +46,12 @@ class SibylBot(object):
     for f in files:
       f = f.split('.')[0]
       mod = util.load_module(f,self.cmd_dir)
-      for (name,func) in inspect.getmembers(mod,inspect.isfunction):
-        if getattr(func,'_sibylbot_dec_conf',False):
-          opts = func(self)
-          if not isinstance(opts,list):
-            opts = [opts]
-          self.conf.add_opts(opts)
+      self.__load_conf(mod)
 
-    # load protocol config options
+    # try to load chat protocol config options
+    if self.chat_proto:
+      mod = util.load_module('sibyl_'+self.chat_proto[0],'protocols')
+      self.__load_conf(mod)
 
     # reload config after plugins
     self.conf.clear_log()
@@ -91,25 +88,9 @@ class SibylBot(object):
       sys.exit(1)
     self.log.info('Success parsing config file')
 
-    #~ # call JabberBot init
-    #~ super(SibylBot,self).__init__(self.username,self.password,
-        #~ res = self.resource,
-        #~ debug = self.debug,
-        #~ rooms = self.rooms,
-        #~ privatedomain = self.priv_domain,
-        #~ cmd_dir = self.cmd_dir,
-        #~ cmd_prefix = self.cmd_prefix,
-        #~ port = self.port,
-        #~ ping_freq = self.ping_freq,
-        #~ ping_timeout = self.ping_timeout,
-        #~ only_direct = self.only_direct,
-        #~ reconnect_wait = self.recon_wait,
-        #~ catch_except = self.catch_except,
-        #~ except_reply = self.except_reply,
-        #~ nick_name = self.nick_name)
-
     # create protocol object
-    self.protocol = XMPP(self,logging.getLogger('xmpp'))
+    self.protocol = self.chat_proto[1](
+        self,logging.getLogger(self.chat_proto[0]))
 
     # used to stop the bot cleanly
     self.__finished = False
@@ -165,6 +146,15 @@ class SibylBot(object):
           dic[fname] = self.__bind(func)
           if not silent:
             self.log.debug(s)
+
+  def __load_conf(self,mod):
+
+    for (name,func) in inspect.getmembers(mod,inspect.isfunction):
+      if getattr(func,'_sibylbot_dec_conf',False):
+        opts = func(self)
+        if not isinstance(opts,list):
+          opts = [opts]
+        self.conf.add_opts(opts)
 
   def __load_module(self,name,path):
 

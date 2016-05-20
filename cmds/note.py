@@ -9,9 +9,9 @@ import util
 def conf(bot):
   """add config options"""
 
-  return [{'name':'note_file',
+  return {'name':'note_file',
           'default':'data/sibyl_note.txt',
-          'valid':bot.conf.valid_file}]
+          'valid':bot.conf.valid_file}
 
 @botinit
 def init(bot):

@@ -11,6 +11,7 @@ def conf(bot):
 
   return [{'name' : 'xbmc_ip',
             'default' : '127.0.0.1',
+            'required' : True,
             'valid' : bot.conf.valid_ip},
           {'name' : 'xbmc_user'},
           {'name' : 'xbmc_pass'}]

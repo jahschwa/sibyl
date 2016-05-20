@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
-import time,os,socket,copy,logging
+import time,os,socket,copy,logging,inspect
 from collections import OrderedDict as odict
 import ConfigParser as cp
 
+from protocol import Protocol
 import util
 
 DUMMY = 'dummy'
@@ -30,34 +31,20 @@ class Config(object):
 
 #option          default             requir  validate_func     parse_func
 #-------------------------------------------------------------------------------
+('chat_proto',  (None,               True,   None,             self.parse_protocol)),
 ('username',    (None,               True,   None,             None)),
 ('password',    (None,               True,   None,             None)),
+('cmd_dir',     ('cmds',             False,  self.valid_dir,   None)),
+('rooms',       ([],                 False,  None,             self.parse_room)),
+('nick_name',   ('Sibyl',            False,  None,             None)),
 ('log_level',   (logging.INFO,       False,  None,             self.parse_log)),
 ('log_file',    ('data/sibyl.log',   False,  self.valid_file,  None)),
 ('bw_list',     ([('w','*','*')],    False,  self.valid_bw,    self.parse_bw)),
 ('chat_ctrl',   (False,              False,  None,             self.parse_bool)),
-('link_echo',   (False,              False,  None,             self.parse_bool)),
-
-#jabberbot options
-#-------------------------------------------------------------------------------
-('resource',    ('SibylBot',         False,  None,             None)),
-('debug',       (False,              False,  None,             self.parse_bool)),
-('rooms',       ([],                 False,  None,             self.parse_room)),
-('priv_domain', (True,               False,  None,             self.parse_bool)),
-('cmd_dir',     ('cmds',             False,  self.valid_dir,   None)),
 ('cmd_prefix',  (None,               False,  None,             None)),
-('port',        (5222,               False,  None,             self.parse_int)),
-('ping_freq',   (0,                  False,  None,             self.parse_int)),
 ('except_reply',(False,              False,  None,             self.parse_bool)),
-('ping_timeout',(3,                  False,  None,             self.parse_int)),
 ('only_direct', (True,               False,  None,             self.parse_bool)),
-('recon_wait',  (60,                 False,  None,             self.parse_int)),
 ('catch_except',(True,               False,  None,             self.parse_bool)),
-('nick_name',   ('Sibyl',            False,  None,             None)),
-
-#temp
-('server',(None,False,None,None)),
-('xmpp_debug',(False,False,None,None))
 
     ])
     
@@ -305,6 +292,15 @@ class Config(object):
 ################################################################################
 # Parse functions                                                              #
 ################################################################################
+
+  def parse_protocol(self,opt,val):
+    """parse the protocol and return the subclass"""
+
+    mod = util.load_module('sibyl_'+val,'protocols')
+    for (name,clas) in inspect.getmembers(mod,inspect.isclass):
+      if issubclass(clas,Protocol) and name.lower()==val:
+        return (val,clas)
+    raise ValueError
 
   def parse_room(self,opt,val):
     """parse the rooms into a list"""
