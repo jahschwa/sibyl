@@ -23,8 +23,8 @@
 
 import random,requests,json,os
 
-from decorators import *
-import util
+from lib.decorators import *
+import lib.util as util
 
 @botconf
 def conf(bot):
@@ -226,7 +226,15 @@ def prev(bot,mess,args):
     return 'Nothing playing'
   (pid,typ) = active
 
-  bot.xbmc('Player.GoTo',{'playerid':pid,'to':'previous'})
+  # the "previous" option for GoTo seems to not work consistently in XBMC
+  params = {'playlistid':pid,'properties':['size']}
+  siz = bot.xbmc('Playlist.GetProperties',params)['result']['size']
+  
+  params = {'playerid':pid,'properties':['position']}
+  pos = bot.xbmc('Player.GetProperties',params)['result']['position']
+
+  pos = min(siz-1,max(0,pos-1))
+  bot.run_cmd('jump',[str(pos+1)])
 
 @botcmd
 def next(bot,mess,args):
@@ -502,6 +510,9 @@ def xbmc_chat(bot,mess,args):
 
   if not args:
     return 'http://http://kodi.wiki/view/JSON-RPC_API/v6'
+
+  text = mess.get_text()
+  args = text.split(' ')[1:]
 
   # if specified convert params to a dict
   params = None

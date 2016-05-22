@@ -20,6 +20,11 @@ OVERHAUL:
   ( + ) finish cmds plug-in framework
         ( + ) implement dependency checking
         ( + ) add config options to disable plug-ins
+        ( + ) implement duplicate checking
+              ( + ) modules
+              ( + ) chat cmds
+              ( + ) bot funcs
+              ( + ) config opts
 
   ( ! ) finish redo-ing docs to reflect plug-ins changes
         ( ! ) home page

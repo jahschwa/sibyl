@@ -40,11 +40,11 @@
 
 import sys,logging,re,os,imp,inspect,traceback,time
 
-from config import Config
-from protocol import Message
-from protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
-from decorators import botcmd
-import util
+from lib.config import Config
+from lib.protocol import Message
+from lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
+from lib.decorators import botcmd
+import lib.util as util
 
 __author__ = 'Joshua Haas <haas.josh.a@gmail.com>'
 __version__ = 'v6.0.0'
@@ -276,7 +276,7 @@ class SibylBot(object):
         default_reply = None
       else:
         default_reply = self.MSG_UNKNOWN_COMMAND % {
-          'command': cmd,
+          'command': cmd_name,
           'helpcommand': 'help',
         }
       reply = self.__unknown_command(mess,cmd_name,args)
@@ -350,11 +350,16 @@ class SibylBot(object):
     prefix = False
 
     # if text starts with our nick name, remove it
-    room = frm.get_room()
-    nick = self.protocol.get_nick(room).lower()
-    if self.protocol.in_room(room) and text.lower().startswith(nick):
+    if mess.get_type()==Message.GROUP:
+      room = frm.get_room()
+      nick = self.protocol.get_nick(room).lower()
+      if self.protocol.in_room(room) and text.lower().startswith(nick):
+        direct = True
+    else:
+      if text.lower().startswith(self.nick_name):
+        direct = True
+    if direct:
       text = ' '.join(text.split(' ',1)[1:])
-      direct = True
 
     # if text starts with cmd_prefix, remove it
     text = self.__remove_prefix(text)

@@ -25,8 +25,8 @@ import sys,os,subprocess,json,logging,socket
 
 import requests
 
-from decorators import *
-from util import getcell
+from lib.decorators import *
+from lib.util import getcell
 
 @botinit
 def init(bot):
@@ -248,6 +248,6 @@ def log(bot,mess,args):
              'info'     : logging.INFO,
              'debug'    : logging.DEBUG})
 
-  level = levels.get(args[0],'info')
+  level = levels.get(args[0],logging.INFO)
   bot.log.setLevel(level)
-  return 'Logging level set to: '+level
+  return 'Logging level set to: '+logging.getLevelName(level)

@@ -23,8 +23,8 @@
 
 import os,time
 
-from decorators import *
-import util
+from lib.decorators import *
+import lib.util as util
 
 @botconf
 def conf(bot):

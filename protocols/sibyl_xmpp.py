@@ -30,8 +30,8 @@ import logging,time,re
 import xmpp
 from xmpp.protocol import SystemShutdown
 
-from protocol import *
-from decorators import botconf
+from lib.protocol import *
+from lib.decorators import botconf
 
 ################################################################################
 # Config options                                                               #
@@ -259,7 +259,7 @@ class XMPP(Protocol):
     mess = self.__build_message(text)
 
     # if to is a (str) then it's room, otherwise check if to is MUC user
-    room = isinstance(to,str)
+    room = (isinstance(to,str) or isinstance(to,unicode))
     if not room:
       room = to.get_room()
       if room:
@@ -363,7 +363,7 @@ class XMPP(Protocol):
     jid = xmpp.JID(room+'/'+nick)
     real = self.real_jids.get(jid,nick)
     if real==nick:
-      return nick
+      return JID(jid,Message.GROUP)
 
     return JID(real,Message.PRIVATE)
 
@@ -418,7 +418,11 @@ class XMPP(Protocol):
         ["%s" % x for x in self.seen.keys()+self.real_jids.values()])
       return
 
-    self.log.debug('Got %s from %s: "%.40s"' % (typ,jid,text))
+    if len(text)>40:
+      txt = text[:40]+'...'
+    else:
+      txt = text
+    self.log.debug('Got %s from %s: "%s"' % (typ,jid,txt))
 
     typ = self.TYPES[typ]
     frm = JID(jid,typ)

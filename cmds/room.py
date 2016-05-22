@@ -27,8 +27,8 @@ import re,time
 import requests
 from lxml.html import fromstring
 
-from decorators import *
-from protocol import Message
+from lib.decorators import *
+from lib.protocol import Message
 
 @botconf
 def conf(bot):
@@ -103,7 +103,7 @@ def join(bot,mess,args):
 
   # if no room is supplied, just rejoin existing rooms
   if not args:
-    bot.run_cmd('rejoin',None)
+    return bot.run_cmd('rejoin',None)
 
   # check for optional parameters
   if len(args)<2:
@@ -168,12 +168,7 @@ def real(bot,mess,args):
   room = mess.get_from().get_room()
   if not room:
     return 'This cmd only works in a room'
-
-  # if the full username was specified, get just the nick name
-  try:
-    nick = bot.protocol.new_user(args[0],Message.GROUP).get_name()
-  except:
-    nick = args[0]
+  nick = args[0]
 
   # respond with the user's real username if valid and known
   users = [user.get_name() for user in bot.protocol.get_occupants(room)]

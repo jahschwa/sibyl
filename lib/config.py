@@ -25,8 +25,8 @@ import time,os,socket,copy,logging,inspect
 from collections import OrderedDict as odict
 import ConfigParser as cp
 
-from protocol import Protocol
-import util
+from lib.protocol import Protocol
+import lib.util as util
 
 DUMMY = 'dummy'
 

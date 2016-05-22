@@ -13,9 +13,11 @@ This change log follows guidelines at [this site](http://keepachangelog.com/).
 - New decorators: botcon, botdiscon, botrecon, botdown
 - New chat cmd "tell" in room.py
 ### Changed
+- All decorators are now located in decorators.py
 - Chat commands now receive their args as a list (possibly empty)
 - Quote blocking now works for all commands (also preserves capitalization)
 - Decorator: botpres to botstatus
+- Moved config.py, decorators.py, protocol.py, and util.py to new directory lib
 
 ### Removed
 - Refactored jabberbot.py into protocols/xmpp.py and sibylbot.py
