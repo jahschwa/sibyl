@@ -1,4 +1,29 @@
-#!/usr/bin/env python
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# Sibyl: A modular Python chat bot framework
+# Copyright (c) 2015-2016 Joshua Haas <jahschwa.com>
+#
+# JabberBot: A simple jabber/xmpp bot framework
+# Copyright (c) 2007-2012 Thomas Perl <thp.io/about>
+# $Id: d1c7090edd754ff0da8ef4eb10d4b46883f34b9f $
+#
+# This file is part of Sibyl.
+#
+# Sibyl is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
 
 import logging,time,re
 
@@ -19,7 +44,6 @@ def conf(bot):
           {'name':'port','default':5222,'parse':bot.conf.parse_int},
           {'name':'ping_freq','default':0,'parse':bot.conf.parse_int},
           {'name':'ping_timeout','default':3,'parse':bot.conf.parse_int},
-          {'name':'recon_wait','default':60,'parse':bot.conf.parse_int},
           {'name':'xmpp_debug','default':False,'parse':bot.conf.parse_bool},
           {'name':'priv_domain','default':True,'parse':bot.conf.parse_bool}]
 
@@ -36,45 +60,53 @@ class MUCJoinFailure(Exception):
 
 class JID(User):
 
-  def parse(self,user,typ):
+  def parse(self,jid,typ):
+    """accept either xmpp.JID for internal use, or str for external use"""
 
-    if typ==Message.GROUP:
-      (x,self.nick) = user.split('/')
-      (self.room,self.conference) = x.split('@')
+    # format for a JID is: node@domain/resource
+    # for private chat this looks like: user@domain/resource
+    # for group chat this looks like: room@domain/nick
+    
+    self.muc = (typ==Message.GROUP)
+    if isinstance(jid,xmpp.JID):
+      self.jid = jid
     else:
-      if '/' in user:
-        (user,self.resource) = user.split('/')
-      (self.user,self.domain) = user.split('@')
+      self.jid = xmpp.JID(jid)
 
   def get_name(self):
+    """return username or nick name"""
 
-    if self.room:
-      return self.nick
-    return self.user
+    if self.muc:
+      return self.jid.getResource()
+    return self.jid.getNode()
 
   def get_room(self):
+    """return room name or None"""
 
-    if self.room:
-      return self.room+'@'+self.conference
+    if self.muc:
+      return self.jid.getStripped()
 
   def get_base(self):
+    """return JID without resource, or full MUC JID"""
 
-    if self.room:
-      return self.room+'@'+self.conference+'/'+self.nick
-    return self.user+'@'+self.domain
+    if self.muc:
+      return str(self.jid)
+    return self.jid.getStripped()
 
   def __eq__(self,other):
+    """we can just compare our internal xmpp.JID"""
 
     if not isinstance(other,JID):
       return False
-    return str(self)==str(other)
+    return self.jid==other.jid
 
   def __str__(self):
+    """return full JID, including resources if we have one"""
 
-    if self.room:
+    if self.muc:
       return self.get_base()
-    if self.resource:
-      return self.get_base()+'/'+self.resource
+    if self.jid.getResource():
+      return str(self.jid)
     return self.get_base()
 
 ################################################################################
@@ -83,6 +115,11 @@ class JID(User):
 
 class XMPP(Protocol):
 
+  # xmpp show types
+  AVAILABLE, AWAY, CHAT = None, 'away', 'chat'
+  DND, XA, OFFLINE = 'dnd', 'xa', 'unavailable'
+
+  # MUC status
   MUC_PARTED = -1
   MUC_OK = 0
   MUC_ERR = 1
@@ -92,9 +129,7 @@ class XMPP(Protocol):
   MUC_MEMBERS = 322
   MUC_SHUTDOWN = 332
 
-  AVAILABLE, AWAY, CHAT = None, 'away', 'chat'
-  DND, XA, OFFLINE = 'dnd', 'xa', 'unavailable'
-
+  # human-readable MUC errors
   MUC_JOIN_ERROR = {'not-authorized'          : 'invalid password',
                     'forbidden'               : 'banned',
                     'item-not-found'          : 'room does not exist',
@@ -108,29 +143,36 @@ class XMPP(Protocol):
 
   def __init__(self,bot,log):
 
+    # translate xmpp types to sibyl types
     self.TYPES = {'presence':Message.STATUS,
                   'chat':Message.PRIVATE,
                   'groupchat':Message.GROUP,
                   'error':Message.ERROR}
 
+    # translate xmpp show types to sibyl types
+    self.STATUS = {'xa':Message.EXT_AWAY,
+                    'away':Message.AWAY,
+                    'dnd':Message.DND,
+                    None:Message.AVAILABLE}
+
+    # major variables
     self.bot = bot
     self.log = log
     self.conn = None
 
+    # XMPP variables
     if bot.server is not None:
       self.server = (server, port)
     else:
       self.server = None
-    
     self.username = bot.username
     self.password = bot.password
     self.jid = xmpp.JID(self.username)
     self.res = bot.resource
-
-    self.handlers = [('message', self.callback_message),
-                      ('presence', self.callback_presence)]
+    
     self.roster = None
     self.seen = {}
+    
     self.mucs = {}
     self.__muc_pending = []
     self.real_jids = {}
@@ -139,60 +181,65 @@ class XMPP(Protocol):
     self.last_ping = time.time()
     self.last_join = self.last_ping
 
-  def get_name(self):
-
-    return 'XMPP'
-
   def connect(self,user,pword):
+    """try to connect if we aren't connected"""
 
-    if not self.conn:
-      self.log.debug('Attempting to connect using JID "%s"...' % user)
-      conn = xmpp.Client(self.jid.getDomain(), debug=self.bot.xmpp_debug)
+    if self.conn:
+      return
 
-      #connection attempt
-      if self.server:
-        conres = conn.connect(self.server)
-      else:
-        conres = conn.connect()
-      if not conres:
-        raise ConnectFailure
-      if conres != 'tls':
-        self.log.warning('unable to establish secure connection '\
-        '- TLS failed!')
+    self.log.debug('Attempting to connect using JID "%s"...' % user)
+    conn = xmpp.Client(self.jid.getDomain(), debug=self.bot.xmpp_debug)
 
-      authres = conn.auth(self.jid.getNode(), self.password, self.res)
-      if not authres:
-        raise AuthFailure
-      if authres != 'sasl':
-        self.log.warning("unable to perform SASL auth on %s. "\
-        "Old authentication method used!" % self.jid.getDomain())
+    # connection attempt
+    if self.server:
+      conres = conn.connect(self.server)
+    else:
+      conres = conn.connect()
+    if not conres:
+      raise ConnectFailure
+    if conres != 'tls':
+      self.log.warning('unable to establish secure connection '\
+      '- TLS failed!')
 
-      # Connection established - save connection
-      self.conn = conn
+    # authentication attempt
+    authres = conn.auth(self.jid.getNode(), self.password, self.res)
+    if not authres:
+      raise AuthFailure
+    if authres != 'sasl':
+      self.log.warning("unable to perform SASL auth on %s. "\
+      "Old authentication method used!" % self.jid.getDomain())
 
-      # Register given handlers (TODO move to own function)
-      for (handler, callback) in self.handlers:
-        self.conn.RegisterHandler(handler, callback)
-        self.log.debug('Registered handler: %s' % handler)
+    # Connection established - save connection
+    self.conn = conn
 
-      # Send initial presence stanza (say hello to everyone)
-      self.conn.sendInitPresence()
-      # Save roster and log Items
-      self.roster = self.conn.Roster.getRoster()
-      self.log.info('*** roster ***')
-      for contact in self.roster.getItems():
-        self.log.info('  %s' % contact)
-      self.log.info('*** roster ***')
+    # Register handlers
+    self.conn.RegisterHandler('message',self.callback_message)
+    self.conn.RegisterHandler('presence',self.callback_presence)
+
+    # Send initial presence stanza
+    self.conn.sendInitPresence()
+    
+    # Save roster and log Items
+    self.roster = self.conn.Roster.getRoster()
+    self.log.info('*** roster ***')
+    for contact in self.roster.getItems():
+      self.log.info('  %s' % contact)
+    self.log.info('*** roster ***')
 
   def is_connected(self):
+    """return True if we are still connected"""
 
     return (self.conn is not None)
 
-  def disconnect(self):
+  def disconnected(self):
+    """erase self.conn and set all MUCS to parted"""
 
     self.conn = None
+    for muc in self.get_current_mucs():
+      self.mucs[muc]['status'] = self.MUC_PARTED
 
   def process(self):
+    """process messages and __idle_proc"""
 
     try:
       self.conn.Process(1)
@@ -201,10 +248,17 @@ class XMPP(Protocol):
     
     self.__idle_proc()
 
+  def shutdown(self):
+    """we don't have to do anything special here"""
+
+    pass
+
   def send(self,text,to):
+    """send a message to the specified recipient"""
 
     mess = self.__build_message(text)
 
+    # if to is a (str) then it's room, otherwise check if to is MUC user
     room = isinstance(to,str)
     if not room:
       room = to.get_room()
@@ -226,6 +280,7 @@ class XMPP(Protocol):
   def broadcast(self,text,room,frm=None):
     """send a message to every user in a room"""
 
+    # XMPP has on built-in broadcast, so we'll just highlight everyone
     s = ''
     for user in self.get_occupants(room):
       if frm and frm!=user:
@@ -237,31 +292,39 @@ class XMPP(Protocol):
   def join_room(self,room,nick=None,pword=None):
     """join a room and return True if joined successfully or False otherwise"""
 
+    # do nothing if we're already trying to join that room
     for x in self.__muc_pending:
       if x[1]==room:
         return
 
+    # build the room join stanza
     NS_MUC = 'http://jabber.org/protocol/muc'
     if nick is None:
       nick = self.bot.nick_name
     room_jid = room+'/'+nick
 
+    # request no history and add password if we need one
     pres = xmpp.Presence(to=room_jid)
     pres.setTag('x',namespace=NS_MUC).setTagData('history','',attrs={'maxchars':'0'})
     if pword is not None:
       pres.setTag('x',namespace=NS_MUC).setTagData('password',pword)
 
+    # we'll receive a reply stanza with matching id telling us if we succeeded,
+    # but due to the way xmpppy processes stanzas, we can't easily wait for the
+    # given stanza inside a callback without blocking or race conditions
     self.__muc_pending.append((pres,room,nick,pword))
 
   def part_room(self,room):
     """leave the specified room"""
 
+    # build the part stanza
     if self.mucs[room]['status']==self.MUC_OK:
       room_jid = room+'/'+self.mucs[room]['nick']
       pres = xmpp.Presence(to=room_jid)
       pres.setAttr('type', 'unavailable')
       self.conn.send(pres)
-      
+
+    # update mucs dict and log
     self.mucs[room]['status'] = self.MUC_PARTED
     self.log.debug('Parted room "%s"' % room)
 
@@ -280,11 +343,12 @@ class XMPP(Protocol):
   def get_occupants(self,room):
     """return the Users in the given room, or None if we are not in the room"""
 
+    # search through who we've seen for anyone with the room in their JID
     users = []
     for jid in self.seen:
       if ((room==jid.getStripped())
           and (self.mucs[room]['nick']!=jid.getResource())):
-        users.append(JID(str(jid),Message.GROUP))
+        users.append(JID(jid,Message.GROUP))
 
     return users
 
@@ -301,7 +365,7 @@ class XMPP(Protocol):
     if real==nick:
       return nick
 
-    return JID(str(real),Message.PRIVATE)
+    return JID(real,Message.PRIVATE)
 
   def new_user(self,user,typ):
     """create a new user of this Protocol's User class"""
@@ -354,11 +418,13 @@ class XMPP(Protocol):
         ["%s" % x for x in self.seen.keys()+self.real_jids.values()])
       return
 
+    self.log.debug('Got %s from %s: "%.40s"' % (typ,jid,text))
+
     typ = self.TYPES[typ]
-    frm = JID(str(jid),typ)
+    frm = JID(jid,typ)
     if jid in self.real_jids:
       real = self.real_jids[jid]
-      frm.set_real(JID(str(real),Message.PRIVATE))
+      frm.set_real(JID(real,Message.PRIVATE))
     
     self.bot._cb_message(Message(typ,frm,text))
 
@@ -393,16 +459,16 @@ class XMPP(Protocol):
       # Keep track of status message and type changes
       old_show, old_status = self.seen.get(jid, (self.OFFLINE, None))
       if old_show != show:
-        self.status_type_changed(jid, show)
+        self.__status_type_changed(jid, show)
 
       if old_status != status:
-        self.status_message_changed(jid, status)
+        self.__status_message_changed(jid, status)
 
       self.seen[jid] = (show, status)
     elif typ == self.OFFLINE and jid in self.seen:
       # Notify of user offline status change
       del self.seen[jid]
-      self.status_type_changed(jid, self.OFFLINE)
+      self.__status_type_changed(jid, self.OFFLINE)
 
     try:
       subscription = self.roster.getSubscription(unicode(jid.__str__()))
@@ -462,31 +528,41 @@ class XMPP(Protocol):
 
       return
 
+    # type is unavailable for logged out, otherwise status is in 'show'
+    status_msg = status
+    if typ=='unavailable':
+      status = Message.OFFLINE
+    else:
+      status = self.STATUS.get(show,Message.UNKNOWN)
+
+    # presence stanzas don't necessarily specify type, so just check if the
+    # sending JID contains any of our rooms
     typ = Message.STATUS
-    jid_typ = 'chat'
+    jid_typ = Message.PRIVATE
     real = None
     if jid.getStripped() in self.get_current_mucs():
-      jid_typ = 'groupchat'
+      jid_typ = Message.GROUP
       if jid in self.real_jids:
-        real = JID(str(self.real_jids[jid]),Message.PRIVATE)
-    frm = JID(str(jid),jid_typ)
+        real = JID(self.real_jids[jid],Message.PRIVATE)
+    frm = JID(jid,jid_typ)
     if real:
       frm.set_real(real)
 
-    self.bot._cb_message(Message(typ,frm,None,show,status))
-
-  def status_type_changed(self, jid, new_status_type):
-    """Callback for tracking status types (dnd, away, offline, ...)"""
-    self.log.debug('user %s changed status to %s' % (jid, new_status_type))
-
-  def status_message_changed(self, jid, new_status_message):
-    """Callback for tracking status messages (the free-form status text)"""
-    self.log.debug('user %s updated text to %s' %
-      (jid, new_status_message))
+    # call SibylBot's message callback
+    self.bot._cb_message(Message(typ,frm,None,status,status_msg))
 
 ################################################################################
 # Helper functions                                                             #
 ################################################################################
+
+  def __status_type_changed(self, jid, new_status_type):
+    """Callback for tracking status types (dnd, away, offline, ...)"""
+    self.log.debug('user %s changed status to %s' % (jid, new_status_type))
+
+  def __status_message_changed(self, jid, new_status_message):
+    """Callback for tracking status messages (the free-form status text)"""
+    self.log.debug('user %s updated text to %s' %
+      (jid, new_status_message))
 
   def __set_status(self, value):
     """Set status message.
@@ -549,17 +625,22 @@ class XMPP(Protocol):
       status=self.__status))
 
   def __idle_proc(self):
+    """ping, join pending mucs, and try to rejoin mucs we were forced from"""
 
     self.__idle_ping()
     self.__idle_join_muc()
     self.__idle_rejoin_muc()
 
   def __idle_ping(self):
+    """send pings to make sure the server is still there"""
 
+    # build a ping stanza and send it if it's been long enough since last ping
     if self.bot.ping_freq and time.time()-self.last_ping>self.bot.ping_freq:
       self.last_ping = time.time()
       payload = [xmpp.Node('ping',attrs={'xmlns':'urn:xmpp:ping'})]
       ping = xmpp.Protocol('iq',typ='get',payload=payload)
+
+      # raise PingTimeout if pinging fails
       try:
         res = self.conn.SendAndWaitForResponse(ping,3)
       except IOError as e:
@@ -576,10 +657,14 @@ class XMPP(Protocol):
     
     if len(self.__muc_pending):
       try:
+
+        # try to join the first MUC in the queue
         (pres,room,user,pword) = self.__muc_pending[0]
         del self.__muc_pending[0]
         self.__muc_join(pres,room,user,pword)
         self.__muc_join_success(room)
+
+      # if joining fails, __idle_rejoin_muc will try again
       except MUCJoinFailure as e:
         self.__muc_join_failure(room,e.message)
         if room in self.mucs and self.mucs[room]['status'] > self.MUC_OK:
@@ -615,15 +700,17 @@ class XMPP(Protocol):
   def __muc_join_failure(self,room,error):
     """execute callbacks on successfull MUC join"""
     
-    self.bot._cb_join_room_failure(room,error)
+    self.bot._cb_join_room_failure(room,self.MUC_JOIN_ERROR[error])
 
   def __idle_rejoin_muc(self):
     """attempt to rejoin the MUC if needed"""
 
+    # don't try too often
     t = time.time()
     if t-self.bot.recon_wait<self.last_join:
       return
 
+    # we'll keep trying until the user tells us to stop via part_room()
     for room in self.mucs:
       if self.mucs[room]['status']>self.MUC_OK:
         self.__lastjoin = time.time()

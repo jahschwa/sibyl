@@ -1,4 +1,25 @@
-#!/usr/bin/env python
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# Sibyl: A modular Python chat bot framework
+# Copyright (c) 2015-2016 Joshua Haas <jahschwa.com>
+#
+# This file is part of Sibyl.
+#
+# Sibyl is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
 
 import os,pickle,time,traceback
 
@@ -47,14 +68,19 @@ def parse_lib(conf,opt,val):
   """parse the lib into a list"""
 
   val = val.replace('\n','')
+
+  # paths are separated by semi-colon
   entries = util.split_strip(val,';')
   lib = []
   for entry in entries:
     if entry=='':
       continue
     if ',' in entry:
+
+      # samba share parameters are separated by comma
       params = util.split_strip(entry,',')
-      item = {'server':params[0], 'share':params[1], 'username':None, 'password':None}
+      item = {'server':params[0], 'share':params[1],
+          'username':None, 'password':None}
       if len(params)>2:
         item['username'] = params[2]
       if len(params)>3:
@@ -167,7 +193,8 @@ def search(bot,mess,args):
   matches = []
 
   # search all library paths
-  dirs = [bot.lib_video_dir,bot.lib_video_file,bot.lib_audio_dir,bot.lib_audio_file]
+  dirs = [bot.lib_video_dir,bot.lib_video_file,
+      bot.lib_audio_dir,bot.lib_audio_file]
   for d in dirs:
     matches.extend(util.matches(d,args))
 
@@ -209,7 +236,8 @@ def find(bot,fd,dirs):
       for entry in contents:
         result.append(entry)
     except Exception as e:
-      msg = 'Unable to traverse "%s": %s' % (path,traceback.format_exc(e).split('\n')[-2])
+      msg = ('Unable to traverse "%s": %s' %
+          (path,traceback.format_exc(e).split('\n')[-2]))
       errors.append((path,msg))
 
   # same as above but for samba shares
@@ -217,7 +245,8 @@ def find(bot,fd,dirs):
     try:
       smb = smbc.Context()
       if path['username']:
-        smb.functionAuthData = lambda se,sh,w,u,p: (w,path['username'],path['password'])
+        smb.functionAuthData = (lambda se,sh,w,u,p:
+            (w,path['username'],path['password']))
       share = 'smb://'+path['server']+'/'+path['share']
       smb.opendir(share[:share.rfind('/')])
       if fd=='dir':
@@ -227,7 +256,8 @@ def find(bot,fd,dirs):
       for entry in contents:
         result.append(entry)
     except Exception as e:
-      msg = 'Unable to traverse "%s": %s' % (share,traceback.format_exc(e).split('\n')[-2])
+      msg = ('Unable to traverse "%s": %s' %
+          (share,traceback.format_exc(e).split('\n')[-2]))
       errors.append((share,msg))
 
   return (result,errors)

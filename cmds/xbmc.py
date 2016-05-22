@@ -1,4 +1,25 @@
-#!/usr/bin/env python
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# Sibyl: A modular Python chat bot framework
+# Copyright (c) 2015-2016 Joshua Haas <jahschwa.com>
+#
+# This file is part of Sibyl.
+#
+# Sibyl is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
 
 import random,requests,json,os
 
@@ -58,9 +79,11 @@ def volume(bot,mess,args):
 def subtitles(bot,mess,args):
   """change the subtitles - subtitles (info|on|off|next|prev|set) [index]"""
 
+  # default action is 'info'
   if not args:
     args = ['info']
-  
+
+  # return if nothing is playing
   active = bot.xbmc_active_player()
   if not active or active[1]!='video':
     return 'No video playing'
@@ -69,6 +92,7 @@ def subtitles(bot,mess,args):
   if args[0]=='prev':
     args[0] = 'previous'
 
+  # change subtitles
   if args[0]=='on' or args[0]=='off' or args[0]=='next' or args[0]=='previous':
     bot.xbmc('Player.SetSubtitle',{'playerid':pid,'subtitle':args[0]})
     if args[0]=='off':
@@ -78,11 +102,13 @@ def subtitles(bot,mess,args):
     subs = subs['result']['currentsubtitle']
     return 'Subtitle: '+str(subs['index'])+'-'+subs['language']+'-'+subs['name']
 
+  # get subtitles
   subs = bot.xbmc('Player.GetProperties',{'playerid':pid,
       'properties':['subtitles','currentsubtitle']})
   cur = subs['result']['currentsubtitle']
   subs = subs['result']['subtitles']
 
+  # allow the user to specify an index from the list
   if args[0]=='set':
     try:
       index = int(args[1])
@@ -105,12 +131,12 @@ def subtitles(bot,mess,args):
       bot.subtitles(None,func)
     return
 
+  # else return a list of all the subtitles
   sub = []
   for i in range(0,len(subs)):
     for s in subs:
       if i==s['index']:
         sub.append(subs[i])
-        continue
 
   if not len(sub):
     return 'No subtitles'
@@ -156,10 +182,13 @@ def info(bot,mess,args):
 def play(bot,mess,args):
   """if xbmc is paused, resume playing"""
 
+  # if no args are passed, start playing again
   if not args:
     playpause(bot,0)
     return
 
+  # if args are passed, play the specified file
+  # [TODO] make work with samba shares
   if os.path.isfile(args[0]):
     result = bot.xbmc('Player.Open',{'item':{'file':args[0]}})
     if 'error' in result:
@@ -382,15 +411,18 @@ def stream(bot,mess,args):
 
   elif 'twitch' in msg.lower():
 
+    # get the webpage
     url = msg[msg.find('twitch.tv/')+10:]
     vid = url.split('/')[0]
     html = requests.get('http://twitch.tv/'+vid,headers=agent).text
 
+    # find the stream title
     stream = html.find("property='og:title'")
     stop = html.rfind("'",0,stream)
     start = html.rfind("'",0,stop)+1
     stream = html[start:stop]
 
+    # find the stream description
     title = html.find("property='og:description'")
     stop = html.rfind("'",0,title)
     start = html.rfind("'",0,stop)+1
@@ -471,10 +503,12 @@ def xbmc_chat(bot,mess,args):
   if not args:
     return 'http://http://kodi.wiki/view/JSON-RPC_API/v6'
 
+  # if specified convert params to a dict
   params = None
   if len(args)>1:
     params = json.loads(' '.join(args[1:]))
-    
+
+  # make the request and check for an error
   result = bot.xbmc(args[0],params)
   if 'error' in result:
     return str(result['error'])
@@ -491,7 +525,8 @@ def shuffle(bot,mess,args):
   if active is None:
     return 'Nothing playing'
   (pid,typ) = active
-  
+
+  # set shuffle
   if args[0]=='on':
     bot.xbmc('Player.SetShuffle',{'playerid':pid,'shuffle':True})
     return 'Enabled shuffle'
@@ -500,6 +535,7 @@ def shuffle(bot,mess,args):
     bot.xbmc('Player.SetShuffle',{'playerid':pid,'shuffle':False})
     return 'Disabled shuffle'
 
+  # return the shuffle status of the current player
   params = {'playerid':pid,'properties':['shuffled']}
   result = bot.xbmc('Player.GetProperties',params)['result']['shuffled']
   if result:

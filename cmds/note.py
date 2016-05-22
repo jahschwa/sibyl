@@ -1,4 +1,25 @@
-#!/usr/bin/env python
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# Sibyl: A modular Python chat bot framework
+# Copyright (c) 2015-2016 Joshua Haas <jahschwa.com>
+#
+# This file is part of Sibyl.
+#
+# Sibyl is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
 
 import os
 
@@ -47,7 +68,8 @@ def note(bot,mess,args):
     if not active:
       return 'Nothing playing; note not added'
     (pid,typ) = active
-    result = bot.xbmc('Player.GetProperties',{'playerid':pid,'properties':['time']})
+    params = {'playerid':pid,'properties':['time']}
+    result = bot.xbmc('Player.GetProperties',params)
     t = str(util.time2str(result['result']['time']))
 
     result = bot.xbmc('Player.GetItem',{'playerid':pid,'properties':['file']})
@@ -102,7 +124,8 @@ def note(bot,mess,args):
 
   # if args[1] is text, show matching notes
   search = args[1].lower()
-  matches = [i for i in range(0,len(bot.notes)) if search in bot.notes[i].lower()]
+  matches = [i for i in range(0,len(bot.notes))
+      if search in bot.notes[i].lower()]
 
   s = 'Found '+str(len(matches))+' matches: '
   for i in matches:

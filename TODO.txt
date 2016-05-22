@@ -4,11 +4,12 @@
 OVERHAUL:
 
   (jah) abstract out chat protocol
-        (jah) define API for chat plugins
-        (jah) write skeleton chat plugin example file
-        (jah) refactor sibylbot and jabberbot (make jabberbot a chat plug-in)
-        (jah) plug-in framework for chat (including config option)
-        (jah) add config option
+        ( x ) define API for chat plugins
+        ( x ) write skeleton chat plugin example file
+        ( x ) refactor sibylbot and jabberbot (make jabberbot a chat plug-in)
+        ( x ) plug-in framework for chat (including config option)
+        ( x ) add config option
+        ( ! ) finalize API with help from @jef
         (jah) add docs page about chat plug-in API
 
   (jef) write matrix plug-in
@@ -39,7 +40,7 @@ OVERHAUL:
   ( - ) review logging
         ( - ) audit existing levels
         ( - ) add lots of debug info to all commands
-        ( - ) remove/control "requests" library logging
+        ( x ) remove/control "requests" library logging
 
   ( - ) figure out if unicode is broken anywhere (xmpppy returns unicode msgs)
 
@@ -50,13 +51,15 @@ GENERAL:
   ( + ) add chat_ctrl option to config framework
         ( + ) additional parameter to @botconf dictionaries
         ( + ) auto-gen bw/list black entry for chat_ctrl cmds
+  ( - ) add custom logging string config option
+  ( - ) add max reconnect attempts option
 
 COMMANDS:
 
   ( - ) add ping command
   ( + ) add isup command
   ( - ) add remind command (send msg highlighting user at specified time)
-  ( + ) add tell command (send msg when specified user joins room)
+  ( x ) add tell command (send msg when specified user joins room)
   ( - ) add stalk command (send msg when specified user changes to avilable)
 
 MAYBE:

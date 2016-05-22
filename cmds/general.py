@@ -1,4 +1,25 @@
-#!/usr/bin/env python
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# Sibyl: A modular Python chat bot framework
+# Copyright (c) 2015-2016 Joshua Haas <jahschwa.com>
+#
+# This file is part of Sibyl.
+#
+# Sibyl is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
 
 import sys,os,subprocess,json,logging,socket
 
@@ -20,6 +41,7 @@ def config(bot,mess,args):
   if not bot.chat_ctrl:
     return "chat_ctrl not enabled"
 
+  # default action is 'show'
   if not args or args[0] not in ('show','set','save','diff'):
     args.insert(0,'show')
   cmd = args[0]
@@ -34,9 +56,11 @@ def config(bot,mess,args):
   if opt in ('chat_proto','username','password'):
     return 'You may not access that option via chat!'
 
+  # return the value of the specified opt
   if cmd=='show':
     return opt+' = '+str(bot.conf.opts[opt])
 
+  # return opt values that have been edited but not saved
   if cmd=='diff':
     if len(bot.conf_diff)==0:
       return 'No differences between bot and config file'
@@ -47,7 +71,8 @@ def config(bot,mess,args):
     if opt not in bot.conf_diff:
       return 'Opt "'+opt+'" has not changed from config file'
     return 'Opt "'+opt+'" was "'+bot.conf_diff[opt][0]+'" but is now "'+bot.conf.opts[opt]+'"'
-  
+
+  # set opt values in this bot instance only
   if cmd=='set':
     if opt=='*':
       return 'Invalid opt'
@@ -58,7 +83,7 @@ def config(bot,mess,args):
     else:
       return 'Invalid value for opt "'+opt+'"'
 
-  # logic for 'save' command
+  # logic for 'save' command that also modified the config file
   if len(args)>2:
     value = ' '.join(args[2:])
   elif opt in bot.conf_diff:
@@ -66,6 +91,7 @@ def config(bot,mess,args):
   elif opt!='*':
     return 'Invalid value'
 
+  # save all changed opts
   if opt=='*':
     for opt in bot.conf_diff:
       bot.conf.save_opt(opt,bot.conf_diff[opt][1])
@@ -134,11 +160,13 @@ def tv(bot,mess,args):
   p = subprocess.Popen(['cec-client','-s'],stdin=PIPE,stdout=PIPE,stderr=PIPE)
   (out,err) = p.communicate(args+' 0')
 
+  # do some basic error checking
   if err:
     return err
   if 'connection opened' not in out:
     return 'Unknown error'
 
+  # if the user requested power state, return that
   if args=='pow':
     for line in out.split('\n'):
       if 'power status:' in line:
@@ -203,13 +231,17 @@ def wiki(bot,mess,args):
 def log(bot,mess,args):
   """set the log level - log (critical|error|warning|info|debug|clear)"""
 
+  # default action is to print current level
   if not args:
-    return 'Current level: '+logging.getLevelName(bot.log.getEffectiveLevel()).lower()
+    return ('Current level: '+
+        logging.getLevelName(bot.log.getEffectiveLevel()).lower())
 
+  # clear the log
   if args[0]=='clear':
     with open(bot.log_file,'w') as f:
       return 'Log cleared'
 
+  # set the log level for this instance only
   levels = ({'critical' : logging.CRITICAL,
              'error'    : logging.ERROR,
              'warning'  : logging.WARNING,

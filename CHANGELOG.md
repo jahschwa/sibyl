@@ -10,9 +10,12 @@ This change log follows guidelines at [this site](http://keepachangelog.com/).
 - Custom protocol-agnostic msg and presence classes with methods
 - XMPP plug-in (based on Jabberbot) at protocols/xmpp.py
 - Matrix plug-in at protocols/matrix.py
+- New decorators: botcon, botdiscon, botrecon, botdown
+- New chat cmd "tell" in room.py
 ### Changed
 - Chat commands now receive their args as a list (possibly empty)
 - Quote blocking now works for all commands (also preserves capitalization)
+- Decorator: botpres to botstatus
 
 ### Removed
 - Refactored jabberbot.py into protocols/xmpp.py and sibylbot.py

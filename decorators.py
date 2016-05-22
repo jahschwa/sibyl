@@ -1,8 +1,60 @@
-#!/usr/bin/env python
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# Sibyl: A modular Python chat bot framework
+# Copyright (c) 2015-2016 Joshua Haas <jahschwa.com>
+#
+# JabberBot: A simple jabber/xmpp bot framework
+# Copyright (c) 2007-2012 Thomas Perl <thp.io/about>
+# $Id: d1c7090edd754ff0da8ef4eb10d4b46883f34b9f $
+#
+# This file is part of Sibyl.
+#
+# Sibyl is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# botcmd    - chat commands
+# botfunc   - helper functions
+# botinit   - bot initialisation
+# botdown   - bot shutdown
+# botcon    - successfully connected to server
+# botdiscon - disconnected from server
+# botrecon  - attempting to reconnect to server
+# botmucs   - successfully joined a room
+# botmucf   - failed to join a room
+# botstatus - received a STATUS update
+# boterr    - received an ERROR message
+# botmsg    - received a PRIVATE or GROUP message
+# botpriv   - received a PRIVATE message
+# botgroup  - received a GROUP message
+# botidle   - about once per second
+# botconf   - add options to parse from the config file
+#
+# Full explanations: https://github.com/TheSchwa/sibyl/wiki/Plug-Ins
+#
+################################################################################
 
+# decorated function: func(bot,mess,args)
+# @param bot (SibylBot)
+# @param mess (Message) triggering Message
+# @param args (list) not including the command name itself
 def botcmd(*args,**kwargs):
   """Decorator for bot chat commands"""
 
+  # @param name (str) [function name] the name to respond to in chat
+  # @param hidden (bool) [False] whether to hide this command from help output
   def decorate(func,name=None,hidden=False):
     setattr(func, '_sibylbot_dec_chat', True)
     setattr(func, '_sibylbot_dec_chat_name', name or func.__name__)
@@ -14,48 +66,140 @@ def botcmd(*args,**kwargs):
   else:
     return lambda func: decorate(func,**kwargs)
 
+# decorated function: no required signature
 def botfunc(func):
   """Decorator for bot helper functions"""
-
+  
   setattr(func, '_sibylbot_dec_func', True)
   return func
 
+# decorated function: func(bot)
+# @param bot (SibylBot)
 def botinit(func):
   """Decorator for bot initialisation hooks"""
 
   setattr(func, '_sibylbot_dec_init', True)
   return func
 
+# decorated function: func(bot)
+# @param bot (SibylBot)
+def botdown(func):
+  """Decorator for bot closing functions"""
+
+  setattr(func, '_sibylbot_dec_down', True)
+  return func
+
+# decorated function: func(bot)
+# @param bot (SibylBot)
+def botcon(func):
+  """Decorator for bot connection hooks"""
+
+  setattr(func, '_sibylbot_dec_con', True)
+  return func
+
+# decorated function: func(bot,ex)
+# @param bot (SibylBot)
+# @param ex (Exception) the reason the bot disconnected
+def botdiscon(func):
+  """Decorator for bot disconnection hooks"""
+
+  setattr(func, '_sibylbot_dec_discon', True)
+  return func
+
+# decorated function: func(bot)
+# @param bot (SibylBot)
+def botrecon(func):
+  """Decorator for bot reconnection hooks"""
+
+  setattr(func, '_sibylbot_dec_recon', True)
+  return func
+
+# decorated function: func(bot,room)
+# @param bot (SibylBot)
+# @param room (str) room we successfully connected to
 def botmucs(func):
   """Decorator for success joining a room hooks"""
 
   setattr(func, '_sibylbot_dec_mucs', True)
   return func
 
+# decorated function: func(bot,room,err)
+# @param bot (SibylBot)
+# @param room (str) the room we failed to connect to
+# @param err (str) the human-readable reason we failed
 def botmucf(func):
   """Decorator for failure to join a room hooks"""
 
   setattr(func, '_sibylbot_dec_mucf', True)
   return func
 
+# decorated function: func(bot,mess)
+# @param bot (SibylBot)
+# @param mess (Message) the STATUS Message received
+def botstatus(func):
+  """Decorator for status received hooks"""
+
+  setattr(func, '_sibylbot_dec_status', True)
+  return func
+
+# decorated function: func(bot,mess)
+# @param bot (SibylBot)
+# @param mess (Message) the ERROR Message received
+def boterr(func):
+  """Decorator for error received hooks"""
+
+  setattr(func, '_sibylbot_dec_err', True)
+  return func
+
+# decorated function: func(bot,mess,cmd)
+# @param bot (SibylBot)
+# @param mess (Message) the PRIVATE or GROUP Message received
+# @param cmd (str,None) the cmd+args that will be executed or None if no cmd
 def botmsg(func):
   """Decorator for message received hooks"""
 
   setattr(func, '_sibylbot_dec_msg', True)
   return func
 
-def botpres(func):
-  """Decorator for presence received hooks"""
+# decorated function: func(bot,mess,cmd)
+# @param bot (SibylBot)
+# @param mess (Message) the PRIVATE
+# @param cmd (str,None) the cmd+args that will be executed or None if no cmd
+def botpriv(func):
+  """Decorator for private message received hooks"""
 
-  setattr(func, '_sibylbot_dec_pres', True)
+  setattr(func, '_sibylbot_dec_priv', True)
   return func
 
+# decorated function: func(bot,mess,cmd)
+# @param bot (SibylBot)
+# @param mess (Message) the GROUP Message received
+# @param cmd (str,None) the cmd+args that will be executed or None if no cmd
+def botgroup(func):
+  """Decorator for group message received hooks"""
+
+  setattr(func, '_sibylbot_dec_group', True)
+  return func
+
+# decorated function: func(bot)
+# @param bot (SibylBot)
 def botidle(func):
   """Decorator for idle hooks (executed once per second)"""
 
   setattr(func, '_sibylbot_dec_idle', True)
   return func
 
+# decorated function: func(bot)
+# @param bot (SibylBot)
+# @return (list of dict) config options to add, dict defined below
+#   name     (str)  [req]: name of the config option to read from the file
+#   default  (obj)  [req]: default value of option (should be Python object)
+#   required (bool) [opt]: quit execution if option is missing (default: False)
+#   parse    (func) [opt]: parse the given string into a Python object
+#   valid    (func) [opt]: validate the given Python object
+#
+# for more details: https://github.com/TheSchwa/sibyl/wiki/Plug-Ins
+#
 def botconf(func):
   """Decorator for bot helper functions"""
 
