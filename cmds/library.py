@@ -93,16 +93,17 @@ def parse_lib(conf,opt,val):
 @botinit
 def init(bot):
   """create libraries"""
-  
-  if os.path.isfile(bot.lib_file):
+
+  bot.add_var('lib_last_rebuilt',time.asctime())
+  bot.add_var('lib_last_elapsed',0)
+  bot.add_var('lib_audio_dir')
+  bot.add_var('lib_audio_file')
+  bot.add_var('lib_video_dir')
+  bot.add_var('lib_video_file')
+
+  if os.path.isfile(bot.opt('lib_file')):
     bot.run_cmd('library',['load'])
   else:
-    bot.lib_last_rebuilt = time.asctime()
-    bot.lib_last_elapsed = 0
-    bot.lib_audio_dir = None
-    bot.lib_audio_file = None
-    bot.lib_video_dir = None
-    bot.lib_video_file = None
     bot.run_cmd('library',['rebuild'])
 
 @botcmd
@@ -114,7 +115,7 @@ def library(bot,mess,args):
 
   # read the library from a pickle and load it into sibyl
   if args[0]=='load':
-    with open(bot.lib_file,'r') as f:
+    with open(bot.opt('lib_file'),'r') as f:
       d = pickle.load(f)
     bot.lib_last_rebuilt = d['lib_last_rebuilt']
     bot.lib_last_elapsed = d['lib_last_elapsed']
@@ -124,7 +125,7 @@ def library(bot,mess,args):
     bot.lib_audio_file = d['lib_audio_file']
 
     n = len(bot.lib_audio_file)+len(bot.lib_video_file)
-    s = 'Library loaded from "'+bot.lib_file+'" with '+str(n)+' files'
+    s = 'Library loaded from "'+bot.opt('lib_file')+'" with '+str(n)+' files'
     bot.log.info(s)
     return s
 
@@ -136,10 +137,10 @@ def library(bot,mess,args):
           'lib_video_file':bot.lib_video_file,
           'lib_audio_dir':bot.lib_audio_dir,
           'lib_audio_file':bot.lib_audio_file})
-    with open(bot.lib_file,'w') as f:
+    with open(bot.opt('lib_file'),'w') as f:
       pickle.dump(d,f,-1)
 
-    s = 'Library saved to "'+bot.lib_file+'"'
+    s = 'Library saved to "'+bot.opt('lib_file')+'"'
     bot.log.info(s)
     return s
 
@@ -155,10 +156,10 @@ def library(bot,mess,args):
     start = time.time()
     bot.lib_last_rebuilt = time.asctime()
 
-    libs = [('lib_video_dir','dir',bot.video_dirs),
-            ('lib_video_file','file',bot.video_dirs),
-            ('lib_audio_dir','dir',bot.audio_dirs),
-            ('lib_audio_file','file',bot.audio_dirs)]
+    libs = [('lib_video_dir','dir',bot.opt('video_dirs')),
+            ('lib_video_file','file',bot.opt('video_dirs')),
+            ('lib_audio_dir','dir',bot.opt('audio_dirs')),
+            ('lib_audio_file','file',bot.opt('audio_dirs'))]
     errors = []
     for lib in libs:
       (r,e) = find(bot,lib[1],lib[2])

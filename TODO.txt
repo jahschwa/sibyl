@@ -1,76 +1,79 @@
-( - ) low priority, ( + ) normal priority, ( ! ) high priority, ( x ) done
+(   ) low priority, ( . ) normal priority, ( ! ) high priority, ( # ) done
 (jah) actively assigned to jah, (jef) actively assigned to jef
 
-OVERHAUL:
+NEXT RELEASE:
 
-  (jah) abstract out chat protocol
-        ( x ) define API for chat plugins
-        ( x ) write skeleton chat plugin example file
-        ( x ) refactor sibylbot and jabberbot (make jabberbot a chat plug-in)
-        ( x ) plug-in framework for chat (including config option)
-        ( x ) add config option
+  (jah) [main] abstract out chat protocol
+        ( # ) define API for chat plugins
+        ( # ) write skeleton chat plugin example file
+        ( # ) refactor sibylbot and jabberbot (make jabberbot a chat plug in)
+        ( # ) plug in framework for chat (including config option)
+        ( # ) add config option
         ( ! ) finalize API with help from @jef
-        (jah) add docs page about chat plug-in API
+        ( ! ) add docs page about chat plug in API
 
-  (jef) write matrix plug-in
+  (jef) [matr] write matrix plug in
         (jef) work with @jah on above
-        (jef) write and test plug-in
+        (jef) write and test plug in
         (jef) write wiki page
 
-  ( + ) finish cmds plug-in framework
-        ( + ) implement dependency checking
-        ( + ) add config options to disable plug-ins
-        ( + ) implement duplicate checking
-              ( + ) modules
-              ( + ) chat cmds
-              ( + ) bot funcs
-              ( + ) config opts
+  (jef) [main] write setup.py
 
-  ( ! ) finish redo-ing docs to reflect plug-ins changes
+  ( # ) [plug] finish cmds plug in framework
+        ( # ) implement dependency checking
+        ( # ) add config options to disable plug ins
+        ( # ) implement duplicate checking
+              ( # ) modules
+              ( # ) chat cmds
+              ( # ) bot funcs
+              ( # ) config opts
+
+  (jah) [docs] finish redo ing docs to reflect plug ins changes
         ( ! ) home page
         ( ! ) config
-        ( x ) b/w list
-        ( x ) writing plug-ins intro
-        ( + ) writing plug-in example (alarm)
-        ( + ) add dependencies info to plug-in pages
-        ( x ) bookmark.py
+        ( # ) b/w list
+        ( # ) writing plug ins intro
+        ( . ) writing plug in example (alarm)
+        ( . ) add dependencies info to plug in pages
+        ( # ) bookmark.py
         ( ! ) general.py
-        ( x ) library.py
+        ( # ) library.py
         ( ! ) muc.py
         ( ! ) note.py
         ( ! ) xbmc.py
 
-  ( + ) add extended help text to all commands accessible via "help" cmd
+  (jah) [docs] add extended help text to all commands accessible via "help" cmd
 
-  ( - ) review logging
-        ( - ) audit existing levels
-        ( - ) add lots of debug info to all commands
-        ( x ) remove/control "requests" library logging
+  (   ) [main] review logging
+        (   ) audit existing levels
+        (   ) add lots of debug info to all commands
+        ( # ) remove/control "requests" library logging
 
-  ( - ) figure out if unicode is broken anywhere (xmpppy returns unicode msgs)
+  (   ) [main] figure out if unicode is broken anywhere
 
-  ( + ) review and add comments to everything
+  ( # ) [main] review and add comments to everything
 
-GENERAL:
+  ( # ) [plug] add chat_ctrl option to plugin framework
+        ( # ) additional parameter to @botcmd decorator
 
-  ( + ) add chat_ctrl option to config framework
-        ( + ) additional parameter to @botconf dictionaries
-        ( + ) auto-gen bw/list black entry for chat_ctrl cmds
-  ( - ) add custom logging string config option
-  ( - ) add max reconnect attempts option
+  ( # ) [cmds] add tell command (send msg when specified user joins room)
 
-COMMANDS:
+FUTURE:
 
-  ( - ) add ping command
-  ( + ) add isup command
-  ( - ) add remind command (send msg highlighting user at specified time)
-  ( x ) add tell command (send msg when specified user joins room)
-  ( - ) add stalk command (send msg when specified user changes to avilable)
+  (   ) [conf] add custom logging string config option
+  (   ) [conf] add max reconnect attempts option
+  (   ) [conf] allow user to set requests timeout (currently 60s)
+  (   ) [conf] add option to overwrite log
+  (   ) [conf] add log rotate option
+
+  (   ) [cmds] add ping command
+  ( . ) [cmds] add isup command
+  (   ) [cmds] add remind command (send msg highlighting user at specified time)
+  (   ) [cmds] add stalk command (send msg when user changes to avilable)
 
 MAYBE:
 
-  ( - ) switch from real JID dict to on execute requests
-  ( - ) allow user to set requests timeout (currently 60s)
-  ( - ) read and search media tags (e.g. title, album, artist from mp3)
-  ( - ) allow searching xbmc library
-  ( - ) daemonize inside python
+  (   ) [xmpp] switch from real JID dict to on execute requests
+  (   ) [libr] read and search media tags (e.g. title, album, artist)
+  (   ) [libr] allow searching xbmc library
+  (   ) [main] daemonize inside python

@@ -32,14 +32,11 @@ from lib.util import getcell
 def init(bot):
   """initialise config change tracking variable"""
 
-  bot.conf_diff = {}
+  bot.add_var('conf_diff',{})
 
-@botcmd
+@botcmd(ctrl=True)
 def config(bot,mess,args):
   """view and edit config - config (show|set|save|diff) (opt|*) [value]"""
-
-  if not bot.chat_ctrl:
-    return "chat_ctrl not enabled"
 
   # default action is 'show'
   if not args or args[0] not in ('show','set','save','diff'):
@@ -50,15 +47,15 @@ def config(bot,mess,args):
     opt = args[1]
 
   if opt=='*' and cmd=='show':
-    return str(bot.conf.opts)
-  if opt not in bot.conf.opts and opt!='*':
+    return str(bot.opt())
+  if opt not in bot.opt() and opt!='*':
     return 'Invalid opt'
-  if opt in ('chat_proto','username','password'):
+  if opt=='password':
     return 'You may not access that option via chat!'
 
   # return the value of the specified opt
   if cmd=='show':
-    return opt+' = '+str(bot.conf.opts[opt])
+    return opt+' = '+str(bot.opt(opt))
 
   # return opt values that have been edited but not saved
   if cmd=='diff':
@@ -66,17 +63,21 @@ def config(bot,mess,args):
       return 'No differences between bot and config file'
     if opt in ('','*'):
       return str(bot.conf_diff.keys())
-    if opt not in bot.conf.opts:
+    if opt not in bot.opt():
       return 'Invalud opt'
     if opt not in bot.conf_diff:
       return 'Opt "'+opt+'" has not changed from config file'
-    return 'Opt "'+opt+'" was "'+bot.conf_diff[opt][0]+'" but is now "'+bot.conf.opts[opt]+'"'
+    return 'Opt "'+opt+'" was "'+bot.conf_diff[opt][0]+'" but is now "'+bot.opt[opt]+'"'
+
+  # some options don't make sense to edit in chat
+  if opt in ('chat_proto','username','disabled','cmd_dir'):
+    return 'You may not edit that option via chat'
 
   # set opt values in this bot instance only
   if cmd=='set':
     if opt=='*':
       return 'Invalid opt'
-    old = bot.conf.opts[opt]
+    old = bot.opt(opt)
     if bot.conf.set_opt(opt,args[2]):
       bot.conf_diff[opt] = (old,args[2])
       return 'Set opt "'+opt+'" to "'+args[2]+'"'
@@ -120,26 +121,22 @@ def network(bot,mess,args):
   myip = s.getsockname()[0]
   s.close()
 
-  xbmc = getattr(bot,'xbmc_ip',None)
+  xbmc = None
+  if 'xbmc_ip' in bot.opt():
+    xbmc = bot.opt('xbmc_ip')
   exip = requests.get('http://ipecho.net/plain').text.strip()
 
   return 'My IP - '+myip+' --- XBMC IP - '+str(xbmc)+' --- External IP - '+exip
 
-@botcmd
+@botcmd(ctrl=True)
 def die(bot,mess,args):
   """kill sibyl"""
 
-  if not bot.chat_ctrl:
-    return 'chat_ctrl disabled'
-
   bot.quit('Killed via chat_ctrl')
 
-@botcmd
+@botcmd(ctrl=True)
 def reboot(bot,mess,args):
   """restart sibyl (currently only works with init.d)"""
-
-  if not bot.chat_ctrl:
-    return 'chat_ctrl disabled'
 
   DEVNULL = open(os.devnull,'wb')
   subprocess.Popen(['sudo','-n','/etc/init.d/sibyl','restart'],
@@ -227,7 +224,7 @@ def wiki(bot,mess,args):
   url = result[3][0]
   return unicode(title)+' - '+unicode(url)+'\n'+unicode(text)
 
-@botcmd
+@botcmd(ctrl=True)
 def log(bot,mess,args):
   """set the log level - log (critical|error|warning|info|debug|clear)"""
 
@@ -238,7 +235,7 @@ def log(bot,mess,args):
 
   # clear the log
   if args[0]=='clear':
-    with open(bot.log_file,'w') as f:
+    with open(bot.opt('log_file'),'w') as f:
       return 'Log cleared'
 
   # set the log level for this instance only

@@ -26,6 +26,8 @@ import os
 from lib.decorators import *
 import lib.util as util
 
+__wants__ = ['xbmc']
+
 @botconf
 def conf(bot):
   """add config options"""
@@ -38,11 +40,13 @@ def conf(bot):
 def init(bot):
   """initialize note list"""
   
-  if os.path.isfile(bot.note_file):
-    bot.notes = note_parse(bot)
+  if os.path.isfile(bot.opt('note_file')):
+    notes = note_parse(bot)
   else:
-    with open(bot.note_file,'w') as f:
-      bot.notes = []
+    with open(bot.opt('note_file'),'w') as f:
+      notes = []
+
+  bot.add_var('notes',notes)
 
 @botcmd
 def note(bot,mess,args):
@@ -62,6 +66,10 @@ def note(bot,mess,args):
 
   # add the currently playing file to the body of the note then do "add"
   if args[0]=='playing':
+
+    if not bot.has_plugin('xbmc'):
+      return 'This feature not available because plugin "xbmc" not loaded'
+
     args[0] = 'add'
 
     active = bot.xbmc_active_player()
@@ -135,11 +143,11 @@ def note(bot,mess,args):
 def note_parse(bot):
   """read the note file into a list"""
 
-  with open(bot.note_file,'r') as f:
+  with open(bot.opt('note_file'),'r') as f:
     lines = f.readlines()
 
   notes = [l.strip() for l in lines if l!='\n']
-  bot.log.info('Read '+str(len(notes))+' notes from "'+bot.note_file+'"')
+  bot.log.info('Read '+str(len(notes))+' notes from "'+bot.opt('note_file')+'"')
   return notes
 
 def note_write(bot):
@@ -148,5 +156,5 @@ def note_write(bot):
   lines = [l+'\n' for l in bot.notes]
   lines.append('\n')
 
-  with open(bot.note_file,'w') as f:
+  with open(bot.opt('note_file'),'w') as f:
     f.writelines(lines)

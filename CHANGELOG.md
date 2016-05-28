@@ -6,24 +6,33 @@ This change log follows guidelines at [this site](http://keepachangelog.com/).
 
 ## [v6.0.0] - RELEASEDATE
 ### Added
-- Chat plug-in framework that reads from "protocols" directory
-- Custom protocol-agnostic msg and presence classes with methods
-- XMPP plug-in (based on Jabberbot) at protocols/xmpp.py
-- Matrix plug-in at protocols/matrix.py
-- New decorators: botcon, botdiscon, botrecon, botdown
-- New chat cmd "tell" in room.py
+- Actual change log tracking
+- Chat protocol plug-in framework that reads from `protocols` directory
+- Protocol-agnostic msg and presence classes with methods in `protocols.py`
+- XMPP plug-in (based on Jabberbot) at `protocols/sibyl_xmpp.py`
+- Matrix plug-in at `protocols/sibyl_matrix.py`
+- Decorators: botcon, botdiscon, botrecon, botdown, boterr, botpriv, botgroup
+- Ability to specify "chat_ctrl" cmds with `@botcmd(ctrl=True)`
+- New chat cmd "tell" in `room.py`
+- Checking for duplicate plugin (file) names
+- Checking for duplicate config options from different plugins
+- New config option `enable` to enable only a specific list of plugins
+- New config option `disable` to disable plugins (supersedes `enable`)
+- Disabled `stdout`; all plugins should use logging instead
+- Plugins can specify dependencies as a list via the `__depends__` variable
+- Plugins can specify "wants" as a list via the `__wants__` variable
+
 ### Changed
-- All decorators are now located in decorators.py
+- All decorators are now in `lib/decorators.py`
 - Chat commands now receive their args as a list (possibly empty)
 - Quote blocking now works for all commands (also preserves capitalization)
-- Decorator: botpres to botstatus
-- Moved config.py, decorators.py, protocol.py, and util.py to new directory lib
+- Decorator: botpres is now botstatus
+- Moved `config.py`, `decorators.py`, `protocol.py`, `util.py` to dir `lib`
+- Pinging is now enabled by default for xmpp
+- If a @botidle hook raises an exception, it will be disabled
 
 ### Removed
-- Refactored jabberbot.py into protocols/xmpp.py and sibylbot.py
-
-### Changed
-- All decorators are now in sibylbot.py
+- Refactored `jabberbot.py` into `protocols/sibyl_xmpp.py` and `sibylbot.py`
 
 ## [v5.0.0-beta] - 2016-05-18
 ### Added
@@ -44,18 +53,18 @@ This change log follows guidelines at [this site](http://keepachangelog.com/).
 
 ## [v2.0.0-alpha] - 2016-01-30
 ### Added
-- Custom jabberbot.py
+- Custom `jabberbot.py`
 
 ### Changed
-- Change from pysmbc to pysmbclient
+- Change from `pysmbc` to `pysmbclient`
 
 ## [v1.0.0-alpha] - 2015-06-26
 ### Added
-- Refactoring into sibylbot.py
+- Refactoring into `sibylbot.py`
 
 ## [v0.0.0-alpha] - 2015-06-22
 ### Added
-- Basic chat bot for controlling XBMC in sibyl.py
+- Basic chat bot for controlling XBMC in `sibyl.py`
 
 [Unreleased]: https://github.com/TheSchwa/sibyl/tree/dev
 [v5.0.0-beta]: https://github.com/TheSchwa/sibyl/compare/v4.0.0-beta...v5.0.0-beta

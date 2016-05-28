@@ -51,6 +51,9 @@ __version__ = 'v6.0.0'
 __website__ = 'https://github.com/TheSchwa/sibyl'
 __license__ = 'GNU General Public License version 3 or later'
 
+class DuplicateVarError(Exception):
+  pass
+
 ################################################################################
 # AAA - SibylBot                                                               #
 ################################################################################
@@ -69,52 +72,69 @@ class SibylBot(object):
   MSG_UNHANDLED = 'Please consider reporting the above error to the developers.'
 
   def __init__(self,conf_file='sibyl.conf'):
-    """override to only answer direct msgs"""
+    """create a new sibyl instance, load: conf, protocol, plugins"""
+
+    # create "namespace" dicts to keep track of who added what for error msgs
+    self.ns_opt = {}
+    self.ns_func = {}
+    self.ns_cmd = {}
 
     # load config to get cmd_dir and chat_proto
     self.conf_file = conf_file
-    result = self.__init_config()
+    (result,duplicates) = self.__init_config()
 
     # configure logging
-    logging.basicConfig(filename=self.log_file,
+    logging.basicConfig(filename=self.opt('log_file'),
         format='%(asctime).19s | %(name)-8.8s | %(levelname).3s | %(message)s',
-        level=self.log_level)
+        level=self.opt('log_level'))
     self.log = logging.getLogger('sibylbot')
     self.__log_startup_msg()
 
     # log config errors and check for success
     self.conf.process_log()
-    if result==Config.FAIL:
+    if result==Config.FAIL or duplicates:
       self.log.critical('Error parsing config file; exiting')
     elif result==Config.ERRORS:
       self.log.warning('Parsed config file with warnings')
-      self.log.info('')
 
     # if we are missing required config options exit with status message
-    if result==Config.FAIL:
-      print '\n   *** Fatal error: unusable config file (see log) ***\n'
-      print '   Config file: %s' % os.path.abspath(self.conf_file)
-      print '   Log file:    %s\n' % os.path.abspath(self.log_file)
-      sys.exit(1)
-      
+    if result==Config.FAIL or duplicates:
+      self.__fatal('unusuable config')
+
     self.log.info('Success parsing config file')
+    self.log.info('')
 
     # create protocol object
-    self.protocol = self.chat_proto[1](
-        self,logging.getLogger(self.chat_proto[0]))
+    self.protocol = self.opt('chat_proto')[1](
+        self,logging.getLogger(self.opt('chat_proto')[0]))
 
     # initialise variables
     self.__finished = False
     self.last_cmd = {}
 
-    # load plug-in hooks from this file and self.cmd_dir
+    # load plug-in hooks from this file
     self.hooks = {x:{} for x in ['chat','init','down','con','discon','recon',
-        'mucs','mucf','msg','priv','group','status','idle']}
+        'mucs','mucf','msg','priv','group','status','err','idle']}
     self.__load_funcs(self,'sibylbot',silent=True)
-    self.__load_plugins(self.cmd_dir)
 
-    # Run plug-in init hooks
-    self.__run_hooks('init')
+    # exit if we failed to load plugin hooks from self.cmd_dir
+    if not self.__load_plugins(self.opt('cmd_dir')):
+      self.log.critical('Failed to load plugins; exiting')
+      self.__fatal('duplicate @botcmd or @botfunc')
+
+    # run plug-in init hooks and exit if there were errors
+    if self.__run_hooks('init'):
+      self.log.critical('Exception executing @botinit hooks; exiting')
+      self.__fatal('a plugin\'s @botinit failed')
+
+  def __fatal(self,msg):
+    """exit due to a fatal error"""
+
+    print '\n   *** Fatal error: %s (see log) ***\n' % msg
+    print '   Config file: %s' % os.path.abspath(self.conf_file)
+    print '   Cmd dir:     %s' % os.path.abspath(self.opt('cmd_dir'))
+    print '   Log file:    %s\n' % os.path.abspath(self.opt('log_file'))
+    sys.exit(1)
 
 ################################################################################
 # BBB - Plug-in framework                                                      #
@@ -123,72 +143,158 @@ class SibylBot(object):
   def __init_config(self):
     """search for and set all config options to default or user-specified"""
 
+    duplicates = False
+
     # we need to get cmd_dir and chat_proto from the config file first
-    self.conf = Config(self)
+    self.conf = Config(self.conf_file)
+
+    # don't log the first set of default opts to avoid duplicates later
+    self.conf.logging = False
     self.conf.reload()
-    
-    # load plugin config options
-    files = [x for x in os.listdir(self.cmd_dir) if x.endswith('.py')]
+    self.conf.logging = True
+
+    # check for duplicate plugin files
+    files = [os.path.splitext(x)[0] for x in
+        util.rlistfiles(self.opt('cmd_dir')) if
+        ('__init__' not in x and x.endswith('.py'))]
+    files = sorted(files,key=os.path.basename)
+    files = [x for x in files if os.path.basename(x) not in self.opt('disable')]
+    if self.opt('enable'):
+      files = [x for x in files if x in self.opt('enable')]
+
+    base_names = [os.path.basename(x) for x in files]
+    if len(files)!=len(set(base_names)):
+      dup = set([x for x in base_names if base_names.count(x)>1])
+      raise RuntimeError('Multiple plugins named %s' % list(dup))
+
+    # load config options from plugins
     for f in files:
-      f = f.split('.')[0]
-      mod = util.load_module(f,self.cmd_dir)
-      self.__load_conf(mod)
+      (d,f) = (os.path.dirname(f),os.path.basename(f))
+      mod = util.load_module(f,d)
+      duplicates = (not self.__load_conf(mod,f) or duplicates)
 
     # load chat protocol config options if chat_proto was set in the config
-    if self.chat_proto:
-      mod = util.load_module('sibyl_'+self.chat_proto[0],'protocols')
-      self.__load_conf(mod)
+    if self.opt('chat_proto'):
+      pname = self.opt('chat_proto')[0]
+      mod = util.load_module('sibyl_'+pname,'protocols')
+      duplicates = (not self.__load_conf(mod,pname) or duplicates)
 
     # now that we know all the options, read every option from the config file
-    self.conf.clear_log()
-    return self.conf.reload()
+    return (self.conf.reload(),duplicates)
 
   def __load_plugins(self,d):
     """recursively load all plugins from all sub-directories"""
 
-    # inspect and load hooks from all files ending in .py
-    files = [x for x in os.listdir(d) if x.endswith('.py')]    
-    for f in files:
-      f = f.split('.')[0]
-      mod = util.load_module(f,d)
-      self.__load_funcs(mod,f)
+    success = True
 
-    # recursion
-    dirs = [os.path.join(d,x) for x in os.listdir(d)
-        if os.path.isdir(os.path.join(d,x))]
-    for x in dirs:
-      self.__load_plugins(x)
+    # build file list before-hand so we can check dependencies
+    files = [x for x in util.rlistfiles(d) if x.endswith('.py')]
+    files = [x for x in files if '__init__' not in x]
+    files = sorted(files,key=os.path.basename)
+    mods = {}
+
+    # load hooks from every file
+    for f in files:
+      (d,f) = (os.path.dirname(f),os.path.basename(f))
+      f = os.path.splitext(f)[0]
+
+      # if "enable" is specified, only load plugins found in "enable"
+      # the "disable" option overrides anything in the "enable" option
+      if ((f not in self.opt('disable')) and
+          ((not self.opt('enable')) or (f in self.opt('enable')))):
+        self.log.info('Loading plugin "%s"' % f)
+        mod = util.load_module(f,d)
+        mods[f] = mod
+        success = (self.__load_funcs(mod,f) and success)
+      else:
+        self.log.debug('Skipping plugin "%s" (disabled in config)' % f)
+
+    # check dependencies
+    for (name,mod) in mods.items():
+      if hasattr(mod,'__depends__'):
+        for dep in mod.__depends__:
+          if dep not in mods:
+            success = False
+            self.log.critical('Missing dependency "%s" from plugin "%s"' %
+                (dep,name))
+      if hasattr(mod,'__wants__'):
+        for dep in mod.__wants__:
+          if dep not in mods:
+            self.log.warning('Missing plugin "%s" limits funcionality of "%s"' %
+                (dep,name))
+
+    self.plugins = sorted(mods.keys())
+    return success
 
   def __load_funcs(self,mod,fil,silent=False):
     """load all hooks from the given module"""
-    
-    for (name,func) in inspect.getmembers(mod,inspect.isroutine):
-      
-      if getattr(func,'_sibylbot_dec_func',False):
-        setattr(self,name,self.__bind(func))
-        if not silent:
-          self.log.debug('Registered function: %s.%s' % (fil,name))
 
+    success = True
+
+    for (name,func) in inspect.getmembers(mod,inspect.isroutine):
+
+      # add @botfunc methods
+      if getattr(func,'_sibylbot_dec_func',False):
+
+        # check for duplicates
+        if hasattr(self,name):
+          self.log.critical('Duplicate @botfunc "%s" from "%s" and "%s"' %
+              (name,self.ns_func[name],fil))
+          success = False
+          continue
+
+        # set the function and ns_func
+        setattr(self,name,self.__bind(func))
+        self.ns_func[name] = fil
+        if not silent:
+          self.log.debug('  Registered function: %s.%s' % (fil,name))
+
+      # add all other decorator hooks
       for (hook,dic) in self.hooks.items():
         if getattr(func,'_sibylbot_dec_'+hook,False):
+
           fname = getattr(func,'_sibylbot_dec_'+hook+'_name',None)
-          s = 'Registered %s command: %s.%s = %s' % (hook,fil,name,fname)
+          
+          # check for duplicate chat cmds
+          if getattr(func,'_sibylbot_dec_chat',False):
+            if fname in dic:
+              self.log.critical('Duplicate @botcmd "%s" from "%s" and "%s"' %
+                  (fname,self.ns_cmd[fname],fil))
+              success = False
+              continue
+
+          # register the hook
+          s = '  Registered %s command: %s.%s = %s' % (hook,fil,name,fname)
           if fname is None:
             fname = fil+'.'+name
-            s = 'Registered %s hook: %s.%s' % (hook,fil,name)
+            s = '  Registered %s hook: %s.%s' % (hook,fil,name)
           dic[fname] = self.__bind(func)
+          
+          # add chat hooks to ns_cmd
+          if getattr(func,'_sibylbot_dec_chat',False):
+            self.ns_cmd[fname] = fil
+
           if not silent:
             self.log.debug(s)
 
-  def __load_conf(self,mod):
+    return success
+
+  def __load_conf(self,mod,ns):
     """load config hooks from the given module"""
 
+    success = True
+
+    # search for @botconf in the given module
     for (name,func) in inspect.getmembers(mod,inspect.isfunction):
       if getattr(func,'_sibylbot_dec_conf',False):
         opts = func(self)
+
+        # conf.add_opts expects a list
         if not isinstance(opts,list):
           opts = [opts]
-        self.conf.add_opts(opts)
+        success = (success and self.conf.add_opts(opts,ns))
+
+    return success
 
   def __bind(self,func):
     """bind the given function to self"""
@@ -197,11 +303,33 @@ class SibylBot(object):
 
   def __run_hooks(self,hook,*args):
     """run and log the specified hooks passing args"""
-    
+
+    errors = {}
+
+    # run all hooks of the given type
     for (name,func) in self.hooks[hook].items():
       if hook!='idle':
         self.log.debug('Running %s hook: %s' % (hook,name))
-      func(*args)
+
+      # catch exceptions, log them, and return them
+      try:
+        func(*args)
+      except Exception as e:
+        full = traceback.format_exc(e)
+        short = full.split('\n')[-2]
+
+        self.log.error('Exception running %s hook %s:' % (hook,name))
+        self.log.error('  '+short)
+        self.log.debug(full)
+
+        # disable idle hooks so that don't keep raising exceptions
+        if hook=='idle':
+          self.log.critical('Disabling idle hook %s' % name)
+          del self.hooks['idle'][name]
+
+        errors[name] = e
+
+    return errors
 
   def __idle_proc(self):
     """This function will be called in the main loop."""
@@ -260,7 +388,7 @@ class SibylBot(object):
       return
     
     # account for double cmd_prefix = redo (e.g. !!)
-    if self.cmd_prefix and cmd.startswith(self.cmd_prefix):
+    if self.opt('cmd_prefix') and cmd.startswith(self.opt('cmd_prefix')):
       new = self.__remove_prefix(cmd)
       cmd = 'redo'
       if len(new.strip())>0:
@@ -287,7 +415,7 @@ class SibylBot(object):
       return
     
     # check against bw_list
-    for rule in self.bw_list:
+    for rule in self.opt('bw_list'):
       if (rule[1]!='*') and (rule[1] not in real):
         continue
       if rule[2]!='*' and rule[2]!=cmd_name:
@@ -310,31 +438,42 @@ class SibylBot(object):
 
     self.log.info('CMD: %s from %s with %s' % (cmd_name,real,applied))
 
+    # check for chat_ctrl
+    func = self.hooks['chat'][cmd_name]
+    if not self.opt('chat_ctrl') and func._sibylbot_dec_chat_ctrl:
+      self.protocol.send('chat_ctrl is disabled',frm)
+      return
+
     # execute the command and catch exceptions
     try:
-      reply = self.hooks['chat'][cmd_name](mess,args)
+      reply = func(mess,args)
     except Exception, e:
-      self.log.exception('An error happened while processing '\
-        'a message ("%s") from %s: %s"' %
-        (text,frm,traceback.format_exc(e)))
+      full = traceback.format_exc(e)
+      short = full.split('\n')[-2]
+
+      self.log.error('Error while executing cmd "%s":' % cmd_name)
+      self.log.error('  %s' % short)
+      self.log.debug('  Message text: "%s"' % text)
+      self.log.debug(full)
+
       reply = self.MSG_ERROR_OCCURRED
-      if self.except_reply:
-        reply = traceback.format_exc(e).split('\n')[-2]
+      if self.opt('except_reply'):
+        reply = short
     if reply:
       self.protocol.send(reply,frm)
 
   # @param room (str) the room we successfully joined
   def _cb_join_room_success(self,room):
     """execute callbacks on successfull MUC join"""
-    
+
     self.__run_hooks('mucs',room)
 
   # @param room (str) the room we failed to join
   # @param error (str) the human-readable reason we failed to join
   def _cb_join_room_failure(self,room,error):
     """execute callbacks on successfull MUC join"""
-    
-    self.__run_hooks('mucf',room,error)
+
+    result = self.__run_hooks('mucf',room,error)
 
 ################################################################################
 # DDD - Helper functions                                                       #
@@ -356,7 +495,7 @@ class SibylBot(object):
       if self.protocol.in_room(room) and text.lower().startswith(nick):
         direct = True
     else:
-      if text.lower().startswith(self.nick_name):
+      if text.lower().startswith(self.opt('nick_name')):
         direct = True
     if direct:
       text = ' '.join(text.split(' ',1)[1:])
@@ -371,19 +510,20 @@ class SibylBot(object):
 
     # for group msgs check if only_direct and/or cmd_prefix are set/fulfilled
     else:
-      if ((not self.only_direct) and (not self.cmd_prefix) or
-          ((self.only_direct and direct) or (self.cmd_prefix and prefix))):
+      if ((not self.opt('only_direct')) and (not self.opt('cmd_prefix')) or
+          ((self.opt('only_direct') and direct) or
+          (self.opt('cmd_prefix') and prefix))):
         return text
     return None
 
   def __remove_prefix(self,text):
     """remove the command prefix from the given text"""
 
-    if not self.cmd_prefix:
+    if not self.opt('cmd_prefix'):
       return text
-    if not text.startswith(self.cmd_prefix):
+    if not text.startswith(self.opt('cmd_prefix')):
       return text
-    return text[len(self.cmd_prefix):]
+    return text[len(self.opt('cmd_prefix')):]
 
   def __get_args(self,cmd):
     """return the cmd_name and args in a tuple, accounting for quotes"""
@@ -428,9 +568,9 @@ class SibylBot(object):
 
     cmds = len(self.hooks['chat'])
     funcs = self.hooks['chat'].values()
-    mods = set([inspect.getfile(f).split('/')[-1].split('.')[0] for f in funcs])
-    return ('SibylBot %s (%s) --- %s commands from %s modules: %s' %
-        (__version__,self.chat_proto[0],cmds,len(mods),list(mods)))
+    plugins = sorted(self.plugins+['sibylbot'])
+    return ('SibylBot %s (%s) --- %s commands from %s plugins: %s' %
+        (__version__,self.opt('chat_proto')[0],cmds,len(plugins),plugins))
 
   @botcmd(name='hello')
   def __hello(self,mess,args):
@@ -522,16 +662,17 @@ class SibylBot(object):
     """log a message to appear when the bot connects"""
 
     self.log.info('')
-    self.log.critical('SibylBot connecting...')
+    self.log.info('SibylBot connecting...')
     self.log.info('')
-    self.log.info('Chat : %s' % self.chat_proto[0])
-    self.log.info('User : %s' % self.username)
+    self.log.info('Chat : %s' % self.opt('chat_proto')[0])
+    self.log.info('User : %s' % self.opt('username'))
     if rooms:
       for room in rooms:
         self.log.info('Room : %s/%s' %
             (room['room'],(room['nick'] if room['nick'] else 'Sibyl')))
     else:
       self.log.info('Room : None')
+    self.log.info('Plug : %s' % ','.join(self.plugins))
     self.log.info('Cmds : %i' % len(self.hooks['chat']))
     self.log.info('Log  : %s' %
         logging.getLevelName(self.log.getEffectiveLevel()))
@@ -545,14 +686,14 @@ class SibylBot(object):
     # if we're not connected, try to connect
     # protocol.connected should raise ConnectFailure if it doesn't work
     if not self.protocol.is_connected():
-      self.protocol.connect(self.username,self.password)
+      self.protocol.connect()
 
     # sanity check just in case the protocol isn't implemented correctly
     if not self.protocol.is_connected():
       raise ConnectFailure
 
     self.log.info('bot connected; serving forever')
-    for room in self.rooms:
+    for room in self.opt('rooms'):
       self.protocol.join_room(room['room'],room['nick'],room['pass'])
 
     self.__run_hooks('con')
@@ -560,8 +701,8 @@ class SibylBot(object):
     # process messages forever unless self.quit()
     while not self.__finished:
       try:
-        self.protocol.process()
         self.__idle_proc()
+        self.protocol.process()
       except KeyboardInterrupt as e:
         self.quit('stopped by keyboard interrupt')
 
@@ -578,19 +719,19 @@ class SibylBot(object):
         self.__run_hooks('discon',e)
         
         # attempt to reconnect if self.catch_except
-        if self.catch_except:
+        if self.opt('catch_except'):
           reason = {PingTimeout:'ping timeout',
                     ConnectFailure:'unable to connect',
                     ServerShutdown:'server shutdown'}
           self.log.error('Connection lost ('+reason[e.__class__]+
-              '); retrying in '+str(self.recon_wait)+' sec')
+              '); retrying in '+str(self.opt('recon_wait'))+' sec')
 
         # traceback all exceptions and quit if not self.catch_except
         else:
           raise e
 
         # wait then reconnect
-        time.sleep(self.recon_wait)
+        time.sleep(self.opt('recon_wait'))
         self.__run_hooks('recon')
 
 ################################################################################
@@ -604,7 +745,7 @@ class SibylBot(object):
     stdout = sys.stdout
     sys.stdout = open(os.devnull,'wb')
 
-    self.__log_connect_msg(rooms=self.rooms)
+    self.__log_connect_msg(rooms=self.opt('rooms'))
 
     # catch unhandled Exceptions and write traceback to the log
     try:
@@ -617,8 +758,8 @@ class SibylBot(object):
     # shutdown cleanly
     self.protocol.shutdown()
     self.__run_hooks('down')
-    logging.shutdown()
 
+  # @param msg (str) [None] message to log
   def quit(self,msg=None):
     """Stop serving messages and exit"""
     
@@ -628,6 +769,35 @@ class SibylBot(object):
     else:
       self.log.critical('SibylBot.quit() called, but no reason given')
 
+  # @param name (str) [None] name of the opt to fetch
+  # @return (object) the value of the opt or the entire opt dict if no name
+  def opt(self,name=None):
+    """return the value of the specified config option"""
+
+    if not name:
+      return self.conf.opts
+    return self.conf.opts[name]
+
+  # @param name (str) name of the instance variable to set
+  # @param val (object) [None] value to set
+  # @raise (AttributeError) if the var already exists
+  def add_var(self,name,val=None):
+    """add a var to the bot, or raise an exception if it already exists"""
+
+    caller = util.get_caller()
+    if hasattr(self,name):
+      space = self.ns_opt.get(name,'sibylbot')
+      self.log.critical('plugin "%s" tried to overwrite var "%s" from "%s"' %
+          (caller,name,space))
+      raise DuplicateVarError
+
+    setattr(self,name,val)
+    self.ns_opt[name] = caller
+
+  # @param cmd (str) name of chat cmd to run
+  # @param args (list) [None] arguments to pass to the command
+  # @param mess (Message) [None] message to pass to the command
+  # @return (str,None) the result of the command
   def run_cmd(self,cmd,args=None,mess=None):
     """run a chat command manually"""
 
@@ -638,3 +808,12 @@ class SibylBot(object):
     if args is None:
       args = []
     return self.hooks['chat'][cmd](mess,args)
+
+  # @param plugin (str) [None] name of plugin to check for, or return all
+  # @return (bool,list) True if the plugin was loaded, or list all
+  def has_plugin(self,plugin=None):
+    """check if a plugin was loaded"""
+
+    if not plugin:
+      return self.plugins
+    return (plugin in self.plugins)

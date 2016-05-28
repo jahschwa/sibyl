@@ -40,8 +40,8 @@ def conf(bot):
 def init(bot):
   """create the pending_room variable to enable chat responses"""
 
-  bot.pending_room = {}
-  bot.pending_tell = []
+  bot.add_var('pending_room',{})
+  bot.add_var('pending_tell',[])
 
 @botcmd
 def all(bot,mess,args):
@@ -94,12 +94,9 @@ def say(bot,mess,args):
   text = ' '.join(args)
   bot.protocol.send(text,room)
 
-@botcmd
+@botcmd(ctrl=True)
 def join(bot,mess,args):
   """join a room - [room nick pass]"""
-
-  if not bot.chat_ctrl:
-    return 'chat_ctrl disabled'
 
   # if no room is supplied, just rejoin existing rooms
   if not args:
@@ -122,7 +119,7 @@ def rejoin(bot,mess,args):
 
   # rejoin every room from the config file if we're not in them
   rejoined = []
-  for room in bot.rooms:
+  for room in bot.opt('rooms'):
     (room,nick,pword) = (room['room'],room['nick'],room['pass'])
     if not bot.protocol.in_room(room):
       rejoined.append(room)
@@ -135,15 +132,12 @@ def rejoin(bot,mess,args):
     return 'Attempting to join rooms: '+str(rejoined)
   return 'No rooms to rejoin'
 
-@botcmd
+@botcmd(ctrl=True)
 def leave(bot,mess,args):
   """leave the specified room - leave [room]"""
 
-  if not bot.chat_ctrl:
-    return 'chat_ctrl disabled'
-
   # if a room was specified check if it's valid, else use the invoker's room
-  rooms = bot.protocol.get_rooms()+[room['room'] for room in bot.rooms]
+  rooms = bot.protocol.get_rooms()+[room['room'] for room in bot.opt('rooms')]
   room = mess.get_from().get_room()
   if args:
     if args[0] in rooms:
@@ -263,7 +257,7 @@ def link_echo(bot,mess,cmd):
   if cmd is not None:
     return
 
-  if not bot.link_echo:
+  if not bot.opt('link_echo'):
     return
 
   msg = mess.get_text()

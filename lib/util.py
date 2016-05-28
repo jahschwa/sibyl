@@ -21,7 +21,7 @@
 #
 ################################################################################
 
-import os,requests,json,imp
+import os,requests,json,imp,inspect
 
 # @param s (str) the string to split
 # @param sep (str) [' '] the string on which to split
@@ -413,3 +413,9 @@ def xbmc_cmp(a,b):
     ia += 1
     ib += 1
   return (1 if len(a)<len(b) else -1)
+
+# @return (str) the module name of the caller's caller
+def get_caller():
+  """can be called from inside foo() to return the file that called foo()"""
+
+  return os.path.basename(inspect.stack()[2][1]).split('.')[0]

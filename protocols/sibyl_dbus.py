@@ -32,185 +32,80 @@
 #
 ################################################################################
 
-from abc import ABCMeta,abstractmethod
+import json,logging
+
+import dbus
+
+from lib.protocol import *
+from lib.decorators import botconf
 
 ################################################################################
-# Custom exceptions                                                            #
+# Config options                                                               #
 ################################################################################
 
-class PingTimeout(Exception):
-  pass
-
-class ConnectFailure(Exception):
-  pass
-
-class AuthFailure(Exception):
-  pass
-
-class ServerShutdown(Exception):
-  pass
+@botconf
+def conf(bot):
+  return [{'name':'bus_name','default':None,'required':True}]
 
 ################################################################################
-# User abstract class                                                          #
+# DUser(User) class                                                            #
 ################################################################################
 
-class User(object):
-  __metaclass__ = ABCMeta
+class DUser(object):
 
-  # called on object init to guarantee some variables are always initialised
-  # @param user (str) a full username
-  # @param typ (int) is either Message.PRIVATE or Message.GROUP
-  @abstractmethod
   def parse(self,user,typ):
-    pass
 
-  # @return (str) the username in private chat or the nick name in a room
-  @abstractmethod
-  def get_name(self):
-    pass
+    d = json.loads(user)
+    self.name = d['name']
+    self.room = d['room']
+    self.base = d['base']
+    if 'real' in d:
+      self.real = DUser(d['real'],d['real']['type'])
 
-  # @return (str) the room this User is a member of or None
-  @abstractmethod
-  def get_room(self):
-    pass
-
-  # @return (str) the username without resource identifier
-  @abstractmethod
-  def get_base(self):
-    pass
-
-  # @param other (object) you must check for class equivalence
-  # @return (bool) True if self==other
-  @abstractmethod
-  def __eq__(self,other):
-    pass
-
-  # @return (str) the full username
-  @abstractmethod
-  def __str__(self):
-    pass
-
-  # initialise the User object and call parse
-  def __init__(self,user,typ):
-    self.real = None
-    self.parse(user,typ)
-
-  # @return (User subclass) the "real" username of this User or None
-  def get_real(self):
-    """get the "real" User of this User"""
-    return self.real
-
-  # set the "real" User info for this User
-  # @param real (User) the "real" username of this User
-  def set_real(self,real):
-    """set the "real" User of this User"""
-    self.real = real
-
-  # override the != operator (you don't have to do this in the subclass)
-  # @param other (object)
-  # @return (bool) whether self!=other
-  def __ne__(self,other):
-    return not self==other
-
-################################################################################
-# Message class                                                                #
-################################################################################
-
-class Message(object):
-
-  # Type enums
-  STATUS = 0
-  PRIVATE = 1
-  GROUP = 2
-  ERROR = 3
-
-  # Status enums
-  UNKNOWN = -1
-  OFFLINE = 0
-  EXT_AWAY = 1
-  AWAY = 2
-  DND = 3
-  AVAILABLE = 4
-
-  # Type names
-  TYPES = ['STATUS','PRIVATE','GROUP','ERROR']
-  STATUSES = ['OFFLINE','EXT_AWAY','AWAY','DND','AVAILABLE']
-
-  # create a new message object with given info
-  # @param typ (int) a Message type enum
-  # @param frm (User) the User who sent the Message
-  # @param txt (str,unicode) the body of the msg
-  # @param status (str) [None] status enum
-  # @param msg (str) [None] custom status msg (e.g. "Doing awesome!")
-  def __init__(self,typ,frm,txt,status=None,msg=None):
-    """create a new Message"""
-
-    if typ not in range(0,4):
-      raise ValueError('Valid types: Message.STATUS, PRIVATE, GROUP, ERROR')
+    self.pfmt = d['priv-str']
+    self.gfmt = d['group-str']
     self.typ = typ
 
-    if (status is not None) and (status not in range(0,5)):
-      raise ValueError('Valid status: Message.UNKNOWN, OFFLINE, EXT_AWAY, '+
-          'AWAY, DND, AVAILABLE')
-    self.status = status
-    
-    self.frm = frm
-    self.txt = txt
-    self.msg = msg
+  def get_name(self):
+    return self.name
 
-  # @return (User) the User who sent this Message
-  def get_from(self):
-    """return the User who sent this messge"""
-    return self.frm
+  def get_room(self):
+    return self.room
 
-  # @return (str,unicode) the body of this Message
-  def get_text(self):
-    """return the body of the message"""
-    return self.txt
+  def get_base(self):
+    return self.base
 
-  # @param text (str,unicode) the body of this Message to set
-  def set_text(self,text):
-    """set the body of the message"""
-    self.txt = text
+  def __eq__(self,other):
+    if not isinstance(other,DUser):
+      return False
+    return str(self)==str(other)
 
-  # @return (int) the type of this Message (Message class type enum)
-  def get_type(self):
-    """return the typ of the message"""
-    return self.typ
+  def __str__(self):
 
-  # @return (tuple of (int,str)) the Message status enum and status msg
-  def get_status(self):
-    """return the status (e.g. Message.OFFLINE)"""
-    return (self.status,self.msg)
+    d = {'name':self.name,
+          'room':self.room,
+          'base':self.base}
 
-  # @param typ (int) Message type enum
-  # @return (str) human-readable Message type
-  @staticmethod
-  def type_to_str(typ):
-    """return a human-readable Message type given a Message type enum"""
-    if typ not in range(0,4):
-      return 'INVALID'
-    return Message.TYPES[typ]
+    if self.typ==Message.GROUP:
+      return self.gfmt % d
+    return self.pfmt % d
 
 ################################################################################
-# Protocol abstract class                                                      #
+# DBus(Protocol) class                                                         #
 ################################################################################
 
-class Protocol(object):
-  __metaclass__ = ABCMeta
+class DBus(Protocol):
 
-  # called on bot init; the following are guaranteed to exist:
-  #   self.bot = SibylBot instance
-  #   self.log = the logger you should use
-  @abstractmethod
   def setup(self):
-    pass
 
-  # @raise (ConnectFailure) if can't connect to server
-  # @raise (AuthFailure) if failed to authenticate to server
-  @abstractmethod
+    self.bus = dbus.SystemBus()
+    self.service = self.bus.get_object(self.opt('bus_name'),'/')
+
+    self.conf = self.service.
+
   def connect(self):
-    pass
+
+    self.
 
   # @return (bool) True if we are connected to the server
   @abstractmethod

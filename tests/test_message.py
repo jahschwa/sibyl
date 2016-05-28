@@ -21,6 +21,24 @@
 #
 ################################################################################
 
-from sibylbot import SibylBot
-import lib
-import protocols
+import sys,os,unittest
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
+
+from lib.protocol import Message
+
+class MessageTypesTestCase(unittest.TestCase):
+
+  def test_message_types(self):
+    self.check(Message.TYPES)
+
+  def test_message_statuses(self):
+    self.check(Message.STATUSES)
+
+  def check(self,types):
+    length = len(types)
+    for typ in types:
+      self.assertTrue(hasattr(Message,typ),msg=('Missing %s'%typ))
+      value = getattr(Message,typ)
+      msg = '%s=%s not in [%s,%s]' % (typ,value,0,length-1)
+      self.assertIn(value,range(0,length),msg=msg)

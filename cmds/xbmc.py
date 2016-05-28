@@ -26,6 +26,8 @@ import random,requests,json,os
 from lib.decorators import *
 import lib.util as util
 
+__wants__ = ['library']
+
 @botconf
 def conf(bot):
   """add config options"""
@@ -36,6 +38,12 @@ def conf(bot):
             'valid' : bot.conf.valid_ip},
           {'name' : 'xbmc_user'},
           {'name' : 'xbmc_pass'}]
+
+@botinit
+def init(bot):
+  """create empty vars"""
+
+  bot.add_var('last_played')
 
 @botcmd
 def remote(bot,mess,args):
@@ -446,11 +454,17 @@ def stream(bot,mess,args):
 def videos(bot,mess,args):
   """open a folder as a playlist - videos [include -exclude] [#track] [@match]"""
 
+  if not bot.has_plugin('library'):
+    return 'This command not available because plugin "library" not loaded'
+
   return files(bot,args,bot.lib_video_dir,1)
 
 @botcmd
 def video(bot,mess,args):
   """search and play a single video - video [include -exclude]"""
+
+  if not bot.has_plugin('library'):
+    return 'This command not available because plugin "library" not loaded'
 
   return _file(bot,args,bot.lib_video_file)
 
@@ -458,11 +472,17 @@ def video(bot,mess,args):
 def audios(bot,mess,args):
   """open a folder as a playlist - audios [include -exclude] [#track] [@match]"""
 
+  if not bot.has_plugin('library'):
+    return 'This command not available because plugin "library" not loaded'
+
   return files(bot,args,bot.lib_audio_dir,0)
 
 @botcmd
 def audio(bot,mess,args):
   """search and play a single audio file - audio [include -exclude]"""
+
+  if not bot.has_plugin('library'):
+    return 'This command not available because plugin "library" not loaded'
 
   return _file(bot,args,bot.lib_audio_file)
 
@@ -482,27 +502,30 @@ def fullscreen(bot,mess,args):
 def random_chat(bot,mess,args):
   """play random song - random [include -exclude]"""
 
+  if not bot.has_plugin('library'):
+    return 'This command not available because plugin "library" not loaded'
+
   # check if a search term was passed
   if not args:
-    _matches = bot.lib_audio_file
+    matches = bot.lib_audio_file
   else:
-    _matches = util.matches(bot.lib_audio_file,args)
+    matches = util.matches(bot.lib_audio_file,args)
 
-  if len(_matches)==0:
+  if len(matches)==0:
     return 'Found 0 matches'
 
   # play a random audio file from the matches
-  rand = random.randint(0,len(_matches)-1)
+  rand = random.randint(0,len(matches)-1)
 
-  result = bot.xbmc('Player.Open',{'item':{'file':_matches[rand]}})
+  result = bot.xbmc('Player.Open',{'item':{'file':matches[rand]}})
   if 'error' in result.keys():
-    s = 'Unable to open: '+_matches[rand]
+    s = 'Unable to open: '+matches[rand]
     bot.log.error(s)
     return s
 
   bot.run_cmd('fullscreen',['on'])
 
-  return 'Playing "'+_matches[rand]+'"'
+  return 'Playing "'+matches[rand]+'"'
 
 @botcmd(name='xbmc')
 def xbmc_chat(bot,mess,args):
@@ -557,13 +580,15 @@ def shuffle(bot,mess,args):
 def xbmc(bot,method,params=None):
   """wrapper method to always provide IP to static method"""
 
-  return util.xbmc(bot.xbmc_ip,method,params,bot.xbmc_user,bot.xbmc_pass)
+  return util.xbmc(bot.opt('xbmc_ip'),method,params,
+      bot.opt('xbmc_user'),bot.opt('xbmc_pass'))
 
 @botfunc
 def xbmc_active_player(bot):
   """wrapper method to always provide IP to static method"""
 
-  return util.xbmc_active_player(bot.xbmc_ip,bot.xbmc_user,bot.xbmc_pass)
+  return util.xbmc_active_player(bot.opt('xbmc_ip'),
+      bot.opt('xbmc_user'),bot.opt('xbmc_pass'))
 
 def playpause(bot,target):
   """helper function for play() and pause()"""
@@ -616,7 +641,7 @@ def files(bot,args,dirs,pid):
   matches = util.reducetree(matches)
 
   if len(matches)>1:
-    if bot.max_matches<1 or len(_matches)<=bot.max_matches:
+    if bot.max_matches<1 or len(matches)<=bot.opt('max_matches'):
       return 'Found '+str(len(matches))+' matches: '+util.list2str(matches)
     else:
       return 'Found '+str(len(matches))+' matches'
@@ -668,7 +693,7 @@ def _file(bot,args,dirs):
     return 'Found 0 matches'
 
   if len(matches)>1:
-    if bot.max_matches<1 or len(matches)<=bot.max_matches:
+    if bot.opt('max_matches')<1 or len(matches)<=bot.opt('max_matches'):
       return 'Found '+str(len(matches))+' matches: '+util.list2str(matches)
     else:
       return 'Found '+str(len(matches))+' matches'

@@ -30,6 +30,9 @@ import lib.util as util
 
 DUMMY = 'dummy'
 
+class DuplicateOptError(Exception):
+  pass
+
 ################################################################################
 # Config class                                                                 #
 ################################################################################
@@ -46,8 +49,9 @@ class Config(object):
   FAIL = 0
   SUCCESS = 1
   ERRORS = 2
+  DUPLICATES = 3
 
-  def __init__(self,bot):
+  def __init__(self,conf_file):
     """create a new config parser tied to the given bot"""
 
     # OrderedDict containing full descriptions of options
@@ -58,6 +62,8 @@ class Config(object):
 ('chat_proto',  (None,               True,   None,             self.parse_protocol)),
 ('username',    (None,               True,   None,             None)),
 ('password',    (None,               True,   None,             None)),
+('enable',      ([],                 False,  None,             self.parse_plugins)),
+('disable',     ([],                 False,  None,             self.parse_plugins)),
 ('cmd_dir',     ('cmds',             False,  self.valid_dir,   None)),
 ('rooms',       ([],                 False,  None,             self.parse_room)),
 ('nick_name',   ('Sibyl',            False,  None,             None)),
@@ -73,11 +79,14 @@ class Config(object):
 
     ])
 
+    # create "namespace" dict
+    self.NS = {k:'sibylbot' for k in self.OPTS}
+
     # initialise variables
     self.opts = None
-    self.bot = bot
-    self.conf_file = bot.conf_file
+    self.conf_file = conf_file
     self.log_msgs = []
+    self.logging = logging
 
     # raise an exception if we can't write to conf_file
     util.can_write_file(self.conf_file,delete=True)
@@ -102,20 +111,36 @@ class Config(object):
     return odict([(opt,value[self.DEF]) for (opt,value) in opts])
 
   # @param opts (list of dict) options to add to defaults
-  def add_opts(self,opts):
-    """add several new options"""
+  # @param ns (str) the namespace (e.g. filename) of the option
+  # @return (bool) True if all opts added successfully
+  def add_opts(self,opts,ns):
+    """add several new options, catching exceptions"""
 
+    success = True
     for opt in opts:
-      self.add_opt(opt)
+      try:
+        self.add_opt(opt,ns)
+      except DuplicateOptError:
+        success = False
+
+    return success
 
   # @param opt (dict) option to add to defaults
+  # @param ns (str) the namespace (e.g. filename) of the option
+  # @raise (DuplicateOptError) if the opt already exists
   #
   # See @botconf in https://github.com/TheSchwa/sibyl/wiki/Plug-Ins
-  def add_opt(self,opt):
-    """add the option to our dictionary for parsing"""
+  def add_opt(self,opt,ns):
+    """add the option to our dictionary for parsing, log errors"""
 
     # construct option tuple and add to self.OPTS
     name = opt['name']
+
+    if name in self.OPTS:
+      self.log('critical','Duplicate opt "%s" from "%s" and "%s"' %
+          (name,self.NS[name],ns))
+      raise DuplicateOptError
+
     default = opt.get('default',None)
     req = opt.get('req',False)
     valid = opt.get('valid',None)
@@ -124,8 +149,9 @@ class Config(object):
     parse = opt.get('parse',None)
     if parse:
       parse = self.__bind(parse)
-    
+
     self.OPTS[name] = (default,req,valid,parse)
+    self.NS[name] = ns
 
   # @param opt (str) the option to set
   # @param val (str) the value to set (will be parsed into a Python object)
@@ -164,7 +190,7 @@ class Config(object):
 
     # note the time of the change at the end of the line
     val = (opt+' = '+val+' ;;; '+time.asctime()+'\n')
-    with open(self.bot.conf_file,'r') as f:
+    with open(self.conf_file,'r') as f:
       lines = f.readlines()
 
     # search the config file for the specified opt to replace
@@ -185,7 +211,7 @@ class Config(object):
       while (start<len(lines)) and (not self.__is_opt_line(lines[start])):
         del lines[start]
       lines.insert(start,val)
-    with open(self.bot.conf_file,'w') as f:
+    with open(self.conf_file,'w') as f:
       f.writelines(lines)
     return True
 
@@ -211,7 +237,7 @@ class Config(object):
   #   ERRORS  - ignored sections, ignore opts, parse fails, or validate fails
   #   FAIL    - missing any required opts
   def reload(self):
-    """load opts from config file into bot"""
+    """load opts from config file and check for errors"""
 
     # parse options from the config file and store them in self.opts
     self.__update()
@@ -222,9 +248,6 @@ class Config(object):
       if self.OPTS[opt][self.REQ] and not self.opts[opt]:
         self.log('critical','Missing required option "%s"' % opt)
         errors.append(opt)
-
-    # set all opts in self.opts as members of the bot
-    self.__load()
 
     # return status
     if len(errors):
@@ -259,14 +282,14 @@ class Config(object):
     try:
       config.readfp(FakeSecHead(open(self.conf_file)))
     except:
-      self.log.critical('Unable to read/parse config file')
+      self.log('critical','Unable to read/parse config file')
       return {}
 
     # Sibyl config does not use sections; options in sections will be ignored
     secs = config.sections()
     for sec in secs:
       if sec!=DUMMY:
-        self.log('info','Ignoring section "%s" in config file' % sec)
+        self.log('error','Ignoring section "%s" in config file' % sec)
 
     # return a dictionary of all opts read from the config file
     items = config.items(DUMMY)
@@ -290,7 +313,8 @@ class Config(object):
           try:
             opts[opt] = func(opt,opts[opt])
           except Exception as e:
-            self.log('warning','Error parsing "%s"; using default' % opt)
+            self.log('error','Error parsing "%s"; using default=%s' %
+                (opt,self.opts[opt]))
             del opts[opt]
 
   # @params opts (dict) opt:value pairs to validate
@@ -301,14 +325,9 @@ class Config(object):
     for opt in opts.keys():
       func = self.OPTS[opt][self.VALID]
       if func and not func(opts[opt]):
-        self.log('warning','Invalid value for config option "%s"' % opt)
+        self.log('error','Invalid value for "%s"; using default=%s' %
+            (opt,self.opts[opt]))
         del opts[opt]
-
-  def __load(self):
-    """take everything in self.opts and add them as attributes to our bot"""
-
-    for opt in self.opts:
-      setattr(self.bot,opt,self.opts[opt])
 
   def write_default_conf(self):
     """write a default, completely commented-out config file"""
@@ -362,7 +381,6 @@ class Config(object):
     # just check the color; everything else happens in parse_bw()
     for (color,_,_) in bw:
       if color not in ('b','w'):
-        self.log('warning','Invalid color "%s" in "bw_list"' % color)
         return False
     return True
 
@@ -393,6 +411,14 @@ class Config(object):
       if issubclass(clas,Protocol) and name.lower()==val:
         return (val,clas)
     raise ValueError
+
+  # @return (list) a list of plugins to disable
+  def parse_plugins(self,opt,val):
+    """parse the list of disabled or enables plugins"""
+
+    # individiual plugins are separated by commas
+    val = val.replace('\n','').replace(' ','')
+    return val.split(',')
 
   # @return (dict) a room to join with keys [room, nick, pass]
   def parse_room(self,opt,val):
@@ -481,7 +507,8 @@ class Config(object):
   def log(self,lvl,msg):
     """add the message to the queue"""
 
-    self.log_msgs.append((lvl,msg))
+    if self.logging:
+      self.log_msgs.append((lvl,msg))
 
   def process_log(self):
     """should only be called after logging has been initialised in the bot"""

@@ -26,6 +26,8 @@ import os,time
 from lib.decorators import *
 import lib.util as util
 
+__depends__ = ['xbmc','library']
+
 @botconf
 def conf(bot):
   """add config options"""
@@ -41,12 +43,14 @@ def conf(bot):
 def init(bot):
   """initialize bookmark dict and last played str for bookmarking"""
   
-  if os.path.isfile(bot.bm_file):
-    bot.bm_store = bm_parse(bot)
+  if os.path.isfile(bot.opt('bm_file')):
+    bm_store = bm_parse(bot)
   else:
-    with open(bot.bm_file,'w') as f:
-      bot.bm_store = {}
-  bot.last_played = None
+    with open(bot.opt('bm_file'),'w') as f:
+      bm_store = {}
+
+  bot.add_var('bm_store',bm_store)
+  # note the "last_played" var is created in xbmc.py so don't do it here
 
 @botcmd
 def bookmark(bot,mess,args):
@@ -59,6 +63,10 @@ def bookmark(bot,mess,args):
     # check if last_played is set
     if bot.last_played is None:
       return 'No active audios or videos playlist to bookmark'
+
+    # check if anything is actually playing
+    if bot.xbmc_active_player() is None:
+      return 'Nothing playing'
 
     # check if a name was passed
     name = bot.last_played[1]
@@ -135,7 +143,7 @@ def resume(bot,mess,args):
   if start_next or start_current:
     args = args[:-1]
 
-  start_next = (bot.resume_next and not start_current) or start_next
+  start_next = (bot.opt('resume_next') and not start_current) or start_next
 
   # check if a name was passed
   name = bm_recent(bot)
@@ -175,7 +183,7 @@ def bm_parse(bot):
   """read the bm_file into a dict"""
 
   d = {}
-  with open(bot.bm_file,'r') as f:
+  with open(bot.opt('bm_file'),'r') as f:
     lines = [l.strip() for l in f.readlines() if l!='\n']
 
   # tab-separated each line is: name path pid position file time added
@@ -183,7 +191,7 @@ def bm_parse(bot):
     (name,props) = bm_unformat(l)
     d[name] = props
 
-  bot.log.info('Parsed '+str(len(d))+' bookmarks from "'+bot.bm_file+'"')
+  bot.log.info('Parsed '+str(len(d))+' bookmarks from "'+bot.opt('bm_file')+'"')
   return d
 
 def bm_update(bot,name,props):
@@ -201,7 +209,7 @@ def bm_add(bot,name,props):
   bot.bm_store[name] = props
 
   # the bookmark file should always end in a newline
-  with open(bot.bm_file,'a') as f:
+  with open(bot.opt('bm_file'),'a') as f:
     f.write(bm_format(name,props)+'\n')
 
 def bm_remove(bot,name):
@@ -211,7 +219,7 @@ def bm_remove(bot,name):
   # passing "*" removes all bookmarks
   if name=='*':
     bot.bm_store = {}
-    with open(bot.bm_file,'w') as f:
+    with open(bot.opt('bm_file'),'w') as f:
       f.write('')
     return True
 
@@ -221,7 +229,7 @@ def bm_remove(bot,name):
 
   del bot.bm_store[name]
 
-  with open(bot.bm_file,'r') as f:
+  with open(bot.opt('bm_file'),'r') as f:
     lines = f.readlines()
 
   lines = [l for l in lines if l.split('\t')[0]!=name]
