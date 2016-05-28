@@ -48,8 +48,8 @@ video_dirs = /mnt/harddrive/videos;
 
 admin_cmds = config,die,join,leave,log,reboot,xbmc
 admin_usrs = admin@server.com,someone@server.com
-bw_list = b %(admin_cmds)s *;
-          w * %(admin_usrs)s;
+bw_list = b * %(admin_cmds)s;
+          w %(admin_usrs)s *;
 ```
 
 ## XBMC/Kodi
