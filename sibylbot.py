@@ -418,7 +418,7 @@ class SibylBot(object):
     for rule in self.opt('bw_list'):
       if (rule[1]!='*') and (rule[1] not in real):
         continue
-      if rule[2]!='*' and rule[2]!=cmd_name:
+      if (rule[2]!='*') and (rule[2]!=cmd_name):
         continue
       applied = rule
     if applied[0]=='b':

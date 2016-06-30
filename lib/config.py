@@ -175,7 +175,6 @@ class Config(object):
 
     # set the option in ourself and the bot
     self.opts[opt] = val
-    setattr(self.bot,opt,val)
     return True
 
   # @param opt (str) the option to set

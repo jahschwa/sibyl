@@ -218,7 +218,7 @@ def str2sec(t):
 
   return time2sec(str2time(t))
 
-# @param path (str) a local directory
+# @param path (str,unicode) a local directory
 # @return (list) every sub-directory (recursive) in the given directory
 def rlistdir(path):
   """list folders recursively"""
@@ -229,7 +229,7 @@ def rlistdir(path):
       alldirs.append(os.path.join(cur_path,dirname)+'/')
   return alldirs
 
-# @param path (str) a local directory
+# @param path (str,unicode) a local directory
 # @return (list) every file (recursive) in the given directory
 def rlistfiles(path):
   """list files recursively"""

@@ -204,7 +204,7 @@ def search(bot,mess,args):
 
   # reply with matches based on max_matches setting
   if len(matches)>1:
-    if bot.max_matches<1 or len(matches)<=bot.max_matches:
+    if bot.opt('max_matches')<1 or len(matches)<=bot.opt('max_matches'):
       return 'Found '+str(len(matches))+' matches: '+util.list2str(matches)
     else:
       return 'Found '+str(len(matches))+' matches'
@@ -231,9 +231,9 @@ def find(bot,fd,dirs):
   for path in paths:
     try:
       if fd=='dir':
-        contents = util.rlistdir(path)
+        contents = util.rlistdir(unicode(path))
       else:
-        contents = util.rlistfiles(path)
+        contents = util.rlistfiles(unicode(path))
       for entry in contents:
         result.append(entry)
     except Exception as e:

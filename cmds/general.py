@@ -36,10 +36,10 @@ def init(bot):
 
 @botcmd(ctrl=True)
 def config(bot,mess,args):
-  """view and edit config - config (show|set|save|diff) (opt|*) [value]"""
+  """view and edit config - config (show|set|save|diff|reset) (opt|*) [value]"""
 
   # default action is 'show'
-  if not args or args[0] not in ('show','set','save','diff'):
+  if not args or args[0] not in ('show','set','save','diff','reset'):
     args.insert(0,'show')
   cmd = args[0]
   opt = '*'
@@ -67,11 +67,29 @@ def config(bot,mess,args):
       return 'Invalud opt'
     if opt not in bot.conf_diff:
       return 'Opt "'+opt+'" has not changed from config file'
-    return 'Opt "'+opt+'" was "'+bot.conf_diff[opt][0]+'" but is now "'+bot.opt[opt]+'"'
+    return 'Opt "%s" was "%s" but is now "%s"' % (opt,bot.conf_diff[opt][0],bot.opt[opt])
 
   # some options don't make sense to edit in chat
   if opt in ('chat_proto','username','disabled','cmd_dir'):
     return 'You may not edit that option via chat'
+
+  # revert to original config
+  if cmd=='reset':
+    if len(bot.conf_diff)==0:
+      return 'No config options to reset'
+    if opt in ('','*'):
+      opts = bot.conf_diff.keys()
+      for opt in opts:
+        bot.conf.opts[opt] = bot.conf_diff[opt][0]
+      bot.conf_diff = {}
+      return 'Reset opts: %s' % opts
+    if opt not in bot.opt():
+      return 'Invalid opt'
+    if opt not in bot.conf_diff:
+      return 'Opt "%s" has not been changed' % opt
+    bot.conf.opts[opt] = bot.conf_diff[opt][0]
+    del bot.conf_diff[opt]
+    return 'Reset "%s" to "%s"' % (opt,bot.opt(opt))
 
   # set opt values in this bot instance only
   if cmd=='set':
