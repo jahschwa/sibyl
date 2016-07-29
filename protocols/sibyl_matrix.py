@@ -22,6 +22,8 @@
 #
 ################################################################################
 
+import time
+
 from lib import protocol
 from lib.decorators import botconf
 from matrix_client.client import MatrixClient
@@ -35,10 +37,12 @@ def conf(bot):
 class MXID(protocol.User):
 
     mxid = ''
+    room_id = ''
 
-    def parse(self, mxid, typ):
-        self.mxid = mxid
-        self.set_real(mxid)
+    def parse(self, id_dict, typ):
+        self.mxid = id_dict['mxid']
+        self.room_id = id_dict['room_id']
+        self.set_real(self)
 
     def get_name(self):
         print("TODO stuff")
@@ -51,10 +55,7 @@ class MXID(protocol.User):
         return self.mxid
 
     def __eq__(self, other):
-        if(self.get_base() == other.get_base()):
-            return True
-        else:
-            return False
+        return (self.get_base() == other.get_base() and (self.room_id == other.room_id))
 
     def __str__(self):
         return self.mxid
@@ -64,6 +65,7 @@ class Matrix(protocol.Protocol):
     def setup(self):
         self.connected = False
         self.rooms = {}
+        self.connect_time_millis = time.time() * 1000
 
     def connect(self):
         homeserver = self.opt('server')
@@ -103,7 +105,8 @@ class Matrix(protocol.Protocol):
         print("TODO: shutdown()")
 
     def send(self, text, to):
-        print("TODO: send()")
+        room_id = to.room_id
+        self.rooms[room_id].send_text(text)
 
     def broadcast(self, text, room, frm=None):
         print("TODO: broadcast()")
@@ -142,7 +145,12 @@ class Matrix(protocol.Protocol):
         print("TODO: get_occupants")
 
     def get_nick(self, room):
-        print("TODO: get_nick")
+        #TODO: Want to be able to use either username or mxid in config?
+        user = self.client.get_user(self.opt('username'))
+        try:
+            return user.get_display_name()
+        except (MatrixRequestError, TypeError):
+            return self.opt('username')
 
     def get_real(self, room, nick):
         print("TODO: get_real")
@@ -154,5 +162,13 @@ class Matrix(protocol.Protocol):
         self.log.debug(event)
         if(event['type'] == 'm.room.message'):
             room = event['room_id']
-            if(self.in_room(room)):
-                self.log.debug(event['content']['body'])
+            if(self.in_room(room) and self.connect_time_millis < int(event['origin_server_ts'])):
+                body = event['content']['body']
+                user = MXID({'mxid': event['sender'], 'room_id': event['room_id']}, protocol.Message.GROUP)
+                msg = protocol.Message(protocol.Message.GROUP, user, body)
+                self.bot._cb_message(msg)
+
+    def _find_room(self, roomid_str):
+        for roomid, room in self.rooms.items():
+            if(alias_str in room.aliases):
+                return room
