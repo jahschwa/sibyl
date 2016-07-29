@@ -21,7 +21,7 @@
 #
 ################################################################################
 
-import time,os,socket,copy,logging,inspect
+import time,os,socket,copy,logging,inspect,traceback
 from collections import OrderedDict as odict
 import ConfigParser as cp
 
@@ -405,10 +405,27 @@ class Config(object):
   def parse_protocol(self,opt,val):
     """parse the protocol and return the subclass"""
 
-    mod = util.load_module('sibyl_'+val,'protocols')
-    for (name,clas) in inspect.getmembers(mod,inspect.isclass):
-      if issubclass(clas,Protocol) and name.lower()==val:
-        return (val,clas)
+    if not os.path.isfile('protocols/sibyl_'+val+'.py'):
+      self.log('critical','No matching file in protocols/ for "%s"' % val)
+      raise ValueError
+
+    try:
+      mod = util.load_module('sibyl_'+val,'protocols')
+      for (name,clas) in inspect.getmembers(mod,inspect.isclass):
+        if issubclass(clas,Protocol) and name.lower()==val:
+          return (val,clas)
+    except Exception as e:
+      full = traceback.format_exc(e)
+      short = full.split('\n')[-2]
+      
+      self.log('critical','Exception importing protocols/%s:' % ('sibyl_'+val))
+      self.log('critical','  %s' % short)
+      self.log('debug',full)
+
+      raise e
+
+    self.log('critical',
+        'Protocol "%s" does not contain a lib.protocol.Protocol subclass' % val)
     raise ValueError
 
   # @return (list) a list of plugins to disable

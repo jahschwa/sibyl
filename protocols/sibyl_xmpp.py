@@ -143,6 +143,16 @@ class XMPP(Protocol):
 
   def setup(self):
 
+    # MUC error codes, reason, and log level
+    self.MUC_CODES = {self.MUC_PARTED   : ('parted',None),
+                      self.MUC_OK       : ('OK',None),
+                      self.MUC_ERR      : ('unknown',self.log.error),
+                      self.MUC_BANNED   : ('banned',self.log.critical),
+                      self.MUC_KICKED   : ('kicked',self.log.error),
+                      self.MUC_AFFIL    : ('affiliation',self.log.info),
+                      self.MUC_MEMBERS  : ('members-only',self.log.error),
+                      self.MUC_SHUTDOWN : ('shutdown',self.log.error)}
+
     # translate xmpp types to sibyl types
     self.TYPES = {'presence':Message.STATUS,
                   'chat':Message.PRIVATE,
@@ -224,7 +234,7 @@ class XMPP(Protocol):
     """erase self.conn and set all MUCS to parted"""
 
     self.conn = None
-    for muc in self.get_current_mucs():
+    for muc in self.__get_current_mucs():
       self.mucs[muc]['status'] = self.MUC_PARTED
 
   def process(self):
@@ -264,7 +274,10 @@ class XMPP(Protocol):
       typ = 'groupchat'
     mess.setType(typ)
 
-    self.conn.send(mess)
+    try:
+      self.conn.send(mess)
+    except IOError:
+      raise ConnectFailure
 
   def broadcast(self,text,room,frm=None):
     """send a message to every user in a room"""
@@ -286,21 +299,10 @@ class XMPP(Protocol):
       if x[1]==room:
         return
 
-    # build the room join stanza
-    NS_MUC = 'http://jabber.org/protocol/muc'
-    nick = (nick or self.opt('nick_name'))
-    room_jid = room+'/'+nick
-
-    # request no history and add password if we need one
-    pres = xmpp.Presence(to=room_jid)
-    pres.setTag('x',namespace=NS_MUC).setTagData('history','',attrs={'maxchars':'0'})
-    if pword is not None:
-      pres.setTag('x',namespace=NS_MUC).setTagData('password',pword)
-
     # we'll receive a reply stanza with matching id telling us if we succeeded,
     # but due to the way xmpppy processes stanzas, we can't easily wait for the
     # given stanza inside a callback without blocking or race conditions
-    self.__muc_pending.append((pres,room,nick,pword))
+    self.__muc_pending.append((room,nick,pword))
 
   def part_room(self,room):
     """leave the specified room"""
@@ -310,7 +312,10 @@ class XMPP(Protocol):
       room_jid = room+'/'+self.mucs[room]['nick']
       pres = xmpp.Presence(to=room_jid)
       pres.setAttr('type', 'unavailable')
-      self.conn.send(pres)
+      try:
+        self.conn.send(pres)
+      except IOError:
+        raise ConnectFailure
 
     # update mucs dict and log
     self.mucs[room]['status'] = self.MUC_PARTED
@@ -319,13 +324,13 @@ class XMPP(Protocol):
   def in_room(self,room):
     """return True/False if we are in the specified room"""
 
-    return room in self.get_current_mucs()
+    return room in self.__get_current_mucs()
 
   def get_rooms(self,in_only=False):
     """return our rooms, optionally only those we are in"""
 
     if in_only:
-      return self.get_current_mucs()
+      return self.__get_current_mucs()
     return [room for room in self.mucs]
 
   def get_occupants(self,room):
@@ -372,7 +377,7 @@ class XMPP(Protocol):
     jid = mess.getFrom()
     props = mess.getProperties()
     text = mess.getBody()
-    username = self.get_sender_username(mess)
+    username = self.__get_sender_username(mess)
     private = False
 
     if text is None:
@@ -383,8 +388,8 @@ class XMPP(Protocol):
       return
 
     # Account for MUC PM messages
-    if (typ=='chat' and len(self.get_current_mucs())
-        and jid.getStripped() in self.get_current_mucs()):
+    if (typ=='chat' and len(self.__get_current_mucs())
+        and jid.getStripped() in self.__get_current_mucs()):
       private = True
 
     if typ=='groupchat':
@@ -396,7 +401,7 @@ class XMPP(Protocol):
       # Ignore messages from myself
       room = jid.getStripped()
       if ((self.jid==jid) or
-          (room in self.get_current_mucs() and jid.getResource()==self.mucs[room]['nick'])):
+          (room in self.__get_current_mucs() and jid.getResource()==self.mucs[room]['nick'])):
         return
 
     # Ignore messages from users not seen by this bot
@@ -429,7 +434,7 @@ class XMPP(Protocol):
 
     # keep track of "real" JIDs in a MUC
     real = None
-    if jid.getStripped() in self.get_current_mucs():
+    if jid.getStripped() in self.__get_current_mucs():
       try:
         real = pres.getTag('x').getTag('item').getAttr('jid')
         self.real_jids[jid] = xmpp.protocol.JID(real)
@@ -480,7 +485,7 @@ class XMPP(Protocol):
 
     # Catch kicked from the room
     room = jid.getStripped()
-    if room in self.get_current_mucs() and jid.getResource()==self.mucs[room]['nick']:
+    if room in self.__get_current_mucs() and jid.getResource()==self.mucs[room]['nick']:
       code = pres.getStatusCode()
       if code:
         code = int(code)
@@ -532,7 +537,7 @@ class XMPP(Protocol):
     typ = Message.STATUS
     jid_typ = Message.PRIVATE
     real = None
-    if jid.getStripped() in self.get_current_mucs():
+    if jid.getStripped() in self.__get_current_mucs():
       jid_typ = Message.GROUP
       if jid in self.real_jids:
         real = JID(self.real_jids[jid],Message.PRIVATE)
@@ -613,8 +618,11 @@ class XMPP(Protocol):
 
   def __send_status(self):
     """Send status to everyone"""
-    self.conn.send(xmpp.dispatcher.Presence(show=self.__show,
-      status=self.__status))
+    try:
+      self.conn.send(xmpp.dispatcher.Presence(show=self.__show,
+        status=self.__status))
+    except IOError:
+      raise ConnectFailure
 
   def __idle_proc(self):
     """ping, join pending mucs, and try to rejoin mucs we were forced from"""
@@ -635,13 +643,47 @@ class XMPP(Protocol):
       # raise PingTimeout if pinging fails
       try:
         res = self.conn.SendAndWaitForResponse(ping,self.opt('ping_timeout'))
-      except IOError as e:
+      except IOError:
         raise PingTimeout
       if res is None:
         raise PingTimeout
 
 ################################################################################
 # XEP-0045 Multi User Chat (MUC)                                               #
+################################################################################
+# Joining a MUC (2 asynchronous execution paths)                               #
+#                                                                              #
+# (1) User calls self.join_room() which adds MUC info to self.__muc_pending    #
+#                                                                              #
+# (1) Approx once per second self.process() is called                          #
+# (2) Which calls self.__idle_proc()                                           #
+# (3) Which calls self.__idle_join_muc()                                       #
+# (4) Which tries to join every MUC in self.__muc_pending                      #
+# (5) By calling self.__muc_join() which sends a stanza and checks for success #
+# (6) On success self.mucs is updated to have MUC_OK                           #
+#     On failure self.mucs is updated to have MUC_PARTED and we won't rejoin   #
+################################################################################
+# Getting forced from a MUC                                                    #
+#                                                                              #
+# (1) self.callback_presence() receives a presence that forces us from the MUC #
+# (2) Which updates the status in self.mucs to any of those in self.MUC_CODES  #
+# (3) This can't result in MUC_PARTED or MUC_OK so we will try to rejoin       #
+################################################################################
+# Rejoining a MUC                                                              #
+#                                                                              #
+# (1) Approx once per second self.process() is called                          #
+# (2) Which calls self.__idle_proc()                                           #
+# (3) Which calls self.__idle_rejoin_muc()                                     #
+# (4) Which tries to rejoin every MUC with status != MUC_OK or MUC_PARTED      #
+# (5) By calling self.__muc_join() which sends a stanza and checks for success #
+# (6) On success self.mucs is updated to have MUC_OK                           #
+#     On failure self.mucs is not changed so we will try to rejoin again       #
+################################################################################
+# Parting a MUC                                                                #
+#                                                                              #
+# (1) User calls self.part_room()                                              #
+# (2) Which sends a stanza and updates self.mucs to MUC_PARTED                 #
+# (3) This can be used to either leave a room or cancel reconnection           #
 ################################################################################
 
   def __idle_join_muc(self):
@@ -651,23 +693,38 @@ class XMPP(Protocol):
       try:
 
         # try to join the first MUC in the queue
-        (pres,room,user,pword) = self.__muc_pending[0]
+        (room,user,pword) = self.__muc_pending[0]
         del self.__muc_pending[0]
-        self.__muc_join(pres,room,user,pword)
+        self.__muc_join(room,user,pword)
         self.__muc_join_success(room)
 
-      # if joining fails, __idle_rejoin_muc will try again
+      # we only rejoin if we were able to rejoin successfully in the past
       except MUCJoinFailure as e:
         self.__muc_join_failure(room,e.message)
         if room in self.mucs and self.mucs[room]['status'] > self.MUC_OK:
           self.log.debug('Rejoining room "%s" in %i sec' % (room,self.opt('recon_wait')))
 
-  def __muc_join(self,pres,room,nick,pword):
-    """send XMPP stanzas to join a much and raise MUCJoinFailure if error"""
+  def __muc_join(self,room,nick,pword):
+    """send XMPP stanzas to join a muc and raise MUCJoinFailure if error"""
 
+    # build the room join stanza
+    NS_MUC = 'http://jabber.org/protocol/muc'
+    nick = (nick or self.opt('nick_name'))
+    room_jid = room+'/'+nick
+
+    # request no history and add password if we need one
+    pres = xmpp.Presence(to=room_jid)
+    pres.setTag('x',namespace=NS_MUC).setTagData('history','',attrs={'maxchars':'0'})
+    if pword is not None:
+      pres.setTag('x',namespace=NS_MUC).setTagData('password',pword)
+
+    # try to join and wait for response
     self.log.debug('Attempting to join room "%s"' % room)
     self.last_muc = room
-    result = self.conn.SendAndWaitForResponse(pres)
+    try:
+      result = self.conn.SendAndWaitForResponse(pres)
+    except IOError:
+      raise ConnectFailure
 
     # result is None for timeout
     if not result:
@@ -707,24 +764,24 @@ class XMPP(Protocol):
       if self.mucs[room]['status']>self.MUC_OK:
         self.__lastjoin = time.time()
         muc = self.mucs[room]
-        self.muc_join_room(room,muc['nick'],muc['pass'])
+        self.__muc_join(room,muc['nick'],muc['pass'])
 
-  def get_current_mucs(self):
+  def __get_current_mucs(self):
     """return all mucs that we are currently in"""
 
     return [room for room in self.mucs if self.mucs[room]['status']==self.MUC_OK]
 
-  def get_active_mucs(self):
+  def __get_active_mucs(self):
     """return all mucs we are in or are trying to reconnect"""
 
     return [room for room in self.mucs if self.mucs[room]['status']!=self.MUC_PARTED]
 
-  def get_inactive_mucs(self):
+  def __get_inactive_mucs(self):
     """return all mucs that we are currently not in"""
 
     return [room for room in self.mucs if self.mucs[room]['status']!=self.MUC_OK]
 
-  def get_sender_username(self, mess):
+  def __get_sender_username(self, mess):
     """Extract the sender's user name from a message"""
     type = mess.getType()
     jid = mess.getFrom()
