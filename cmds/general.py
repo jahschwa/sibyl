@@ -47,7 +47,9 @@ def config(bot,mess,args):
     opt = args[1]
 
   if opt=='*' and cmd=='show':
-    return str(bot.opt())
+    opts = bot.opt()
+    opts['password'] = 'REDACTED'
+    return str(opts)
   if opt not in bot.opt() and opt!='*':
     return 'Invalid opt'
   if opt=='password':
