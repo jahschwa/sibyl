@@ -104,7 +104,7 @@ def join(bot,mess,args):
 
   # check for optional parameters
   if len(args)<2:
-    args.append(bot.nick_name)
+    args.append(bot.opt('nick_name'))
   if len(args)<3:
     args.append(None)
   (room,nick,pword) = args
