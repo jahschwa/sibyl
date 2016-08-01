@@ -427,12 +427,18 @@ class XMPP(Protocol):
     self.log.debug([x[0] for x in self.__muc_pending])
     if ((jid.getStripped() in self.__get_current_mucs()) or
         (jid.getStripped() in [x[0] for x in self.__muc_pending])):
-      try:
-        real = pres.getTag('x').getTag('item').getAttr('jid')
-        self.real_jids[jid] = xmpp.protocol.JID(real)
-        self.log.debug('JID: '+str(jid)+' = realJID: '+real)
-      except:
-        pass
+      x_tags = pres.getTags('x')
+      for x_tag in x_tags:
+        item_tags = x_tag.getTags('item')
+        for item_tag in item_tags:
+          real = item_tag.getAttr('jid')
+          if real is None:
+            continue
+          self.real_jids[jid] = xmpp.protocol.JID(real)
+          self.log.debug('JID: '+str(jid)+' = realJID: '+real)
+          break
+        if real is not None:
+          break
 
     # update internal status
     if self.jid.bareMatch(jid):
