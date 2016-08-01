@@ -111,6 +111,7 @@ class SibylBot(object):
 
     # initialise variables
     self.__finished = False
+    self.__reboot = False
     self.last_cmd = {}
 
     # load plug-in hooks from this file
@@ -759,6 +760,7 @@ class SibylBot(object):
     # shutdown cleanly
     self.protocol.shutdown()
     self.__run_hooks('down')
+    return self.__reboot
 
   # @param msg (str) [None] message to log
   def quit(self,msg=None):
@@ -769,6 +771,13 @@ class SibylBot(object):
       self.log.critical(msg)
     else:
       self.log.critical('SibylBot.quit() called, but no reason given')
+
+  # @param msg (str) [None] message to log
+  def reboot(self,msg=None):
+    """Reboot the bot"""
+
+    self.__reboot = True
+    self.quit(msg)
 
   # @param name (str) [None] name of the opt to fetch
   # @return (object) the value of the opt or the entire opt dict if no name

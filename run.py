@@ -23,7 +23,7 @@
 
 import sys,os,argparse
 
-from sibylbot import SibylBot,ChatReboot
+from sibylbot import SibylBot
 
 def main():
 
@@ -37,11 +37,7 @@ def main():
 
   finished = False
   while not finished:
-    try:
-      run(args)
-      finished = True
-    except ChatReboot:
-      pass
+    finished = run(args)
 
 def run(args):
 
@@ -52,7 +48,10 @@ def run(args):
     with open('/var/run/sibyl/sibyl.pid','w') as f:
       f.write(str(os.getpid()))
 
-  bot.run_forever()
+  reboot = bot.run_forever()
+  
+  finished = not reboot
+  return finished
 
 if __name__ == '__main__':
   main()

@@ -27,7 +27,6 @@ import requests
 
 from lib.decorators import *
 from lib.util import getcell
-from sibylbot import ChatReboot
 
 @botinit
 def init(bot):
@@ -159,8 +158,7 @@ def die(bot,mess,args):
 def reboot(bot,mess,args):
   """restart sibyl (currently only works with init.d)"""
 
-  bot.quit('reboot by chat_ctrl')
-  raise ChatReboot
+  bot.reboot('Reboot via chat_ctrl')
 
 @botcmd
 def tv(bot,mess,args):
