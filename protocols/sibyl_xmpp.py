@@ -256,17 +256,11 @@ class XMPP(Protocol):
     """send a message to the specified recipient"""
 
     mess = self.__build_message(text)
+    room = to.get_room()
 
-    # if to is a (str) then it's room, otherwise check if to is MUC user
-    room = (isinstance(to,str) or isinstance(to,unicode))
-    if not room:
-      room = to.get_room()
-      if room:
-        to = room
-        room = True
-      else:
-        to = str(to)
-        room = False
+    to = str(to)
+    if room:
+      to = room
     mess.setTo(xmpp.JID(to))
 
     typ = 'chat'
@@ -282,7 +276,7 @@ class XMPP(Protocol):
   def broadcast(self,text,room,frm=None):
     """send a message to every user in a room"""
 
-    # XMPP has on built-in broadcast, so we'll just highlight everyone
+    # XMPP has no built-in broadcast, so we'll just highlight everyone
     s = ''
     for user in self.get_occupants(room):
       if frm and frm!=user:
@@ -378,7 +372,6 @@ class XMPP(Protocol):
     props = mess.getProperties()
     text = mess.getBody()
     username = self.__get_sender_username(mess)
-    private = False
 
     if text is None:
       return
@@ -386,11 +379,6 @@ class XMPP(Protocol):
     if typ not in ("groupchat","chat"):
       self.log.debug("unhandled message type: %s" % typ)
       return
-
-    # Account for MUC PM messages
-    if (typ=='chat' and len(self.__get_current_mucs())
-        and jid.getStripped() in self.__get_current_mucs()):
-      private = True
 
     if typ=='groupchat':
 
@@ -433,8 +421,12 @@ class XMPP(Protocol):
     frm = pres.getFrom()
 
     # keep track of "real" JIDs in a MUC
+    # when joining a MUC other member presence might come before confirmation
     real = None
-    if jid.getStripped() in self.__get_current_mucs():
+    self.log.debug(self.__get_current_mucs())
+    self.log.debug([x[0] for x in self.__muc_pending])
+    if ((jid.getStripped() in self.__get_current_mucs()) or
+        (jid.getStripped() in [x[0] for x in self.__muc_pending])):
       try:
         real = pres.getTag('x').getTag('item').getAttr('jid')
         self.real_jids[jid] = xmpp.protocol.JID(real)
@@ -500,7 +492,7 @@ class XMPP(Protocol):
 
     # If subscription is private,
     # disregard anything not from the private domain
-    if self.opt('priv_domain') and typ in ('subscribe','subscribed','unsubscribe'):
+    if typ in ('subscribe','subscribed','unsubscribe','unsubscribed'):
       if self.opt('priv_domain')==True:
         # Use the bot's domain
         domain = self.jid.getDomain()
@@ -510,7 +502,7 @@ class XMPP(Protocol):
 
       # Check if the sender is in the private domain
       user_domain = jid.getDomain()
-      if domain!=user_domain:
+      if self.opt('priv_domain') and domain!=user_domain:
         self.log.info('Ignoring subscribe request: %s does not '\
         'match private domain (%s)' % (user_domain, domain))
         return
@@ -519,10 +511,14 @@ class XMPP(Protocol):
       if typ=='subscribe':
         # Authorize all subscription requests (we checked for domain above)
         self.roster.Authorize(jid)
-        self.log.info('authorized!')
+        self.log.debug('authorized!')
         self.__send_status()
-      # Do nothing for 'subscribed' or 'unsubscribed'
+      if typ=='unsubscribe':
+        # Unsubscribe both directions
+        self.roster.Unauthorize(jid)
+        self.log.debug('unauthorized!')
 
+      # Do nothing for 'subscribed' or 'unsubscribed'
       return
 
     # type is unavailable for logged out, otherwise status is in 'show'
@@ -691,10 +687,8 @@ class XMPP(Protocol):
 
     if len(self.__muc_pending):
       try:
-
         # try to join the first MUC in the queue
         (room,user,pword) = self.__muc_pending[0]
-        del self.__muc_pending[0]
         self.__muc_join(room,user,pword)
         self.__muc_join_success(room)
 
@@ -703,6 +697,10 @@ class XMPP(Protocol):
         self.__muc_join_failure(room,e.message)
         if room in self.mucs and self.mucs[room]['status'] > self.MUC_OK:
           self.log.debug('Rejoining room "%s" in %i sec' % (room,self.opt('recon_wait')))
+
+      # we need this to happen after successful joining to catch presences
+      finally:
+        del self.__muc_pending[0]
 
   def __muc_join(self,room,nick,pword):
     """send XMPP stanzas to join a muc and raise MUCJoinFailure if error"""
