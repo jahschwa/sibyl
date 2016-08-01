@@ -423,8 +423,6 @@ class XMPP(Protocol):
     # keep track of "real" JIDs in a MUC
     # when joining a MUC other member presence might come before confirmation
     real = None
-    self.log.debug(self.__get_current_mucs())
-    self.log.debug([x[0] for x in self.__muc_pending])
     if ((jid.getStripped() in self.__get_current_mucs()) or
         (jid.getStripped() in [x[0] for x in self.__muc_pending])):
       x_tags = pres.getTags('x')
