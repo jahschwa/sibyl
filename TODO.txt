@@ -13,9 +13,9 @@ NEXT RELEASE:
         ( ! ) add docs page about chat plug in API
 
   (jef) [matr] write matrix plug in
-        (jef) work with @jah on above
-        (jef) write and test plug in
-        (jef) write wiki page
+        ( ! ) work with @jah on above
+        ( ! ) write and test plug in
+        ( ! ) write wiki page
 
   (jef) [main] write setup.py
 
@@ -31,6 +31,9 @@ NEXT RELEASE:
   (jah) [docs] finish redo ing docs to reflect plug ins changes
         ( ! ) home page
         ( ! ) config
+        ( ! ) protocols
+              ( ! ) xmpp (note realjid non-anonymous rooms)
+              ( ! ) matrix
         ( # ) b/w list
         ( # ) writing plug ins intro
         ( . ) writing plug in example (alarm)
@@ -70,10 +73,10 @@ FUTURE:
   ( . ) [cmds] add isup command
   (   ) [cmds] add remind command (send msg highlighting user at specified time)
   (   ) [cmds] add stalk command (send msg when user changes to avilable)
+  ( . ) [cmds] add trigger command (add triggers to say things)
 
 MAYBE:
 
-  (   ) [xmpp] switch from real JID dict to on execute requests
   (   ) [libr] read and search media tags (e.g. title, album, artist)
   (   ) [libr] allow searching xbmc library
   (   ) [main] daemonize inside python
