@@ -283,7 +283,9 @@ class XMPP(Protocol):
         s += (user.get_name()+': ')
 
     text = '%s[ %s ] %s' % (s,text,frm.get_name())
-    self.send(text,room)
+
+    jid = JID(room,Message.GROUP)
+    self.send(text,jid)
 
   def join_room(self,room,nick=None,pword=None):
     """join a room and return True if joined successfully or False otherwise"""
