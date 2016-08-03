@@ -223,6 +223,7 @@ def tell(bot,mess,args):
   # add it to pending_tell to act on when status changes
   msg = '%s: %s said "%s" at %s' % (to,frm,msg,t)
   bot.pending_tell.append((room,to,msg))
+  return 'Added tell for "%s"' % to
 
 @botstatus
 def tell_cb(bot,mess):
