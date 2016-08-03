@@ -777,6 +777,8 @@ class SibylBot(object):
     """Reboot the bot"""
 
     self.__reboot = True
+    if msg is None:
+      msg = 'SibylBot.reboot() called, but no reason given'
     self.quit(msg)
 
   # @param name (str) [None] name of the opt to fetch
