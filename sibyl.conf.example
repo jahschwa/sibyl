@@ -1,0 +1,14 @@
+username = sibyl@server.com
+password = wordpass
+rooms = room@conference.server.com
+cmd_prefix = !
+
+xbmc_ip = 127.0.0.1
+audio_dirs = /mnt/flashdrive/music
+video_dirs = /mnt/harddrive/videos;
+             mediaserver,Videos,username,password
+
+admin_cmds = config,die,join,leave,log,reboot,xbmc
+admin_usrs = admin@server.com,someone@server.com
+bw_list = b %(admin_cmds)s *;
+          w * %(admin_usrs)s;
