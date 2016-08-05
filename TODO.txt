@@ -19,6 +19,8 @@ NEXT RELEASE:
 
   (jef) [main] write setup.py
 
+  (jef) [main] write systemd module
+
   ( # ) [plug] finish cmds plug in framework
         ( # ) implement dependency checking
         ( # ) add config options to disable plug ins
