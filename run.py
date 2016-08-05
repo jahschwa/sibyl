@@ -27,13 +27,12 @@ from sibylbot import SibylBot
 
 def main():
 
-  # append the current directory so cmds can import files correctly
+  # change directories so cmds can imports and saving files works correctly
   current_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'.'))
-  sys.path.append(current_dir)
-  conf_file = os.path.join(current_dir,'sibyl.conf')
+  os.chdir(current_dir)
 
   parser = argparse.ArgumentParser()
-  parser.add_argument('-c',default=conf_file,help='path to config file',metavar='file')
+  parser.add_argument('-c',default='sibyl.conf',help='path to config file',metavar='file')
   parser.add_argument('-d',action='store_true',help='run as daemon')
   args = parser.parse_args()
 
