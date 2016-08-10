@@ -220,22 +220,22 @@ def str2sec(t):
 
 # @param path (str,unicode) a local directory
 # @return (list) every sub-directory (recursive) in the given directory
-def rlistdir(path):
+def rlistdir(path,symlinks=True):
   """list folders recursively"""
 
   alldirs = []
-  for (cur_path,dirnames,filenames) in os.walk(path):
+  for (cur_path,dirnames,filenames) in os.walk(path,followlinks=symlinks):
     for dirname in dirnames:
       alldirs.append(os.path.join(cur_path,dirname)+'/')
   return alldirs
 
 # @param path (str,unicode) a local directory
 # @return (list) every file (recursive) in the given directory
-def rlistfiles(path):
+def rlistfiles(path,symlinks=True):
   """list files recursively"""
 
   allfiles = []
-  for (cur_path,dirnames,filenames) in os.walk(path):
+  for (cur_path,dirnames,filenames) in os.walk(path,followlinks=symlinks):
     for filename in filenames:
       allfiles.append(os.path.join(cur_path,filename))
   return allfiles
