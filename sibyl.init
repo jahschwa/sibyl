@@ -42,6 +42,17 @@ NAME=sibyl
 DAEMON=/home/pi/apps/sibyl/sibyl.sh
 PIDFILE=/var/run/sibyl/sibyl.pid
 
+# load environments
+if [ -r /etc/default/locale ]; then
+  . /etc/default/locale
+  export LANG
+elif [ -r /etc/environment ]; then
+  . /etc/environment
+  export LANG
+else
+  export LANG=und.UTF-8
+fi
+
 test -x $DAEMON || exit 5
 
 case $1 in
