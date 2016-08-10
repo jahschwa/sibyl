@@ -23,7 +23,7 @@
 
 import sys,os,argparse
 
-from sibylbot import SibylBot
+from lib.sibylbot import SibylBot
 
 def main():
 
