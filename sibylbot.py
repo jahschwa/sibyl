@@ -89,6 +89,7 @@ class SibylBot(object):
         level=self.opt('log_level'))
     self.log = logging.getLogger('sibylbot')
     logging.getLogger("requests").setLevel(logging.CRITICAL+10)
+    logging.getLogger("urllib3").setLevel(logging.CRITICAL+10)
     self.__log_startup_msg()
 
     # log config errors and check for success
