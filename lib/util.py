@@ -240,43 +240,6 @@ def rlistfiles(path,symlinks=True):
       allfiles.append(os.path.join(cur_path,filename))
   return allfiles
 
-# @param ctx (Context) the smbc Context
-# @param path (str) a samba directory
-# @return (list) every sub-directory (recursive) in the given directory
-def rsambadir(ctx,path):
-  """recursively list directories"""
-  
-  alldirs = []
-  d = ctx.opendir(path)
-  contents = d.getdents()
-  for c in contents:
-
-    # naively figure out if the entry is a directory
-    if '(Dir)' in str(c) and c.name!='.' and c.name!='..':
-      cur_path = path+'/'+c.name
-      alldirs.append(cur_path+'/')
-      alldirs.extend(rsambadir(ctx,cur_path))
-  return alldirs
-
-# @param ctx (Context) the smbc Context
-# @param path (str) a samba directory
-# @return (list) every file (recursive) in the given directory
-def rsambafiles(ctx,path):
-  """recursively list files"""
-  
-  allfiles = []
-  d = ctx.opendir(path)
-  contents = d.getdents()
-  for c in contents:
-    cur_path = path+'/'+c.name
-
-    # naively figure out of the entry is a directory or file
-    if '(File)' in str(c):
-      allfiles.append(cur_path)
-    elif '(Dir)' in str(c) and c.name!='.' and c.name!='..':
-      allfiles.extend(rsambafiles(ctx,cur_path))
-  return allfiles
-
 # @param l (list of str) list of search terms
 # @param s (str) the string to test against each search term
 # @return (bool) True if every string in l matches s 
@@ -407,7 +370,7 @@ def xbmc_cmp(a,b):
 
       # sort episodes correctly (e.g. 2 is before 10)
       if astr!=bstr:
-        return int(astr)-int(bstr)
+        return (1 if int(astr)-int(bstr)>0 else -1)
     if a[ia]!=b[ib]:
       return (1 if a[ia]>b[ib] else -1)
     ia += 1

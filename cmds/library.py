@@ -115,8 +115,11 @@ def library(bot,mess,args):
 
   # read the library from a pickle and load it into sibyl
   if args[0]=='load':
+    start = time.time()
     with open(bot.opt('lib_file'),'r') as f:
       d = pickle.load(f)
+    stop = time.time()
+    
     bot.lib_last_rebuilt = d['lib_last_rebuilt']
     bot.lib_last_elapsed = d['lib_last_elapsed']
     bot.lib_video_dir = d['lib_video_dir']
@@ -125,7 +128,8 @@ def library(bot,mess,args):
     bot.lib_audio_file = d['lib_audio_file']
 
     n = len(bot.lib_audio_file)+len(bot.lib_video_file)
-    s = 'Library loaded from "'+bot.opt('lib_file')+'" with '+str(n)+' files'
+    s = ('Library loaded from "%s" with %s files in %f sec' %
+        (bot.opt('lib_file'),n,stop-start))
     bot.log.info(s)
     return s
 
@@ -182,7 +186,7 @@ def library(bot,mess,args):
   t = bot.lib_last_elapsed
   s = str(int(t/60))+':'
   s += str(int(t-60*int(t/60))).zfill(2)
-  n = len(bot.lib_audio_dir)+len(bot.lib_video_dir)
+  n = len(bot.lib_audio_file)+len(bot.lib_video_file)
   return 'Rebuilt on '+bot.lib_last_rebuilt+' in '+s+' with '+str(n)+' files'
 
 @botcmd
@@ -250,15 +254,49 @@ def find(bot,fd,dirs):
             (w,path['username'],path['password']))
       share = 'smb://'+path['server']+'/'+path['share']
       smb.opendir(share[:share.rfind('/')])
-      if fd=='dir':
-        contents = util.rsambadir(smb,share)
-      else:
-        contents = util.rsambafiles(smb,share)
-      for entry in contents:
-        result.append(entry)
+      
+      ignore = [smbc.PermissionError]
+      typ = (smbc.DIR if fd=='dir' else smbc.FILE)
+      result.extend(rsamba(smb,share,typ,ignore))
     except Exception as e:
       msg = ('Unable to traverse "%s": %s' %
           (share,traceback.format_exc(e).split('\n')[-2]))
       errors.append((share,msg))
 
   return (result,errors)
+
+# @param ctx (Context) the smbc Context (already authenticated if needed)
+# @param path (str) a samba directory
+# @param typ (long) the smbc type to return, or all types if None
+# @param ignore (list) exceptions to ignore (must derive from Exception)
+# @return (list) every item (recursive) in the given directory of type typ
+def rsamba(ctx,path,typ=None,ignore=None):
+  """recursively list directories"""
+
+  ignore = (ignore or [])
+  allitems = []
+  d = ctx.opendir(path)
+  contents = d.getdents()
+
+  for c in contents:
+    cur_path = path+'/'+c.name
+
+    # handle files
+    if c.smbc_type==smbc.FILE:
+      if typ in (smbc.FILE,None):
+        allitems.append(cur_path)
+
+    # handle directories
+    elif c.smbc_type==smbc.DIR and c.name not in ('.','..'):
+      if typ in (smbc.DIR,None):
+        allitems.append(cur_path+'/')
+      try:
+        allitems.extend(rsamba(ctx,cur_path,typ,ignore))
+      except Exception as e:
+        ignored = False
+        for i in ignore:
+          ignored = (ignored or isinstance(e,i))
+        if not ignored:
+          raise e
+
+  return allitems
