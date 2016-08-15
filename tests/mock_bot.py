@@ -25,7 +25,7 @@ import sys,os,logging
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
 
-from sibylbot import SibylBot
+from lib.sibylbot import SibylBot
 from lib.config import Config
 from mock_protocol import MockProtocol
 from mock_log import MockLog
@@ -48,9 +48,11 @@ class Bot(SibylBot):
     self.opts['recon_wait'] = 0
 
     self._SibylBot__finished = False
+    self._SibylBot__reboot = False
     self.last_cmd = {}
+    self.plugins = ['sibylbot']
     self.hooks = {x:{} for x in ['chat','init','down','con','discon','recon',
-        'mucs','mucf','msg','priv','group','status','err','idle']}
+        'rooms','roomf','msg','priv','group','status','err','idle']}
 
     self.hooks['chat']['MOCK'] = lambda m,a: 'HOOK_CHAT'
     self.hooks['init']['MOCK'] = lambda : 'HOOK_INIT'
@@ -58,8 +60,8 @@ class Bot(SibylBot):
     self.hooks['con']['MOCK'] = lambda : 'HOOK_CON'
     self.hooks['discon']['MOCK'] = lambda e: 'HOOK_DISCON'
     self.hooks['recon']['MOCK'] = lambda : 'HOOK_RECON'
-    self.hooks['mucs']['MOCK'] = lambda r: 'HOOK_MUCS'
-    self.hooks['mucf']['MOCK'] = lambda r,e: 'HOOK_MUCF'
+    self.hooks['rooms']['MOCK'] = lambda r: 'HOOK_ROOMS'
+    self.hooks['roomf']['MOCK'] = lambda r,e: 'HOOK_ROOMF'
     self.hooks['msg']['MOCK'] = lambda m,c: 'HOOK_MSG'
     self.hooks['priv']['MOCK'] = lambda m,c: 'HOOK_PRIV'
     self.hooks['group']['MOCK'] = lambda m,c: 'HOOK_GROUP'

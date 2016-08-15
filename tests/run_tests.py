@@ -40,6 +40,8 @@ def get_suite():
   mods = [mod.split('.')[0] for mod in os.listdir(pwd)
       if mod.endswith('.py') and mod.startswith('test')]
 
+  mods = ['test_protocol']
+
   for mod in mods:
     mod = load_module(mod,pwd)
     try:

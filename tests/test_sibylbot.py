@@ -42,7 +42,7 @@ class HooksTestCase(unittest.TestCase):
       f.write('\n'+'='*80+'\n'+self._testMethodName+'\n'+'='*80+'\n\n')
     self.bot = Bot(log=True)
     self.hooks = {x:{} for x in ['chat','init','down','con','discon','recon',
-        'mucs','mucf','msg','priv','group','status','idle']}
+        'rooms','roomf','msg','priv','group','status','idle']}
 
   def process(self,hooks,cond=True):
     try:
@@ -123,23 +123,23 @@ class HooksTestCase(unittest.TestCase):
     self.bot.protocol.queue_msg(ConnectFailure)
     self.process('HOOK_RECON')
 
-  def test_mucs_hook_runs(self):
-    self.process('HOOK_MUCS')
+  def test_rooms_hook_runs(self):
+    self.process('HOOK_ROOMS')
 
-  def test_mucs_hook_fails(self):
+  def test_rooms_hook_fails(self):
     self.bot.protocol.connect()
     self.bot.protocol.join_room('','',success=False)
-    self.assertNotIn('HOOK_MUCS',self.bot.get_result())
+    self.assertNotIn('HOOK_ROOMS',self.bot.get_result())
 
-  def test_mucf_hook_runs(self):
+  def test_roomf_hook_runs(self):
     self.bot.protocol.connect()
     self.bot.protocol.join_room('','',success=False)
-    self.assertIn('HOOK_MUCF',self.bot.get_result())
+    self.assertIn('HOOK_ROOMF',self.bot.get_result())
 
-  def test_mucf_hook_fails(self):
+  def test_roomf_hook_fails(self):
     self.bot.protocol.connect()
     self.bot.protocol.join_room('','')
-    self.assertNotIn('HOOK_MUCF',self.bot.get_result())
+    self.assertNotIn('HOOK_ROOMF',self.bot.get_result())
 
   def test_msg_hook_runs_private(self):
     self.bot.protocol.queue_msg()

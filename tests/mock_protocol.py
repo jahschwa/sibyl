@@ -40,9 +40,7 @@ class MockProtocol(Protocol):
       msg = Message(Message.PRIVATE,user,'MOCK_BODY')
     self.queue.insert(0,msg)
 
-  def __init__(self,bot,log):
-    self.bot = bot
-    self.log = log
+  def setup(self):
     self.conn = False
     self.rooms = []
     self.queue = []

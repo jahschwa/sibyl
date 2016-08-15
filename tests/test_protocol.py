@@ -33,8 +33,6 @@ class Bot(object):
 
   def __init__(self):
     self.success = 0
-    self.username = '127.0.0.1'
-    self.password = ''
     self.conf_file = 'temp.conf'
     self.conf = Config(self.conf_file)
 
@@ -47,6 +45,9 @@ class Bot(object):
   _cb_join_room_success = _cb_message
   _cb_join_room_failure = _cb_message
 
+  def opt(self,name):
+    return self.conf.opts[name]
+
 class ProtocolTestCase(unittest.TestCase):
 
   def setUp(self):
@@ -57,19 +58,27 @@ class ProtocolTestCase(unittest.TestCase):
   def init_bot(self,config):
     bot = Bot()
     if config:
-      for opt in config(bot):
-        setattr(bot,opt['name'],opt['default'])
+      config = config(bot)
+      if not isinstance(config,list):
+        config = [config]
+      bot.conf.add_opts(config,'protocol')
+    bot.conf.reload()
     return bot
 
   def init_protocol(self,p):
-    return p['class'](self.init_bot(p['config']),logging.getLogger())
+    log = logging.getLogger('protocol')
+    log.addHandler(logging.NullHandler())
+    return p['class'](self.init_bot(p['config']),log)
 
   def silent(self,func):
     so = sys.stdout
     with open(os.devnull,'wb') as f:
       sys.stdout = f
-      func()
-    sys.stdout = so
+      try:
+        x = func()
+      finally:
+        sys.stdout = so
+    return x
 
   def catch(self,func,ex):
     try:
@@ -84,15 +93,17 @@ class ProtocolTestCase(unittest.TestCase):
     for p in self.protocols:
       p = self.init_protocol(p)
       caught = self.catch(p.connect,ConnectFailure)
-      self.assertIsNone(caught,msg=caught)
+      self.assertIsNone(caught,msg='['+p.__class__.__name__+'] '+str(caught))
 
   def test_is_connected(self):
     for p in self.protocols:
       p = self.init_protocol(p)
       caught = self.catch(p.connect,Exception)
-      self.assertFalse(p.is_connected())
+      conn = self.silent(p.is_connected)
+      self.assertFalse(conn,msg='['+p.__class__.__name__+'] Reports connected before calling connect()')
 
   def test_get_rooms(self):
     for p in self.protocols:
       p = self.init_protocol(p)
-      self.assertTrue(len(p.get_rooms())==0)
+      rooms = len(self.silent(p.get_rooms))
+      self.assertTrue(rooms==0,msg='['+p.__class__.__name__+'] Reports being in rooms before calling join()')
