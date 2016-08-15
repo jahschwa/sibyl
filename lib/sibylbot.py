@@ -117,7 +117,7 @@ class SibylBot(object):
 
     # load plug-in hooks from this file
     self.hooks = {x:{} for x in ['chat','init','down','con','discon','recon',
-        'mucs','mucf','msg','priv','group','status','err','idle']}
+        'rooms','roomf','msg','priv','group','status','err','idle']}
     self.__load_funcs(self,'sibylbot',silent=True)
 
     # exit if we failed to load plugin hooks from self.cmd_dir
@@ -469,14 +469,14 @@ class SibylBot(object):
   def _cb_join_room_success(self,room):
     """execute callbacks on successfull MUC join"""
 
-    self.__run_hooks('mucs',room)
+    self.__run_hooks('rooms',room)
 
   # @param room (str) the room we failed to join
   # @param error (str) the human-readable reason we failed to join
   def _cb_join_room_failure(self,room,error):
     """execute callbacks on successfull MUC join"""
 
-    result = self.__run_hooks('mucf',room,error)
+    result = self.__run_hooks('roomf',room,error)
 
 ################################################################################
 # DDD - Helper functions                                                       #

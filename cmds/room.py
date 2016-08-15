@@ -282,13 +282,13 @@ def link_echo(bot,mess,cmd):
   else:
     bot.protocol.send(reply,mess.get_from())
 
-@botmucs
+@botrooms
 def _muc_join_success(bot,room):
   """notify user of join success"""
   
   _send_muc_result(bot,room,'Success joining room "%s"' % room)
 
-@botmucf
+@botroomf
 def _muc_join_failure(bot,room,error):
   """notify user of join failure"""
   

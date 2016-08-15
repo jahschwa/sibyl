@@ -32,8 +32,8 @@
 # botcon    - successfully connected to server
 # botdiscon - disconnected from server
 # botrecon  - attempting to reconnect to server
-# botmucs   - successfully joined a room
-# botmucf   - failed to join a room
+# botrooms  - successfully joined a room
+# botroomf  - failed to join a room
 # botstatus - received a STATUS update
 # boterr    - received an ERROR message
 # botmsg    - received a PRIVATE or GROUP message
@@ -119,20 +119,20 @@ def botrecon(func):
 # decorated function: func(bot,room)
 # @param bot (SibylBot)
 # @param room (str) room we successfully connected to
-def botmucs(func):
+def botrooms(func):
   """Decorator for success joining a room hooks"""
 
-  setattr(func, '_sibylbot_dec_mucs', True)
+  setattr(func, '_sibylbot_dec_rooms', True)
   return func
 
 # decorated function: func(bot,room,err)
 # @param bot (SibylBot)
 # @param room (str) the room we failed to connect to
 # @param err (str) the human-readable reason we failed
-def botmucf(func):
+def botroomf(func):
   """Decorator for failure to join a room hooks"""
 
-  setattr(func, '_sibylbot_dec_mucf', True)
+  setattr(func, '_sibylbot_dec_roomf', True)
   return func
 
 # decorated function: func(bot,mess)

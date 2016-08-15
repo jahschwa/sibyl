@@ -255,18 +255,15 @@ class XMPP(Protocol):
   def send(self,text,to):
     """send a message to the specified recipient"""
 
+    if isinstance(to,str):
+      to = JID(to,Message.GROUP)
+
     mess = self.__build_message(text)
     room = to.get_room()
 
-    to = str(to)
-    if room:
-      to = room
+    to = (room if room else str(to))
     mess.setTo(xmpp.JID(to))
-
-    typ = 'chat'
-    if room:
-      typ = 'groupchat'
-    mess.setType(typ)
+    mess.setType('groupchat' if room else 'chat')
 
     try:
       self.conn.send(mess)
