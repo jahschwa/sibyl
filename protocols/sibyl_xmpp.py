@@ -765,7 +765,10 @@ class XMPP(Protocol):
       if self.mucs[room]['status']>self.MUC_OK:
         self.__lastjoin = time.time()
         muc = self.mucs[room]
-        self.__muc_join(room,muc['nick'],muc['pass'])
+        try:
+          self.__muc_join(room,muc['nick'],muc['pass'])
+        except MUCJoinFailure:
+          pass
 
   def __get_current_mucs(self):
     """return all mucs that we are currently in"""
