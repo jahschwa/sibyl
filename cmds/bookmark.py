@@ -94,7 +94,7 @@ def bookmark(bot,mess,args):
       return 'To remove all bookmarks use "bookmarks remove *"'
     if not bm_remove(bot,args[1]):
       return 'Bookmark "'+name+'" not found'
-    return
+    return 'Removed bookmark "%s"' % args[1]
 
   elif args[0]=='show':
     args = args[1:]
