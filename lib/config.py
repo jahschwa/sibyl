@@ -77,6 +77,7 @@ class Config(object):
 ('except_reply',(False,              False,  None,             self.parse_bool)),
 ('only_direct', (True,               False,  None,             self.parse_bool)),
 ('catch_except',(True,               False,  None,             self.parse_bool)),
+('help_plugin', (False,              False,  None,             self.parse_bool)),
 ('recon_wait',  (60,                 False,  None,             self.parse_int))
 
     ])

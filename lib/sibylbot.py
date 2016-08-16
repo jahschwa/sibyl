@@ -543,6 +543,12 @@ class SibylBot(object):
 
     return (name,l)
 
+  def __get_plugin(self,func):
+    """return the name of the plug-in containing the given function"""
+
+    filename = os.path.basename(inspect.getfile(func))
+    return os.path.extsep.join(filename.split(os.path.extsep)[:-1])
+
 ################################################################################
 # EEE - Chat commands                                                          #
 ################################################################################
@@ -592,20 +598,24 @@ class SibylBot(object):
       else:
         description = 'Available commands:'
 
-      usage = '\n'.join(sorted([
-        '%s: %s' % (name, (command.__doc__ or \
-          '(undocumented)').strip().split('\n', 1)[0])
-        for (name, command) in self.hooks['chat'].iteritems() \
-          if not command._sibylbot_dec_chat_hidden
-      ]))
+      usage = sorted([
+        '%s.%s: %s' % (self.__get_plugin(cmd),name,
+            (cmd.__doc__ or '(undocumented)').strip().split('\n', 1)[0])
+        for (name, cmd) in self.hooks['chat'].iteritems()
+          if not cmd._sibylbot_dec_chat_hidden
+      ])
+      if not self.opt('help_plugin'):
+        usage = ['.'.join(x.split('.')[1:]) for x in usage]
+      usage = '\n'.join(usage)
       usage = '\n\n' + '\n\n'.join(filter(None,
         [usage, self.MSG_HELP_TAIL % {'helpcommand': 'help'}]))
     else:
       description = ''
       args = self.__remove_prefix(args[0])
       if args in self.hooks['chat']:
-        usage = (self.hooks['chat'][args].__doc__ or \
-          'undocumented').strip()
+        func = self.hooks['chat'][args]
+        plugin = self.__get_plugin(func)
+        usage = (('[%s] %s' % (plugin,func.__doc__)) or 'undocumented').strip()
       else:
         usage = self.MSG_HELP_UNDEFINED_COMMAND
 
