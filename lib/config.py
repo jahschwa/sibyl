@@ -69,6 +69,8 @@ class Config(object):
 ('nick_name',   ('Sibyl',            False,  None,             None)),
 ('log_level',   (logging.INFO,       False,  None,             self.parse_log)),
 ('log_file',    ('data/sibyl.log',   False,  self.valid_file,  None)),
+('log_requests',(False,              False,  None,             self.parse_bool)),
+('log_urllib3', (False,              False,  None,             self.parse_bool)),
 ('bw_list',     ([('w','*','*')],    False,  self.valid_bw,    self.parse_bw)),
 ('chat_ctrl',   (False,              False,  None,             self.parse_bool)),
 ('cmd_prefix',  (None,               False,  None,             None)),
