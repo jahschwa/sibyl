@@ -45,6 +45,7 @@ from lib.protocol import Message
 from lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
 from lib.decorators import botcmd
 import lib.util as util
+from lib.log import Log
 
 __author__ = 'Joshua Haas <haas.josh.a@gmail.com>'
 __version__ = 'v6.0.0'
@@ -87,7 +88,7 @@ class SibylBot(object):
     logging.basicConfig(filename=self.opt('log_file'),
         format='%(asctime).19s | %(name)-8.8s | %(levelname).3s | %(message)s',
         level=self.opt('log_level'))
-    self.log = logging.getLogger('sibylbot')
+    self.log = Log()
     if not self.opt('log_requests'):
       logging.getLogger("requests").setLevel(logging.CRITICAL+10)
     if not self.opt('log_urllib3'):

@@ -378,7 +378,7 @@ def xbmc_cmp(a,b):
   return (1 if len(a)<len(b) else -1)
 
 # @return (str) the module name of the caller's caller
-def get_caller():
+def get_caller(lvl=2):
   """can be called from inside foo() to return the file that called foo()"""
 
-  return os.path.basename(inspect.stack()[2][1]).split('.')[0]
+  return os.path.basename(inspect.stack()[lvl][1]).split('.')[0]
