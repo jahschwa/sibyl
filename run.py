@@ -31,17 +31,13 @@ def main():
   current_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'.'))
   os.chdir(current_dir)
 
+  # parse command line arguments
   parser = argparse.ArgumentParser()
   parser.add_argument('-c',default='sibyl.conf',help='path to config file',metavar='file')
   parser.add_argument('-d',action='store_true',help='run as daemon')
   args = parser.parse_args()
 
-  finished = False
-  while not finished:
-    finished = run(args)
-
-def run(args):
-
+  # initialise bot (plug-in and config errors will occur here)
   bot = SibylBot(args.c)
 
   # if we're running as a daemon we need to put our PID in the pidfile
@@ -49,10 +45,20 @@ def run(args):
     with open('/var/run/sibyl/sibyl.pid','w') as f:
       f.write(str(os.getpid()))
 
+  # run the bot and store reboot flag
   reboot = bot.run_forever()
-  
-  finished = not reboot
-  return finished
+
+  # remove the pid file
+  if args.d:
+    os.remove('/var/run/sibyl/sibyl.pid')
+
+  # reboot if needed
+  if reboot:
+    python = sys.executable
+    this = os.path.abspath(os.path.basename(__file__))
+    args = [python,this]
+    args.extend(sys.argv[1:])
+    os.execv(python,args)
 
 if __name__ == '__main__':
   main()
