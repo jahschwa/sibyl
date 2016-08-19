@@ -18,18 +18,22 @@ This change log follows guidelines at [this site](http://keepachangelog.com/).
 - Checking for duplicate config options from different plugins
 - New config option `enable` to enable only a specific list of plugins
 - New config option `disable` to disable plugins (supersedes `enable`)
+- New config option `help_plugin` that displays plugin names in help list
+- New config options `log_requests` and `log_urllib3` to enable logging
 - Disabled `stdout`; all plugins should use logging instead
 - Plugins can specify dependencies as a list via the `__depends__` variable
 - Plugins can specify "wants" as a list via the `__wants__` variable
+- Some basic unit tests (more to follow)
 
 ### Changed
 - All decorators are now in `lib/decorators.py`
 - Chat commands now receive their args as a list (possibly empty)
 - Quote blocking now works for all commands (also preserves capitalization)
 - Decorator: botpres is now botstatus
-- Moved `config.py`, `decorators.py`, `protocol.py`, `util.py` to dir `lib`
+- Moved `config.py`, `decorators.py`, `protocol.py`, `sibylbot.py`, `util.py` to dir `lib`
 - Pinging is now enabled by default for xmpp
-- If a @botidle hook raises an exception, it will be disabled
+- If a @botidle hook raises an exception, it will be disabled forever
+- The `reboot` command no longer requires init setup (now works entirely inside python)
 
 ### Removed
 - Refactored `jabberbot.py` into `protocols/sibyl_xmpp.py` and `sibylbot.py`

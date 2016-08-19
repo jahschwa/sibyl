@@ -377,6 +377,8 @@ def xbmc_cmp(a,b):
     ib += 1
   return (1 if len(a)<len(b) else -1)
 
+# @param (int) [2] the number of steps to go back in the stack; you generally
+#        don't want 0 (this file) or 1 (the file that called this function)
 # @return (str) the module name of the caller's caller
 def get_caller(lvl=2):
   """can be called from inside foo() to return the file that called foo()"""
