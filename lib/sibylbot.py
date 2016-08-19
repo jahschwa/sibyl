@@ -606,7 +606,7 @@ class SibylBot(object):
           if not cmd._sibylbot_dec_chat_hidden
       ])
       if not self.opt('help_plugin'):
-        usage = ['.'.join(x.split('.')[1:]) for x in usage]
+        usage = sorted(['.'.join(x.split('.')[1:]) for x in usage])
       usage = '\n'.join(usage)
       usage = '\n\n' + '\n\n'.join(filter(None,
         [usage, self.MSG_HELP_TAIL % {'helpcommand': 'help'}]))
