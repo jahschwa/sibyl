@@ -263,6 +263,7 @@ class SibylBot(object):
           
           # check for duplicate chat cmds
           if getattr(func,'_sibylbot_dec_chat',False):
+            fname = fname.lower()
             if fname in dic:
               self.log.critical('Duplicate @botcmd "%s" from "%s" and "%s"' %
                   (fname,self.ns_cmd[fname],fil))
@@ -488,7 +489,7 @@ class SibylBot(object):
   def __get_cmd(self,mess):
     """return the body of mess with nick and prefix removed, or None"""
 
-    text = mess.get_text()
+    text = mess.get_text().strip()
     frm = mess.get_from()
 
     direct = False
@@ -535,7 +536,7 @@ class SibylBot(object):
     """return the cmd_name and args in a tuple, accounting for quotes"""
 
     args = cmd.split(' ')
-    name = args[0]
+    name = args[0].lower()
     args = ' '.join(args[1:]).strip()
 
     l = []
