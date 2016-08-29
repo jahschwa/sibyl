@@ -34,6 +34,7 @@ This change log follows guidelines at [this site](http://keepachangelog.com/).
 - Pinging is now enabled by default for xmpp
 - If a @botidle hook raises an exception, it will be disabled forever
 - The `reboot` command no longer requires init setup (now works entirely inside python)
+- Chat commands are now case insensitive
 
 ### Removed
 - Refactored `jabberbot.py` into `protocols/sibyl_xmpp.py` and `sibylbot.py`
