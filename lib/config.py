@@ -183,7 +183,7 @@ class Config(object):
   # @param opt (str) the option to set
   # @param val (str) the value to set (will be parsed into a Python object)
   # @return (bool) True if the option was actually changed and saved
-  def save_opt(self,opt,val):
+  def save_opt(self,opt,val,msg=None):
     """call set_opt then save it to the config file"""
 
     # return if set_opt() fails
@@ -191,7 +191,10 @@ class Config(object):
       return False
 
     # note the time of the change at the end of the line
-    val = (opt+' = '+val+' ;;; '+time.asctime()+'\n')
+    s = ('### MODIFIED: '+time.asctime())
+    if msg:
+      s += (' ('+msg+')')
+    s += ('\n'+opt+' = '+val+'\n')
     with open(self.conf_file,'r') as f:
       lines = f.readlines()
 
@@ -205,14 +208,28 @@ class Config(object):
 
     # if the opt was not active in the config file, simply add it to the end
     if start==-1:
-      lines.append(val)
+      lines.append(s)
 
-    # if the opt existed, replace all lines until reaching another valid opt
+    # if the opt existed in the file
     else:
+
+      # delete all non-comments until reaching next opt (account for multiline)
       del lines[start]
-      while (start<len(lines)) and (not self.__is_opt_line(lines[start])):
-        del lines[start]
-      lines.insert(start,val)
+      n = start
+      while (n<len(lines)):
+        line = lines[n].strip()
+        if self.__is_opt_line(line):
+          break
+        elif line.startswith('#') or line.startswith(';') or len(line)==0:
+          n += 1
+        else:
+          del lines[n]
+      lines.insert(start,s)
+
+      # check for and delete an existing "### MODIFIED" line
+      if start>0 and lines[start-1].startswith('### MODIFIED: '):
+        del lines[start-1]
+
     with open(self.conf_file,'w') as f:
       f.writelines(lines)
     return True
