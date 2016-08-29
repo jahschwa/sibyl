@@ -255,7 +255,7 @@ class XMPP(Protocol):
   def send(self,text,to):
     """send a message to the specified recipient"""
 
-    if isinstance(to,str):
+    if not isinstance(to,JID):
       to = JID(to,Message.GROUP)
 
     mess = self.__build_message(text)
