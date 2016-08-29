@@ -112,15 +112,17 @@ def config(bot,mess,args):
   elif opt!='*':
     return 'Invalid value'
 
+  name = mess.get_from().get_real().get_base()
+
   # save all changed opts
   if opt=='*':
     for opt in bot.conf_diff:
-      bot.conf.save_opt(opt,bot.conf_diff[opt][1])
+      bot.conf.save_opt(opt,bot.conf_diff[opt][1],name)
     opts = bot.conf_diff.keys()
     bot.conf_diff = {}
     return 'Saved opts: '+str(opts)
-  
-  if bot.conf.save_opt(opt,value):
+
+  if bot.conf.save_opt(opt,value,name):
     if opt in bot.conf_diff:
       del bot.conf_diff[opt]
     return 'Saved opt "'+opt+'" to be "'+value+'"'
