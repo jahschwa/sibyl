@@ -163,6 +163,7 @@ class XMPP(Protocol):
     self.STATUS = {'xa':Message.EXT_AWAY,
                     'away':Message.AWAY,
                     'dnd':Message.DND,
+                    'chat':Message.AVAILABLE,
                     None:Message.AVAILABLE}
 
     self.conn = None

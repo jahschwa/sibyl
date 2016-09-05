@@ -149,7 +149,7 @@ class Message(object):
       raise ValueError('Valid types: Message.STATUS, PRIVATE, GROUP, ERROR')
     self.typ = typ
 
-    if (status is not None) and (status not in range(0,5)):
+    if (status is not None) and (status not in range(-1,5)):
       raise ValueError('Valid status: Message.UNKNOWN, OFFLINE, EXT_AWAY, '+
           'AWAY, DND, AVAILABLE')
     self.status = status
