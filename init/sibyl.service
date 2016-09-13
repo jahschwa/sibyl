@@ -4,7 +4,7 @@ After=network-online.target
 
 [Service]
 User=sibyl
-ExecStart=/home/jonathan/sources/sibyl/run.py
+ExecStart=/opt/sibyl/run.py
 
 [Install]
 Alias=sibyl.service
