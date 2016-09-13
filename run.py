@@ -21,9 +21,9 @@
 #
 ################################################################################
 
-import sys,os,argparse
+import sys,os,argparse,signal
 
-from lib.sibylbot import SibylBot
+from lib.sibylbot import SibylBot,SigTermInterrupt
 
 def main():
 
@@ -45,6 +45,9 @@ def main():
     with open('/var/run/sibyl/sibyl.pid','w') as f:
       f.write(str(os.getpid()))
 
+  # setup SIGTERM handler for clean shutdowns
+  signal.signal(signal.SIGTERM,sigterm_handler)
+
   # run the bot and store reboot flag
   reboot = bot.run_forever()
 
@@ -59,6 +62,10 @@ def main():
     args = [python,this]
     args.extend(sys.argv[1:])
     os.execv(python,args)
+
+def sigterm_handler(signal,frame):
+
+  raise SigTermInterrupt
 
 if __name__ == '__main__':
   main()

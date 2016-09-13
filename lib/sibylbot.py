@@ -55,6 +55,9 @@ __license__ = 'GNU General Public License version 3 or later'
 class DuplicateVarError(Exception):
   pass
 
+class SigTermInterrupt(Exception):
+  pass
+
 ################################################################################
 # AAA - SibylBot                                                               #
 ################################################################################
@@ -720,8 +723,10 @@ class SibylBot(object):
       try:
         self.__idle_proc()
         self.protocol.process()
-      except KeyboardInterrupt as e:
+      except KeyboardInterrupt:
         self.quit('stopped by keyboard interrupt')
+      except SigTermInterrupt:
+        self.quit('stopping (received SIGTERM)')
 
   def __run_forever(self):
     """reconnect loop - catch known exceptions"""
