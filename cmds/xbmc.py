@@ -428,8 +428,10 @@ def stream(bot,mess,args):
   elif 'twitch' in msg.lower():
 
     # get the webpage
-    url = msg[msg.find('twitch.tv/')+10:]
-    vid = url.split('/')[0]
+    if 'channel=' in msg:
+      vid = msg.split('channel=')[-1].split('&')[0]
+    else:
+      vid = msg.split('twitch.tv/')[-1].split('/')[0]
     html = requests.get('http://twitch.tv/'+vid,headers=agent).text
 
     # find the stream title
@@ -444,7 +446,7 @@ def stream(bot,mess,args):
     start = html.rfind("'",0,stop)+1
     title = html[start:stop]
 
-    response = bot.xbmc('Player.Open',{'item':{'file':'plugin://plugin.video.twitch/playLive/'+url}})
+    response = bot.xbmc('Player.Open',{'item':{'file':'plugin://plugin.video.twitch/playLive/'+vid}})
     return 'Streaming "'+title+'" by "'+stream+'" from Twitch Live'
 
   else:
