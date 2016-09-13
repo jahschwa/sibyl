@@ -1,0 +1,9 @@
+[Unit]
+Description=Sibyl XMPP Bot
+After=network-online.target
+
+[Service]
+ExecStart=/home/jonathan/sources/sibyl/run.py
+
+[Install]
+Alias=sibyl.service
