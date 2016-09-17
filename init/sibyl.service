@@ -4,6 +4,7 @@ After=network-online.target
 
 [Service]
 User=sibyl
+Environment=LANG=en_US.utf8
 ExecStart=/opt/sibyl/run.py
 
 [Install]
