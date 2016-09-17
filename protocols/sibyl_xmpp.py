@@ -486,6 +486,7 @@ class XMPP(Protocol):
       if code:
         code = int(code)
         if code not in self.MUC_CODES:
+          self.log.error('Unhandled MUC code: %s' % code)
           code = 1
         self.mucs[room]['status'] = code
         self.last_join = time.time()
