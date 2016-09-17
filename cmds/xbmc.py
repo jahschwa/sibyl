@@ -33,7 +33,7 @@ def conf(bot):
   """add config options"""
 
   return [{'name' : 'xbmc_ip',
-            'default' : '127.0.0.1',
+            'default' : '127.0.0.1:8080',
             'required' : True,
             'valid' : bot.conf.valid_ip},
           {'name' : 'xbmc_user'},
