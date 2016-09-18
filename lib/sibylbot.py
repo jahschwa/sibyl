@@ -764,8 +764,8 @@ class SibylBot(object):
     """run the bot catching any unhandled exceptions"""
 
     # unfortunately xmpppy has a couple print statements, so kill stdout
-    stdout = sys.stdout
-    sys.stdout = open(os.devnull,'wb')
+    if self.opt('kill_stdout'):
+      sys.stdout = open(os.devnull,'wb')
 
     self.__log_connect_msg(rooms=self.opt('rooms'))
 
@@ -780,6 +780,7 @@ class SibylBot(object):
     # shutdown cleanly
     self.protocol.shutdown()
     self.__run_hooks('down')
+    sys.stdout = sys.__stdout__
     return self.__reboot
 
   # @param msg (str) [None] message to log

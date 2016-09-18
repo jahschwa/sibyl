@@ -59,26 +59,27 @@ class Config(object):
 
 #option          default             requir  validate_func     parse_func
 #-------------------------------------------------------------------------------
-('chat_proto',  (None,               True,   None,             self.parse_protocol)),
-('username',    (None,               True,   None,             None)),
-('password',    (None,               True,   None,             None)),
-('enable',      ([],                 False,  None,             self.parse_plugins)),
-('disable',     ([],                 False,  None,             self.parse_plugins)),
-('cmd_dir',     ('cmds',             False,  self.valid_dir,   None)),
-('rooms',       ([],                 False,  None,             self.parse_room)),
-('nick_name',   ('Sibyl',            False,  None,             None)),
-('log_level',   (logging.INFO,       False,  None,             self.parse_log)),
-('log_file',    ('data/sibyl.log',   False,  self.valid_file,  None)),
-('log_requests',(False,              False,  None,             self.parse_bool)),
-('log_urllib3', (False,              False,  None,             self.parse_bool)),
-('bw_list',     ([('w','*','*')],    False,  self.valid_bw,    self.parse_bw)),
-('chat_ctrl',   (False,              False,  None,             self.parse_bool)),
-('cmd_prefix',  (None,               False,  None,             None)),
-('except_reply',(False,              False,  None,             self.parse_bool)),
-('only_direct', (True,               False,  None,             self.parse_bool)),
-('catch_except',(True,               False,  None,             self.parse_bool)),
-('help_plugin', (False,              False,  None,             self.parse_bool)),
-('recon_wait',  (60,                 False,  None,             self.parse_int))
+('chat_proto',  (None,              True,   None,             self.parse_protocol)),
+('username',    (None,              True,   None,             None)),
+('password',    (None,              True,   None,             None)),
+('enable',      ([],                False,  None,             self.parse_plugins)),
+('disable',     ([],                False,  None,             self.parse_plugins)),
+('cmd_dir',     ('cmds',            False,  self.valid_dir,   None)),
+('rooms',       ([],                False,  None,             self.parse_room)),
+('nick_name',   ('Sibyl',           False,  None,             None)),
+('log_level',   (logging.INFO,      False,  None,             self.parse_log)),
+('log_file',    ('data/sibyl.log',  False,  self.valid_file,  None)),
+('log_requests',(False,             False,  None,             self.parse_bool)),
+('log_urllib3', (False,             False,  None,             self.parse_bool)),
+('bw_list',     ([('w','*','*')],   False,  self.valid_bw,    self.parse_bw)),
+('chat_ctrl',   (False,             False,  None,             self.parse_bool)),
+('cmd_prefix',  (None,              False,  None,             None)),
+('except_reply',(False,             False,  None,             self.parse_bool)),
+('only_direct', (True,              False,  None,             self.parse_bool)),
+('catch_except',(True,              False,  None,             self.parse_bool)),
+('help_plugin', (False,             False,  None,             self.parse_bool)),
+('recon_wait',  (60,                False,  None,             self.parse_int)),
+('kill_stdout', (True,              False,  None,             self.parse_bool))
 
     ])
 
