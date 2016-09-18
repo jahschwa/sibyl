@@ -1,5 +1,6 @@
 (   ) low priority, ( . ) normal priority, ( ! ) high priority, ( # ) done
 (jah) actively assigned to jah, (jef) actively assigned to jef
+categories: main, plug, conf, docs, cmds, (protocol names), (plug-in names)
 
 NEXT RELEASE:
 
@@ -10,7 +11,7 @@ NEXT RELEASE:
         ( # ) plug in framework for chat (including config option)
         ( # ) add config option
         ( ! ) finalize API with help from @jef
-        ( ! ) add docs page about chat plug in API
+        ( # ) add docs page about chat plug in API
 
   (jef) [matr] write matrix plug in
         ( ! ) work with @jah on above
@@ -19,7 +20,7 @@ NEXT RELEASE:
 
   (jef) [main] write setup.py
 
-  (jef) [main] write systemd module
+  ( # ) [main] write systemd module
 
   ( # ) [plug] finish cmds plug in framework
         ( # ) implement dependency checking
@@ -31,21 +32,24 @@ NEXT RELEASE:
               ( # ) config opts
 
   (jah) [docs] finish redo ing docs to reflect plug ins changes
-        ( ! ) home page
-        ( ! ) config
-        ( ! ) protocols
-              ( ! ) xmpp (note realjid non-anonymous rooms)
-              ( ! ) matrix
+        ( # ) home page
+        ( # ) config
+        ( # ) protocols
+              ( # ) xmpp (note realjid non-anonymous rooms)
+              ( # ) matrix
         ( # ) b/w list
         ( # ) writing plug ins intro
-        ( . ) writing plug in example (alarm)
-        ( . ) add dependencies info to plug in pages
+        ( # ) writing plug in example (alarm)
+        ( # ) write protocol sibyl_stdin.py
+        ( . ) tutorial for threading
+        ( # ) about unittests
+        ( # ) add dependencies info to plug in pages
         ( # ) bookmark.py
-        ( ! ) general.py
+        ( # ) general.py
         ( # ) library.py
-        ( ! ) muc.py
-        ( ! ) note.py
-        ( ! ) xbmc.py
+        ( # ) muc.py
+        ( # ) note.py
+        ( # ) xbmc.py
 
   (jah) [docs] add extended help text to all commands accessible via "help" cmd
 
@@ -62,6 +66,8 @@ NEXT RELEASE:
         ( # ) additional parameter to @botcmd decorator
 
   ( # ) [cmds] add tell command (send msg when specified user joins room)
+
+  ( ! ) [conf] add kill_stdout option
 
 FUTURE:
 
@@ -82,3 +88,4 @@ MAYBE:
   (   ) [libr] read and search media tags (e.g. title, album, artist)
   (   ) [libr] allow searching xbmc library
   (   ) [main] daemonize inside python
+  (   ) [main] support multiple protocols or logins
