@@ -78,6 +78,9 @@ class SibylBot(object):
   def __init__(self,conf_file='sibyl.conf'):
     """create a new sibyl instance, load: conf, protocol, plugins"""
 
+    # keep track of errors for use with "errors" command
+    self.errors = []
+
     # create "namespace" dicts to keep track of who added what for error msgs
     self.ns_opt = {}
     self.ns_func = {}
@@ -85,7 +88,7 @@ class SibylBot(object):
 
     # load config to get cmd_dir and chat_proto
     self.conf_file = conf_file
-    (result,duplicates) = self.__init_config()
+    (result,dup_plugins,duplicates) = self.__init_config()
 
     # configure logging
     logging.basicConfig(filename=self.opt('log_file'),
@@ -99,14 +102,20 @@ class SibylBot(object):
     self.__log_startup_msg()
 
     # log config errors and check for success
+    self.errors.extend([x[1] for x in self.conf.log_msgs])
     self.conf.process_log()
-    if result==Config.FAIL or duplicates:
+    if dup_plugins:
+      self.log.error(dup_plugins)
+      self.log.critical('Duplicate plugin names; exiting')
+    elif result==Config.FAIL or duplicates:
       self.log.critical('Error parsing config file; exiting')
     elif result==Config.ERRORS:
       self.log.warning('Parsed config file with warnings')
 
     # if we are missing required config options exit with status message
-    if result==Config.FAIL or duplicates:
+    if dup_plugins:
+      self.__fatal('duplicate plugins')
+    elif result==Config.FAIL or duplicates:
       self.__fatal('unusuable config')
 
     self.log.info('Success parsing config file')
@@ -152,7 +161,8 @@ class SibylBot(object):
   def __init_config(self):
     """search for and set all config options to default or user-specified"""
 
-    duplicates = False
+    dup_plugins = False
+    duplicates = None
 
     # we need to get cmd_dir and chat_proto from the config file first
     self.conf = Config(self.conf_file)
@@ -174,12 +184,18 @@ class SibylBot(object):
     base_names = [os.path.basename(x) for x in files]
     if len(files)!=len(set(base_names)):
       dup = set([x for x in base_names if base_names.count(x)>1])
-      raise RuntimeError('Multiple plugins named %s' % list(dup))
+      dup_plugins = 'Multiple plugins named %s' % list(dup)
 
     # load config options from plugins
     for f in files:
       (d,f) = (os.path.dirname(f),os.path.basename(f))
-      mod = util.load_module(f,d)
+
+      # import errors will be logged and handled in __load_plugins
+      try:
+        mod = util.load_module(f,d)
+      except:
+        continue
+
       duplicates = (not self.__load_conf(mod,f) or duplicates)
 
     # load chat protocol config options if chat_proto was set in the config
@@ -189,7 +205,7 @@ class SibylBot(object):
       duplicates = (not self.__load_conf(mod,pname) or duplicates)
 
     # now that we know all the options, read every option from the config file
-    return (self.conf.reload(),duplicates)
+    return (self.conf.reload(),dup_plugins,duplicates)
 
   def __load_plugins(self,d):
     """recursively load all plugins from all sub-directories"""
@@ -212,7 +228,15 @@ class SibylBot(object):
       if ((f not in self.opt('disable')) and
           ((not self.opt('enable')) or (f in self.opt('enable')))):
         self.log.info('Loading plugin "%s"' % f)
-        mod = util.load_module(f,d)
+
+        try:
+          mod = util.load_module(f,d)
+        except Exception as e:
+          msg = 'Error loading plugin "%s"' % f
+          self.__log_ex(e,msg)
+          self.errors.append(msg)
+          continue
+        
         mods[f] = mod
         success = (self.__load_funcs(mod,f) and success)
       else:
@@ -325,12 +349,7 @@ class SibylBot(object):
       try:
         func(*args)
       except Exception as e:
-        full = traceback.format_exc(e)
-        short = full.split('\n')[-2]
-
-        self.log.error('Exception running %s hook %s:' % (hook,name))
-        self.log.error('  '+short)
-        self.log.debug(full)
+        self.__log_ex(e,'Exception running %s hook %s:' % (hook,name))
 
         # disable idle hooks so that don't keep raising exceptions
         if hook=='idle':
@@ -457,14 +476,10 @@ class SibylBot(object):
     # execute the command and catch exceptions
     try:
       reply = func(mess,args)
-    except Exception, e:
-      full = traceback.format_exc(e)
-      short = full.split('\n')[-2]
-
-      self.log.error('Error while executing cmd "%s":' % cmd_name)
-      self.log.error('  %s' % short)
-      self.log.debug('  Message text: "%s"' % text)
-      self.log.debug(full)
+    except Exception as e:
+      self.__log_ex(e,
+          'Error while executing cmd "%s":' % cmd_name,
+          '  Message text: "%s"' % text)
 
       reply = self.MSG_ERROR_OCCURRED
       if self.opt('except_reply'):
@@ -554,6 +569,18 @@ class SibylBot(object):
     filename = os.path.basename(inspect.getfile(func))
     return os.path.extsep.join(filename.split(os.path.extsep)[:-1])
 
+  def __log_ex(self,ex,short_msg,long_msg=None):
+    """log the exception and traceback"""
+
+    full = traceback.format_exc(ex)
+    short = full.split('\n')[-2]
+
+    self.log.error(short_msg)
+    self.log.error('  %s' % short)
+    if long_msg:
+      self.log.debug(long_msg)
+    self.log.debug(full)
+
 ################################################################################
 # EEE - Chat commands                                                          #
 ################################################################################
@@ -597,6 +624,7 @@ class SibylBot(object):
   @botcmd(name='help')
   def __help(self,mess,args):
     """return help info about cmds - help [cmd]"""
+
     if not args:
       if self.__doc__:
         description = self.__doc__.strip()
@@ -627,6 +655,12 @@ class SibylBot(object):
     top = self.__top_of_help_message()
     bottom = self.__bottom_of_help_message()
     return ''.join(filter(None, [top, description, usage, bottom]))
+
+  @botcmd(name='errors')
+  def __errors(self,mess,args):
+    """list any errors that occurred during startup"""
+
+    return str(self.errors)
 
 ################################################################################
 # FFF - UI Functions                                                           #
