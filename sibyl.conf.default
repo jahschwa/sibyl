@@ -68,6 +68,9 @@ password =
 #disable =
 #enable = bookmark,general,library,note,room,xbmc
 
+# If True, upon joining a room during bot startup, send a message listing errors
+#tell_errors = True
+
 ################################################################################
 # Advanced options
 ################################################################################

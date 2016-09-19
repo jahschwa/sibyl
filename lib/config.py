@@ -79,7 +79,8 @@ class Config(object):
 ('catch_except',(True,              False,  None,             self.parse_bool)),
 ('help_plugin', (False,             False,  None,             self.parse_bool)),
 ('recon_wait',  (60,                False,  None,             self.parse_int)),
-('kill_stdout', (True,              False,  None,             self.parse_bool))
+('kill_stdout', (True,              False,  None,             self.parse_bool)),
+('tell_errors', (True,              False,  None,             self.parse_bool))
 
     ])
 

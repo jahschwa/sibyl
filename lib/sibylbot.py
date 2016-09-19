@@ -43,7 +43,7 @@ import sys,logging,re,os,imp,inspect,traceback,time
 from lib.config import Config
 from lib.protocol import Message
 from lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
-from lib.decorators import botcmd
+from lib.decorators import botcmd,botrooms
 import lib.util as util
 from lib.log import Log
 
@@ -660,7 +660,9 @@ class SibylBot(object):
   def __errors(self,mess,args):
     """list any errors that occurred during startup"""
 
-    return str(self.errors)
+    if self.errors:
+      return str(self.errors)
+    return 'No errors'
 
 ################################################################################
 # FFF - UI Functions                                                           #
@@ -734,6 +736,16 @@ class SibylBot(object):
     self.log.info('-'*50)
     self.log.info('')
 
+  @botrooms
+  def __tell_errors(self,room):
+    """mention startup errors in rooms we join on init"""
+
+    if room in self.__tell_rooms:
+      del self.__tell_rooms[self.__tell_rooms.index(room)]
+      if self.errors:
+        msg = 'Errors during startup: '
+        self.protocol.send(msg+self.run_cmd('errors'),room)
+
   def __serve_forever(self):
     """process loop - connect and process messages"""
 
@@ -747,8 +759,10 @@ class SibylBot(object):
       raise ConnectFailure
 
     self.log.info('bot connected; serving forever')
+    self.__tell_rooms = []
     for room in self.opt('rooms'):
       self.protocol.join_room(room['room'],room['nick'],room['pass'])
+      self.__tell_rooms.append(room['room'])
 
     self.__run_hooks('con')
 
