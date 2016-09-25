@@ -483,7 +483,7 @@ class SibylBot(object):
 
       reply = self.MSG_ERROR_OCCURRED
       if self.opt('except_reply'):
-        reply = short
+        reply = traceback.format_exc(e).split('\n')[-2]
     if reply:
       self.protocol.send(reply,frm)
 
