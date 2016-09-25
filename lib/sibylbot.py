@@ -41,7 +41,7 @@
 import sys,logging,re,os,imp,inspect,traceback,time
 
 from lib.config import Config
-from lib.protocol import Message
+from lib.protocol import Message,Room
 from lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
 from lib.decorators import botcmd,botrooms
 import lib.util as util
@@ -91,7 +91,8 @@ class SibylBot(object):
     (result,dup_plugins,duplicates) = self.__init_config()
 
     # configure logging
-    logging.basicConfig(filename=self.opt('log_file'),
+    mode = 'a' if self.opt('log_append') else 'w'
+    logging.basicConfig(filename=self.opt('log_file'),filemode=mode,
         format='%(asctime).19s | %(name)-8.8s | %(levelname).3s | %(message)s',
         level=self.opt('log_level'))
     self.log = Log()
@@ -121,13 +122,14 @@ class SibylBot(object):
     self.log.info('Success parsing config file')
     self.log.info('')
 
-    # create protocol object
-    self.protocol = self.opt('chat_proto')[1](
-        self,logging.getLogger(self.opt('chat_proto')[0]))
+    # create protocol objects
+    self.protocols = {name:proto(self,logging.getLogger(name))
+        for (name,proto) in self.opt('protocols').items()}
 
     # initialise variables
     self.__finished = False
     self.__reboot = False
+    self.__recons = {}
     self.last_cmd = {}
 
     # load plug-in hooks from this file
@@ -165,17 +167,14 @@ class SibylBot(object):
     duplicates = None
 
     # we need to get cmd_dir and chat_proto from the config file first
-    self.conf = Config(self.conf_file)
-
     # don't log the first set of default opts to avoid duplicates later
-    self.conf.logging = False
-    self.conf.reload()
-    self.conf.logging = True
+    self.conf = Config(self.conf_file)
+    self.conf.reload(log=False)
 
     # check for duplicate plugin files
     files = [os.path.splitext(x)[0] for x in
         util.rlistfiles(self.opt('cmd_dir')) if
-        ('__init__' not in x and x.endswith('.py'))]
+        ('__init__' not in x and x.split(os.path.extsep)[-1]=='py')]
     files = sorted(files,key=os.path.basename)
     files = [x for x in files if os.path.basename(x) not in self.opt('disable')]
     if self.opt('enable'):
@@ -186,7 +185,7 @@ class SibylBot(object):
       dup = set([x for x in base_names if base_names.count(x)>1])
       dup_plugins = 'Multiple plugins named %s' % list(dup)
 
-    # load config options from plugins
+    # register config options from plugins
     for f in files:
       (d,f) = (os.path.dirname(f),os.path.basename(f))
 
@@ -198,11 +197,11 @@ class SibylBot(object):
 
       duplicates = (not self.__load_conf(mod,f) or duplicates)
 
-    # load chat protocol config options if chat_proto was set in the config
-    if self.opt('chat_proto'):
-      pname = self.opt('chat_proto')[0]
-      mod = util.load_module('sibyl_'+pname,'protocols')
-      duplicates = (not self.__load_conf(mod,pname) or duplicates)
+    # load protocol config options if protocols were loaded without errors
+    if [x for x in self.opt('protocols').values() if x is not None]:
+      for pname in self.opt('protocols'):
+        mod = util.load_module('sibyl_'+pname,'protocols')
+        duplicates = (not self.__load_conf(mod,pname) or duplicates)
 
     # now that we know all the options, read every option from the config file
     return (self.conf.reload(),dup_plugins,duplicates)
@@ -213,7 +212,7 @@ class SibylBot(object):
     success = True
 
     # build file list before-hand so we can check dependencies
-    files = [x for x in util.rlistfiles(d) if x.endswith('.py')]
+    files = [x for x in util.rlistfiles(d) if x.split(os.path.extsep)[-1]=='py']
     files = [x for x in files if '__init__' not in x]
     files = sorted(files,key=os.path.basename)
     mods = {}
@@ -440,18 +439,22 @@ class SibylBot(object):
       if reply is None:
         reply = default_reply
       if reply:
-        self.protocol.send(reply,frm)
+        self.send(reply,frm)
       return
     
     # check against bw_list
-    for rule in self.opt('bw_list'):
-      if (rule[1]!='*') and (rule[1] not in real):
-        continue
-      if (rule[2]!='*') and (rule[2]!=cmd_name):
-        continue
-      applied = rule
+    proto = mess.get_protocol()
+    if proto in self.opt('admin_protos'):
+      applied = ('w','proto:'+proto,'*')
+    else:
+      for rule in self.opt('bw_list'):
+        if (rule[1]!='*') and (rule[1] not in real):
+          continue
+        if (rule[2]!='*') and (rule[2]!=cmd_name):
+          continue
+        applied = rule
     if applied[0]=='b':
-      self.protocol.send("You don't have permission to run that command",frm)
+      self.send("You don't have permission to run that command",frm)
       return
 
     # if the command was redo, retrieve the last command from that user
@@ -470,7 +473,7 @@ class SibylBot(object):
     # check for chat_ctrl
     func = self.hooks['chat'][cmd_name]
     if not self.opt('chat_ctrl') and func._sibylbot_dec_chat_ctrl:
-      self.protocol.send('chat_ctrl is disabled',frm)
+      self.send('chat_ctrl is disabled',frm)
       return
 
     # execute the command and catch exceptions
@@ -483,9 +486,9 @@ class SibylBot(object):
 
       reply = self.MSG_ERROR_OCCURRED
       if self.opt('except_reply'):
-        reply = short
+        reply = traceback.format_exc(e).split('\n')[-2]
     if reply:
-      self.protocol.send(reply,frm)
+      self.send(reply,frm)
 
   # @param room (str) the room we successfully joined
   def _cb_join_room_success(self,room):
@@ -516,8 +519,9 @@ class SibylBot(object):
     # if text starts with our nick name, remove it
     if mess.get_type()==Message.GROUP:
       room = frm.get_room()
-      nick = self.protocol.get_nick(room).lower()
-      if self.protocol.in_room(room) and text.lower().startswith(nick):
+      proto = self.protocols[frm.protocol]
+      nick = proto.get_nick(room).lower()
+      if proto.in_room(room) and text.lower().startswith(nick):
         direct = True
     else:
       if text.lower().startswith(self.opt('nick_name')):
@@ -612,8 +616,9 @@ class SibylBot(object):
     cmds = len(self.hooks['chat'])
     funcs = self.hooks['chat'].values()
     plugins = sorted(self.plugins+['sibylbot'])
+    protos = ','.join(sorted(self.opt('protocols').keys()))
     return ('SibylBot %s (%s) --- %s commands from %s plugins: %s' %
-        (__version__,self.opt('chat_proto')[0],cmds,len(plugins),plugins))
+        (__version__,protos,cmds,len(plugins),plugins))
 
   @botcmd(name='hello')
   def __hello(self,mess,args):
@@ -714,20 +719,21 @@ class SibylBot(object):
     self.log.info('')
     self.log.info('Reading config file "%s"...' % self.conf_file)
 
-  def __log_connect_msg(self,rooms=None):
+  def __log_connect_msg(self):
     """log a message to appear when the bot connects"""
 
     self.log.info('')
     self.log.info('SibylBot connecting...')
     self.log.info('')
-    self.log.info('Chat : %s' % self.opt('chat_proto')[0])
-    self.log.info('User : %s' % self.opt('username'))
-    if rooms:
-      for room in rooms:
+
+    for (name,proto) in self.protocols.items():
+      self.log.info('Chat : %s' % name)
+      self.log.info('User : %s' % proto.get_username())
+      for room in self.opt('rooms').get(name,[]):
         self.log.info('Room : %s/%s' %
             (room['room'],(room['nick'] if room['nick'] else 'Sibyl')))
-    else:
-      self.log.info('Room : None')
+      self.log.info('')
+
     self.log.info('Plug : %s' % ','.join(self.plugins))
     self.log.info('Cmds : %i' % len(self.hooks['chat']))
     self.log.info('Log  : %s' %
@@ -744,65 +750,71 @@ class SibylBot(object):
       del self.__tell_rooms[self.__tell_rooms.index(room)]
       if self.errors:
         msg = 'Errors during startup: '
-        self.protocol.send(msg+self.run_cmd('errors'),room)
+        self.send(msg+self.run_cmd('errors'),room)
+    if not self.__tell_rooms:
+      del self.hooks['rooms']['sibylbot._SibylBot__tell_errors']
 
-  def __serve_forever(self):
+  def __serve(self):
     """process loop - connect and process messages"""
 
-    # if we're not connected, try to connect
-    # protocol.connected should raise ConnectFailure if it doesn't work
-    if not self.protocol.is_connected():
-      self.protocol.connect()
-
-    # sanity check just in case the protocol isn't implemented correctly
-    if not self.protocol.is_connected():
-      raise ConnectFailure
-
-    self.log.info('bot connected; serving forever')
-    self.__tell_rooms = []
-    for room in self.opt('rooms'):
-      self.protocol.join_room(room['room'],room['nick'],room['pass'])
-      self.__tell_rooms.append(room['room'])
-
-    self.__run_hooks('con')
-
-    # process messages forever unless self.quit()
-    while not self.__finished:
-      try:
-        self.__idle_proc()
-        self.protocol.process()
-      except KeyboardInterrupt:
-        self.quit('stopped by keyboard interrupt')
-      except SigTermInterrupt:
-        self.quit('stopping (received SIGTERM)')
+    self.__idle_proc()
+    for (name,proto) in self.protocols.items():
+      if proto.is_connected():
+        proto.process()
+      else:
+        if (name not in self.__recons) or (self.__recons[name]>time.time()):
+          self.__run_hooks('recon',name)
+          proto.connect()
+          self.__run_hooks('con',name)
+          for room in self.opt('rooms').get(name,[]):
+            proto.join_room(Room(room['room'],room['nick'],room['pass']))
+          if name in self.__recons:
+            del self.__recons[name]
 
   def __run_forever(self):
     """reconnect loop - catch known exceptions"""
 
+    self.__tell_rooms = []
+    for (proto,rooms) in self.opt('rooms').items():
+      for room in rooms:
+        room = Room(room['room'])
+        room.protocol = proto
+        self.__tell_rooms.append(room)
+
     # try to reconnect forever unless self.quit()
     while not self.__finished:
       try:
-        self.__serve_forever()
+        self.__serve()
+        time.sleep(0.1)
         
       except (PingTimeout,ConnectFailure,ServerShutdown) as e:
-        self.protocol.disconnected()
-        self.__run_hooks('discon',e)
+        name = e.protocol
+        proto = self.protocols[name]
+        proto.disconnected()
+        self.__run_hooks('discon',name,e)
         
-        # attempt to reconnect if self.catch_except
-        if self.opt('catch_except'):
-          reason = {PingTimeout:'ping timeout',
-                    ConnectFailure:'unable to connect',
-                    ServerShutdown:'server shutdown'}
-          self.log.error('Connection lost ('+reason[e.__class__]+
-              '); retrying in '+str(self.opt('recon_wait'))+' sec')
-
-        # traceback all exceptions and quit if not self.catch_except
-        else:
+        if not self.opt('catch_except'):
           raise e
 
-        # wait then reconnect
-        time.sleep(self.opt('recon_wait'))
-        self.__run_hooks('recon')
+        reason = {PingTimeout:'ping timeout',
+                  ConnectFailure:'unable to connect',
+                  ServerShutdown:'server shutdown'}
+        proto.log.error('Connection lost ('+reason[e.__class__]+
+            '); retrying in '+str(self.opt('recon_wait'))+' sec')
+        
+        self.__recons[name] = time.time()+self.opt('recon_wait')
+      
+      except AuthFailure as e:
+        name = e.protocol
+        self.log.error('Disabling protocol "%s" due to AuthFailure' % name)
+        del self.protocols[name]
+        if not self.protocols:
+          self.quit('No active protocols; exiting')
+      
+      except KeyboardInterrupt:
+        self.quit('stopped by KeyboardInterrupt')
+      except SigTermInterrupt:
+        self.quit('stopped by SIGTERM')
 
 ################################################################################
 # HHH - User-facing functions                                                  #
@@ -815,7 +827,7 @@ class SibylBot(object):
     if self.opt('kill_stdout'):
       sys.stdout = open(os.devnull,'wb')
 
-    self.__log_connect_msg(rooms=self.opt('rooms'))
+    self.__log_connect_msg()
 
     # catch unhandled Exceptions and write traceback to the log
     try:
@@ -826,10 +838,25 @@ class SibylBot(object):
       self.log.critical(self.MSG_UNHANDLED)
 
     # shutdown cleanly
-    self.protocol.shutdown()
+    for proto in self.protocols.values():
+      proto.shutdown()
     self.__run_hooks('down')
     sys.stdout = sys.__stdout__
     return self.__reboot
+
+  # @param text (str,unicode) the text to send
+  # @param to (User,Room) the recipient
+  def send(self,text,to):
+    """send a message without worrying about which protocol"""
+    
+    self.protocols[to.get_protocol()].send(text,to)
+
+  # @param (str,User,Room,Message) the object to query
+  # @return (Protocol) the Protocol associated with the given object
+  def get_protocol(self,obj):
+    """return the Protocol object associated with the given object"""
+
+    return self.protocols[obj if isinstance(obj,str) else obj.protocol]
 
   # @param msg (str) [None] message to log
   def quit(self,msg=None):
