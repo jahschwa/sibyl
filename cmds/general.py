@@ -69,7 +69,8 @@ def config(bot,mess,args):
       return 'Invalud opt'
     if opt not in bot.conf_diff:
       return 'Opt "'+opt+'" has not changed from config file'
-    return 'Opt "%s" was "%s" but is now "%s"' % (opt,bot.conf_diff[opt][0],bot.opt[opt])
+    return ('Opt "%s" was "%s" but is now "%s"'
+        % (opt,bot.conf_diff[opt][0],bot.opt[opt]))
 
   # some options don't make sense to edit in chat
   if opt in ('chat_proto','username','disabled','cmd_dir'):
@@ -143,12 +144,10 @@ def network(bot,mess,args):
   myip = s.getsockname()[0]
   s.close()
 
-  xbmc = None
-  if 'xbmc_ip' in bot.opt():
-    xbmc = bot.opt('xbmc_ip')
+  xbmc = bot.opt('xbmc.ip')
   exip = requests.get('http://ipecho.net/plain').text.strip()
 
-  return 'My IP - '+myip+' --- XBMC IP - '+str(xbmc)+' --- External IP - '+exip
+  return 'My IP - '+myip+' --- XBMC IP - '+xbmc+' --- External IP - '+exip
 
 @botcmd(ctrl=True)
 def die(bot,mess,args):

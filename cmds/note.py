@@ -32,7 +32,7 @@ __wants__ = ['xbmc']
 def conf(bot):
   """add config options"""
 
-  return {'name':'note_file',
+  return {'name':'note.file',
           'default':'data/sibyl_note.txt',
           'valid':bot.conf.valid_file}
 
@@ -40,10 +40,10 @@ def conf(bot):
 def init(bot):
   """initialize note list"""
   
-  if os.path.isfile(bot.opt('note_file')):
+  if os.path.isfile(bot.opt('note.file')):
     notes = note_parse(bot)
   else:
-    with open(bot.opt('note_file'),'w') as f:
+    with open(bot.opt('note.file'),'w') as f:
       notes = []
 
   bot.add_var('notes',notes)
@@ -143,11 +143,11 @@ def note(bot,mess,args):
 def note_parse(bot):
   """read the note file into a list"""
 
-  with open(bot.opt('note_file'),'r') as f:
+  with open(bot.opt('note.file'),'r') as f:
     lines = f.readlines()
 
   notes = [l.strip() for l in lines if l!='\n']
-  bot.log.info('Read '+str(len(notes))+' notes from "'+bot.opt('note_file')+'"')
+  bot.log.info('Read '+str(len(notes))+' notes from "'+bot.opt('note.file')+'"')
   return notes
 
 def note_write(bot):
@@ -156,5 +156,5 @@ def note_write(bot):
   lines = [l+'\n' for l in bot.notes]
   lines.append('\n')
 
-  with open(bot.opt('note_file'),'w') as f:
+  with open(bot.opt('note.file'),'w') as f:
     f.writelines(lines)

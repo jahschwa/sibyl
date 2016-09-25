@@ -32,12 +32,12 @@ __wants__ = ['library']
 def conf(bot):
   """add config options"""
 
-  return [{'name' : 'xbmc_ip',
+  return [{'name' : 'xbmc.ip',
             'default' : '127.0.0.1:8080',
             'required' : True,
             'valid' : bot.conf.valid_ip},
-          {'name' : 'xbmc_user'},
-          {'name' : 'xbmc_pass'}]
+          {'name' : 'xbmc.username'},
+          {'name' : 'xbmc.password'}]
 
 @botinit
 def init(bot):
@@ -459,7 +459,7 @@ def videos(bot,mess,args):
   if not bot.has_plugin('library'):
     return 'This command not available because plugin "library" not loaded'
 
-  return files(bot,args,bot.lib_video_dir,1)
+  return _files(bot,args,bot.lib_video_dir,1)
 
 @botcmd
 def video(bot,mess,args):
@@ -477,7 +477,7 @@ def audios(bot,mess,args):
   if not bot.has_plugin('library'):
     return 'This command not available because plugin "library" not loaded'
 
-  return files(bot,args,bot.lib_audio_dir,0)
+  return _files(bot,args,bot.lib_audio_dir,0)
 
 @botcmd
 def audio(bot,mess,args):
@@ -582,15 +582,15 @@ def shuffle(bot,mess,args):
 def xbmc(bot,method,params=None):
   """wrapper method to always provide IP to static method"""
 
-  return util.xbmc(bot.opt('xbmc_ip'),method,params,
-      bot.opt('xbmc_user'),bot.opt('xbmc_pass'))
+  return util.xbmc(bot.opt('xbmc.ip'),method,params,
+      bot.opt('xbmc.username'),bot.opt('xbmc.password'))
 
 @botfunc
 def xbmc_active_player(bot):
   """wrapper method to always provide IP to static method"""
 
-  return util.xbmc_active_player(bot.opt('xbmc_ip'),
-      bot.opt('xbmc_user'),bot.opt('xbmc_pass'))
+  return util.xbmc_active_player(bot.opt('xbmc.ip'),
+      bot.opt('xbmc.username'),bot.opt('xbmc.password'))
 
 def playpause(bot,target):
   """helper function for play() and pause()"""
@@ -607,7 +607,7 @@ def playpause(bot,target):
   if speed==target:
     bot.xbmc('Player.PlayPause',{"playerid":pid})
 
-def files(bot,args,dirs,pid):
+def _files(bot,args,dirs,pid):
   """helper function for videos() and audios()"""
 
   if not args:
@@ -643,7 +643,8 @@ def files(bot,args,dirs,pid):
   matches = util.reducetree(matches)
 
   if len(matches)>1:
-    if bot.max_matches<1 or len(matches)<=bot.opt('max_matches'):
+    maxm = bot.opt('library.max_matches')
+    if maxm<1 or len(matches)<=maxm:
       return 'Found '+str(len(matches))+' matches: '+util.list2str(matches)
     else:
       return 'Found '+str(len(matches))+' matches'
@@ -695,7 +696,8 @@ def _file(bot,args,dirs):
     return 'Found 0 matches'
 
   if len(matches)>1:
-    if bot.opt('max_matches')<1 or len(matches)<=bot.opt('max_matches'):
+    maxm = bot.opt('library.max_matches')
+    if maxm<1 or len(matches)<=maxm:
       return 'Found '+str(len(matches))+' matches: '+util.list2str(matches)
     else:
       return 'Found '+str(len(matches))+' matches'

@@ -23,7 +23,7 @@
 
 import os,pickle,time,traceback
 
-import smbc
+# def rsamba() imports smbc
 
 from lib.decorators import *
 import lib.util as util
@@ -32,17 +32,17 @@ import lib.util as util
 def conf(bot):
   """add config options"""
 
-  return [{'name' : 'lib_file',
+  return [{'name' : 'library.file',
             'default' : 'data/sibyl_lib.pickle',
             'valid' : bot.conf.valid_file},
-          {'name' : 'max_matches',
+          {'name' : 'library.max_matches',
             'default' : 10,
             'parse' : bot.conf.parse_int},
-          {'name' : 'audio_dirs',
+          {'name' : 'library.audio_dirs',
             'default' : [],
             'valid' : valid_lib,
             'parse' : parse_lib},
-          {'name' : 'video_dirs',
+          {'name' : 'library.video_dirs',
             'default' : [],
             'valid' : valid_lib,
             'parse' : parse_lib}]
@@ -77,6 +77,10 @@ def parse_lib(conf,opt,val):
       continue
     if ',' in entry:
 
+      if not util.has_module('smbc'):
+        conf.log('warning','Ignoring share "%s" (missing smbc)' % entry)
+        continue
+
       # samba share parameters are separated by comma
       params = util.split_strip(entry,',')
       item = {'server':params[0], 'share':params[1],
@@ -101,10 +105,13 @@ def init(bot):
   bot.add_var('lib_video_dir')
   bot.add_var('lib_video_file')
 
-  if os.path.isfile(bot.opt('lib_file')):
+  if os.path.isfile(bot.opt('library.file')):
     bot.run_cmd('library',['load'])
   else:
     bot.run_cmd('library',['rebuild'])
+
+  if not util.has_module('smbc'):
+    bot.log.error("Can't find module smbc; network shares will be disabled")
 
 @botcmd
 def library(bot,mess,args):
@@ -116,7 +123,7 @@ def library(bot,mess,args):
   # read the library from a pickle and load it into sibyl
   if args[0]=='load':
     start = time.time()
-    with open(bot.opt('lib_file'),'r') as f:
+    with open(bot.opt('library.file'),'rb') as f:
       d = pickle.load(f)
     stop = time.time()
     
@@ -129,7 +136,7 @@ def library(bot,mess,args):
 
     n = len(bot.lib_audio_file)+len(bot.lib_video_file)
     s = ('Library loaded from "%s" with %s files in %f sec' %
-        (bot.opt('lib_file'),n,stop-start))
+        (bot.opt('library.file'),n,stop-start))
     bot.log.info(s)
     return s
 
@@ -141,10 +148,10 @@ def library(bot,mess,args):
           'lib_video_file':bot.lib_video_file,
           'lib_audio_dir':bot.lib_audio_dir,
           'lib_audio_file':bot.lib_audio_file})
-    with open(bot.opt('lib_file'),'w') as f:
+    with open(bot.opt('library.file'),'wb') as f:
       pickle.dump(d,f,-1)
 
-    s = 'Library saved to "'+bot.opt('lib_file')+'"'
+    s = 'Library saved to "'+bot.opt('library.file')+'"'
     bot.log.info(s)
     return s
 
@@ -154,16 +161,16 @@ def library(bot,mess,args):
     # when sibyl calls this method on init mess is None
     if mess is not None:
       t = util.sec2str(bot.lib_last_elapsed)
-      bot.protocol.send('Working... (last rebuild took '+t+')',mess.get_from())
+      bot.send('Working... (last rebuild took '+t+')',mess.get_from())
 
     # time the rebuild and update library vars
     start = time.time()
     bot.lib_last_rebuilt = time.asctime()
 
-    libs = [('lib_video_dir','dir',bot.opt('video_dirs')),
-            ('lib_video_file','file',bot.opt('video_dirs')),
-            ('lib_audio_dir','dir',bot.opt('audio_dirs')),
-            ('lib_audio_file','file',bot.opt('audio_dirs'))]
+    libs = [('lib_video_dir','dir',bot.opt('library.video_dirs')),
+            ('lib_video_file','file',bot.opt('library.video_dirs')),
+            ('lib_audio_dir','dir',bot.opt('library.audio_dirs')),
+            ('lib_audio_file','file',bot.opt('library.audio_dirs'))]
     errors = []
     for lib in libs:
       (r,e) = find(bot,lib[1],lib[2])
@@ -176,7 +183,7 @@ def library(bot,mess,args):
     bot.lib_last_elapsed = int(time.time()-start)
     result = bot.run_cmd('library',['save'])
 
-    s = 'Library rebuilt in '+util.sec2str(bot.lib_last_elapsed)
+    s = bot.run_cmd('library')
     bot.log.info(s)
     if errors:
       s += ' with errors (see log): '+str([x[0] for x in errors])
@@ -208,7 +215,8 @@ def search(bot,mess,args):
 
   # reply with matches based on max_matches setting
   if len(matches)>1:
-    if bot.opt('max_matches')<1 or len(matches)<=bot.opt('max_matches'):
+    maxm = bot.opt('library.max_matches')
+    if maxm<1 or len(matches)<=maxm:
       return 'Found '+str(len(matches))+' matches: '+util.list2str(matches)
     else:
       return 'Found '+str(len(matches))+' matches'
@@ -245,16 +253,19 @@ def find(bot,fd,dirs):
           (path,traceback.format_exc(e).split('\n')[-2]))
       errors.append((path,msg))
 
+  if smbpaths:
+    import smbc
+
   # same as above but for samba shares
   for path in smbpaths:
     try:
+      share = 'smb://'+path['server']+'/'+path['share']
       smb = smbc.Context()
       if path['username']:
         smb.functionAuthData = (lambda se,sh,w,u,p:
             (w,path['username'],path['password']))
-      share = 'smb://'+path['server']+'/'+path['share']
-      smb.opendir(share[:share.rfind('/')])
       
+      smb.opendir(share[:share.rfind('/')])
       ignore = [smbc.PermissionError]
       typ = (smbc.DIR if fd=='dir' else smbc.FILE)
       result.extend(rsamba(smb,share,typ,ignore))
@@ -272,6 +283,8 @@ def find(bot,fd,dirs):
 # @return (list) every item (recursive) in the given directory of type typ
 def rsamba(ctx,path,typ=None,ignore=None):
   """recursively list directories"""
+
+  import smbc
 
   ignore = (ignore or [])
   allitems = []
