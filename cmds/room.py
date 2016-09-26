@@ -25,16 +25,30 @@
 import re,time
 
 import requests
-from lxml.html import fromstring
 
 from lib.decorators import *
-from lib.protocol import Message
+from lib.protocol import Message,Room
+import lib.util as util
 
 @botconf
 def conf(bot):
   """create the link_echo option"""
 
-  return {'name':'link_echo','default':False,'parse':bot.conf.parse_bool}
+  return {
+    'name':'room.link_echo',
+    'default':False,
+    'parse':bot.conf.parse_bool,
+    'valid':valid
+  }
+
+def valid(conf,echo):
+  """check for lxml"""
+  
+  if (not echo) or util.has_module('lxml'):
+    return True
+  
+  conf.log('error',"Can't find module lxml; link_echo will be disabled")
+  return False
 
 @botinit
 def init(bot):
@@ -42,12 +56,17 @@ def init(bot):
 
   bot.add_var('pending_room',{})
   bot.add_var('pending_tell',[])
+  
+  if not util.has_module('lxml'):
+    bot.log.debug("Can't find module lxml; unregistering link_echo hook")
+    del bot.hooks['group']['room.link_echo']
 
 @botcmd
 def all(bot,mess,args):
   """append every user's nick to the front and say it in room"""
 
-  if not len(bot.protocol.get_rooms()):
+  proto = bot.get_protocol(mess)
+  if not len(proto.get_rooms()):
     return "I'm not in any rooms!"
 
   if not args:
@@ -59,20 +78,21 @@ def all(bot,mess,args):
 
   # if the room is specified and valid, use that
   if len(args)>1:
-    if bot.protocol.in_room(args[0]):
-      room = args[0]
+    if proto.in_room(Room(args[0])):
+      room = Room(args[0])
       args = args[1:]
 
   if not room:
     return 'Invalid room: "%s"' % args[0]
 
-  bot.protocol.broadcast(' '.join(args),room,frm)
+  proto.broadcast(' '.join(args),room,frm)
 
 @botcmd
 def say(bot,mess,args):
   """if in a room, say this in it - say [room] msg"""
 
-  rooms = bot.protocol.get_rooms()
+  proto = bot.get_protocol(mess)
+  rooms = proto.get_rooms()
   if not len(rooms):
     return "I'm not in any rooms!"
 
@@ -80,8 +100,8 @@ def say(bot,mess,args):
     return 'You must specify a room and message'
 
   # check if the first paramter is a valid room and try to use that
-  if args[0] in rooms:
-    room = args[0]
+  if args[0] in [r.get_name() for r in rooms]:
+    room = Room(args[0])
     args = args[1:]
 
   # if they didn't specify a room, but we're only in one, use that
@@ -92,7 +112,7 @@ def say(bot,mess,args):
       return 'You must specify a room (I am in more than one)'
 
   text = ' '.join(args)
-  bot.protocol.send(text,room)
+  proto.send(text,room)
 
 @botcmd(ctrl=True)
 def join(bot,mess,args):
@@ -102,31 +122,35 @@ def join(bot,mess,args):
   if not args:
     return bot.run_cmd('rejoin',None)
 
+  name = args[0]
+  nick = bot.opt('nick_name')
+  pword = None
+
   # check for optional parameters
-  if len(args)<2:
-    args.append(bot.opt('nick_name'))
-  if len(args)<3:
-    args.append(None)
-  (room,nick,pword) = args
+  if len(args)>1:
+    nick = args[1]
+  if len(args)>2:
+    pword = args[2]
+  room = Room(name,nick,pword,mess.get_protocol())
 
   # add the room to pending_room so we can respond with a message later
   bot.pending_room[room] = mess
-  bot.protocol.join_room(room,nick,pword)
+  bot.get_protocol(mess).join_room(room)
 
 @botcmd
 def rejoin(bot,mess,args):
   """attempt to rejoin all rooms from the config file"""
 
+  pname = mess.get_protocol()
+  proto = bot.get_protocol(mess)
+
   # rejoin every room from the config file if we're not in them
   rejoined = []
-  for room in bot.opt('rooms'):
-    (room,nick,pword) = (room['room'],room['nick'],room['pass'])
-    if not bot.protocol.in_room(room):
-      rejoined.append(room)
-      args = [room,nick]
-      if pword:
-        args.append(pword)
-      bot.run_cmd('join',args,mess)
+  for room in bot.opt('rooms').get(pname,[]):
+    room = Room(room['room'],room['nick'],room['pass'])
+    if not proto.in_room(room):
+      rejoined.append(room.get_name())
+      proto.join_room(room)
 
   if rejoined:
     return 'Attempting to join rooms: '+str(rejoined)
@@ -136,18 +160,25 @@ def rejoin(bot,mess,args):
 def leave(bot,mess,args):
   """leave the specified room - leave [room]"""
 
+  pname = mess.get_protocol()
+  proto = bot.get_protocol(mess)
+
   # if a room was specified check if it's valid, else use the invoker's room
-  rooms = bot.protocol.get_rooms()+[room['room'] for room in bot.opt('rooms')]
+  rooms = [Room(room['room']) for room in bot.opt('rooms').get(pname,[])]
+  rooms = proto.get_rooms()+rooms
   room = mess.get_from().get_room()
   if args:
-    if args[0] in rooms:
-      room = args[0]
+    if args[0] in [room.get_name() for room in rooms]:
+      room = Room(args[0])
     else:
       return 'Unknown room "%s"' % room
 
+  if not room:
+    return 'You must specify a room'
+
   # leave the room or stop trying to reconnect
-  in_room = bot.protocol.in_room(room)
-  bot.protocol.part_room(room)
+  in_room = proto.in_room(room)
+  proto.part_room(room)
   if in_room:
     return 'Left room "%s"' % room
   return 'Reconnecting to room "%s" disabled' % room
@@ -155,6 +186,8 @@ def leave(bot,mess,args):
 @botcmd
 def real(bot,mess,args):
   """return the real name of the given nick if known"""
+
+  proto = bot.get_protocol(mess)
 
   if not args:
     return 'You must specify a nick'
@@ -165,14 +198,16 @@ def real(bot,mess,args):
   nick = args[0]
 
   # respond with the user's real username if valid and known
-  users = [user.get_name() for user in bot.protocol.get_occupants(room)]
+  users = [user.get_name() for user in proto.get_occupants(room)]
   if nick not in users:
     return "I haven't seen nick \"%s\"" % nick
-  return bot.protocol.get_real(room,nick).get_base()
+  return proto.get_real(room,nick).get_base()
 
 @botcmd
 def tell(bot,mess,args):
   """give a user a msg when they rejoin - tell [list|remove|nick msg]"""
+
+  proto = bot.get_protocol(mess)
 
   # default is to list existing tells
   if not args:
@@ -183,13 +218,15 @@ def tell(bot,mess,args):
     if mess.get_type()==Message.GROUP:
       rooms = [mess.get_from().get_room()]
     else:
-      rooms = bot.protocol.get_rooms()
+      rooms = proto.get_rooms()
     tells = [x for x in bot.pending_tell if x[0] in rooms]
     if tells:
-      return str(tells)
+      return str([(t[0].get_name(),t[1],t[2]) for t in tells])
     return 'No saved tells'
 
   elif args[0]=='remove':
+    if not mess.get_type()==Message.GROUP:
+      return 'You can only remove tells in a room'
     l = len(bot.pending_tell)
 
     # if no nick specified, remove all tells for the invoker's room
@@ -197,13 +234,15 @@ def tell(bot,mess,args):
       room = mess.get_from().get_room()
       bot.pending_tell = [x for x in bot.pending_tell if x[0]!=room]
 
-    # if "*" specified remove all tells
+    # if "*" specified remove all tells for that protocol
     elif args[1]=='*':
-      bot.pending_tell = []
+      bot.pending_tell = [x for x in bot.pending_tell
+          if x[0].get_protocol()!=mess.get_protocol()]
 
     # if a nick is specified only remove tells for that nick
     else:
-      bot.pending_tell = [x for x in bot.pending_tell if x[1]!=args[1]]
+      bot.pending_tell = [x for x in bot.pending_tell
+          if x[0]!=mess.get_from.get_room() or x[1]!=args[1]]
     return 'Removed %s tells' % (l-len(bot.pending_tell))
 
   if mess.get_type()!=Message.GROUP:
@@ -248,17 +287,23 @@ def tell_cb(bot,mess):
     if x[0]!=room or x[1]!=name:
       new.append(x)
     else:
-      bot.protocol.send(x[2],frm)
+      bot.send(x[2],frm)
   bot.pending_tell = new
 
 @botgroup
 def link_echo(bot,mess,cmd):
   """get the title of the linked webpage"""
 
-  if cmd is not None:
+  if not bot.opt('room.link_echo'):
     return
 
-  if not bot.opt('link_echo'):
+  try:
+    from lxml.html import fromstring
+  except ImportError:
+    bot.log.error("Can't import lxml; disabling link_echo")
+    bot.conf.opts['room.link_echo'] = False
+
+  if cmd is not None:
     return
 
   msg = mess.get_text()
@@ -280,7 +325,7 @@ def link_echo(bot,mess,cmd):
   except Exception as e:
     bot.log.error('Link echo - '+e.__class__.__name__+' - '+url)
   else:
-    bot.protocol.send(reply,mess.get_from())
+    bot.send(reply,mess.get_from())
 
 @botrooms
 def _muc_join_success(bot,room):
@@ -296,10 +341,10 @@ def _muc_join_failure(bot,room,error):
 
 def _send_muc_result(bot,room,msg):
   """helper method for notifying user of result"""
-  
+
   if room not in bot.pending_room:
     return
   mess = bot.pending_room[room]
   del bot.pending_room[room]
   
-  bot.protocol.send(msg,mess.get_from())
+  bot.send(msg,mess.get_from())

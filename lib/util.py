@@ -226,7 +226,7 @@ def rlistdir(path,symlinks=True):
   alldirs = []
   for (cur_path,dirnames,filenames) in os.walk(path,followlinks=symlinks):
     for dirname in dirnames:
-      alldirs.append(os.path.join(cur_path,dirname)+'/')
+      alldirs.append(os.path.join(cur_path,dirname)+os.path.sep)
   return alldirs
 
 # @param path (str,unicode) a local directory
@@ -335,6 +335,17 @@ def load_module(name,path):
     return imp.load_module(name,*found)
   finally:
     found[0].close()
+
+# @param name (str) name of a module to check
+# @return (bool) True if the module exists
+def has_module(name):
+  """return True if the module exists"""
+
+  try:
+    imp.find_module(name)
+    return True
+  except ImportError:
+    return False
 
 # @param files (list of str) a list of file paths
 # @return (list) the input sorted as XBMC default sort

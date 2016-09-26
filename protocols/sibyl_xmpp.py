@@ -39,13 +39,17 @@ from lib.decorators import botconf
 
 @botconf
 def conf(bot):
-  return [{'name':'resource','default':'sibyl'},
-          {'name':'server','default':None},
-          {'name':'port','default':5222,'parse':bot.conf.parse_int},
-          {'name':'ping_freq','default':60,'parse':bot.conf.parse_int},
-          {'name':'ping_timeout','default':3,'parse':bot.conf.parse_int},
-          {'name':'xmpp_debug','default':False,'parse':bot.conf.parse_bool},
-          {'name':'priv_domain','default':True,'parse':bot.conf.parse_bool}]
+  return [
+    {'name':'xmpp.jid','default':None,'req':True},
+    {'name':'xmpp.password','default':None,'req':True},
+    {'name':'xmpp.resource','default':'sibyl'},
+    {'name':'xmpp.server','default':None},
+    {'name':'xmpp.port','default':5222,'parse':bot.conf.parse_int},
+    {'name':'xmpp.ping_freq','default':60,'parse':bot.conf.parse_int},
+    {'name':'xmpp.ping_timeout','default':3,'parse':bot.conf.parse_int},
+    {'name':'xmpp.debug','default':False,'parse':bot.conf.parse_bool},
+    {'name':'xmpp.priv_domain','default':True,'parse':bot.conf.parse_bool}
+  ]
 
 ################################################################################
 # Custom Exceptions                                                            #
@@ -84,7 +88,7 @@ class JID(User):
     """return room name or None"""
 
     if self.muc:
-      return self.jid.getStripped()
+      return Room(self.jid.getStripped())
 
   def get_base(self):
     """return JID without resource, or full MUC JID"""
@@ -167,7 +171,7 @@ class XMPP(Protocol):
                     None:Message.AVAILABLE}
 
     self.conn = None
-    self.jid = xmpp.JID(self.opt('username'))
+    self.jid = xmpp.JID(self.opt('xmpp.jid'))
     
     self.roster = None
     self.seen = {}
@@ -186,12 +190,12 @@ class XMPP(Protocol):
     if self.conn:
       return
 
-    self.log.debug('Attempting to connect with JID "%s"' % self.opt('username'))
-    conn = xmpp.Client(self.jid.getDomain(), debug=self.opt('xmpp_debug'))
+    self.log.debug('Attempting to connect with JID "%s"' % self.opt('xmpp.jid'))
+    conn = xmpp.Client(self.jid.getDomain(), debug=self.opt('xmpp.debug'))
 
     # connection attempt
-    server = self.opt('server') or self.jid.getDomain()
-    port = self.opt('port')
+    server = self.opt('xmpp.server') or self.jid.getDomain()
+    port = self.opt('xmpp.port')
     conres = conn.connect((server,port))
 
     if not conres:
@@ -202,7 +206,7 @@ class XMPP(Protocol):
 
     # authentication attempt
     authres = conn.auth(self.jid.getNode(),
-        self.opt('password'),self.opt('resource'))
+        self.opt('xmpp.password'),self.opt('xmpp.resource'))
     if not authres:
       raise AuthFailure
     if authres != 'sasl':
@@ -238,11 +242,11 @@ class XMPP(Protocol):
     for muc in self.__get_current_mucs():
       self.mucs[muc]['status'] = self.MUC_PARTED
 
-  def process(self):
+  def process(self,wait=0):
     """process messages and __idle_proc"""
 
     try:
-      self.conn.Process(1)
+      self.conn.Process(wait)
     except SystemShutdown:
       raise ServerShutdown
     
@@ -256,15 +260,11 @@ class XMPP(Protocol):
   def send(self,text,to):
     """send a message to the specified recipient"""
 
-    if not isinstance(to,JID):
-      to = JID(to,Message.GROUP)
-
+    if isinstance(to,JID) and to.get_room():
+      to = to.get_room()
     mess = self.__build_message(text)
-    room = to.get_room()
-
-    to = (room if room else str(to))
-    mess.setTo(xmpp.JID(to))
-    mess.setType('groupchat' if room else 'chat')
+    mess.setTo(xmpp.JID(str(to)))
+    mess.setType('groupchat' if isinstance(to,Room) else 'chat')
 
     try:
       self.conn.send(mess)
@@ -281,29 +281,31 @@ class XMPP(Protocol):
         s += (user.get_name()+': ')
 
     text = '%s[ %s ] %s' % (s,text,frm.get_name())
+    self.send(text,room)
 
-    jid = JID(room,Message.GROUP)
-    self.send(text,jid)
-
-  def join_room(self,room,nick=None,pword=None):
+  def join_room(self,room):
     """join a room and return True if joined successfully or False otherwise"""
+
+    name = room.get_name()
 
     # do nothing if we're already trying to join that room
     for x in self.__muc_pending:
-      if x[1]==room:
+      if x[1]==name:
         return
 
     # we'll receive a reply stanza with matching id telling us if we succeeded,
     # but due to the way xmpppy processes stanzas, we can't easily wait for the
     # given stanza inside a callback without blocking or race conditions
-    self.__muc_pending.append((room,nick,pword))
+    self.__muc_pending.append((name,room.get_nick(),room.get_password()))
 
   def part_room(self,room):
     """leave the specified room"""
 
+    name = room.get_name()
+
     # build the part stanza
-    if self.mucs[room]['status']==self.MUC_OK:
-      room_jid = room+'/'+self.mucs[room]['nick']
+    if self.mucs[name]['status']==self.MUC_OK:
+      room_jid = name+'/'+self.mucs[name]['nick']
       pres = xmpp.Presence(to=room_jid)
       pres.setAttr('type', 'unavailable')
       try:
@@ -312,47 +314,60 @@ class XMPP(Protocol):
         raise ConnectFailure
 
     # update mucs dict and log
-    self.mucs[room]['status'] = self.MUC_PARTED
-    self.log.debug('Parted room "%s"' % room)
+    self.mucs[name]['status'] = self.MUC_PARTED
+    self.log.debug('Parted room "%s"' % name)
 
   def in_room(self,room):
     """return True/False if we are in the specified room"""
 
-    return room in self.__get_current_mucs()
+    return room.get_name() in self.__get_current_mucs()
 
   def get_rooms(self,in_only=False):
     """return our rooms, optionally only those we are in"""
 
-    if in_only:
-      return self.__get_current_mucs()
-    return [room for room in self.mucs]
+    rooms = self.__get_current_mucs() if in_only else self.mucs
+    return [Room(room) for room in rooms]
 
   def get_occupants(self,room):
     """return the Users in the given room, or None if we are not in the room"""
 
+    name = room.get_name()
+
     # search through who we've seen for anyone with the room in their JID
     users = []
     for jid in self.seen:
-      if ((room==jid.getStripped())
-          and (self.mucs[room]['nick']!=jid.getResource())):
+      if ((name==jid.getStripped())
+          and (self.mucs[name]['nick']!=jid.getResource())):
         users.append(JID(jid,Message.GROUP))
+
+    me = JID(name+'/'+self.get_nick(room),Message.GROUP)
+    if me not in users:
+      users.append(me)
 
     return users
 
   def get_nick(self,room):
     """return our nick in the given room"""
 
-    return self.mucs[room]['nick']
+    return self.mucs[room.get_name()]['nick']
 
   def get_real(self,room,nick):
     """return the real username of the given nick"""
 
-    jid = xmpp.JID(room+'/'+nick)
+    if nick==self.get_nick(room):
+      return JID(self.jid,Message.PRIVATE)
+
+    jid = xmpp.JID(room.get_name()+'/'+nick)
     real = self.real_jids.get(jid,nick)
     if real==nick:
       return JID(jid,Message.GROUP)
 
     return JID(real,Message.PRIVATE)
+
+  def get_username(self):
+    """return our username"""
+    
+    return JID(self.jid,Message.PRIVATE)
 
   def new_user(self,user,typ):
     """create a new user of this Protocol's User class"""
@@ -498,16 +513,16 @@ class XMPP(Protocol):
     # If subscription is private,
     # disregard anything not from the private domain
     if typ in ('subscribe','subscribed','unsubscribe','unsubscribed'):
-      if self.opt('priv_domain')==True:
+      if self.opt('xmpp.priv_domain')==True:
         # Use the bot's domain
         domain = self.jid.getDomain()
       else:
         # Use the specified domain
-        domain = self.opt('priv_domain')
+        domain = self.opt('xmpp.priv_domain')
 
       # Check if the sender is in the private domain
       user_domain = jid.getDomain()
-      if self.opt('priv_domain') and domain!=user_domain:
+      if self.opt('xmpp.priv_domain') and domain!=user_domain:
         self.log.info('Ignoring subscribe request: %s does not '\
         'match private domain (%s)' % (user_domain, domain))
         return
@@ -636,14 +651,15 @@ class XMPP(Protocol):
     """send pings to make sure the server is still there"""
 
     # build a ping stanza and send it if it's been long enough since last ping
-    if self.opt('ping_freq') and time.time()-self.last_ping>self.opt('ping_freq'):
+    if (self.opt('xmpp.ping_freq')
+        and time.time()-self.last_ping>self.opt('xmpp.ping_freq')):
       self.last_ping = time.time()
       payload = [xmpp.Node('ping',attrs={'xmlns':'urn:xmpp:ping'})]
       ping = xmpp.Protocol('iq',typ='get',payload=payload)
 
       # raise PingTimeout if pinging fails
       try:
-        res = self.conn.SendAndWaitForResponse(ping,self.opt('ping_timeout'))
+        res = self.conn.SendAndWaitForResponse(ping,self.opt('xmpp.ping_timeout'))
       except IOError:
         raise PingTimeout
       if res is None:
@@ -746,13 +762,13 @@ class XMPP(Protocol):
 
   def __muc_join_success(self,room):
     """execute callbacks on successfull MUC join"""
-    
-    self.bot._cb_join_room_success(room)
+
+    self.bot._cb_join_room_success(Room(room))
 
   def __muc_join_failure(self,room,error):
     """execute callbacks on successfull MUC join"""
-    
-    self.bot._cb_join_room_failure(room,self.MUC_JOIN_ERROR[error])
+
+    self.bot._cb_join_room_failure(Room(room),self.MUC_JOIN_ERROR[error])
 
   def __idle_rejoin_muc(self):
     """attempt to rejoin the MUC if needed"""

@@ -29,10 +29,13 @@ import sys
 from threading import Thread,Event
 from Queue import Queue
 
-from lib.protocol import User,Message,Protocol
+from lib.protocol import User,Room,Message,Protocol
 from lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
 
 from lib.decorators import botconf
+
+USER = 'admin@std.in'
+SIBYL = 'sibyl@std.in'
 
 ################################################################################
 # Config options                                                               #
@@ -68,7 +71,7 @@ class BufferThread(Thread):
       self.event_proc.wait()
       if self.event_close.is_set():
         break
-      sys.__stdout__.write('admin@std.in: ')
+      sys.__stdout__.write(USER+': ')
       s = raw_input()
       self.event_proc.clear()
       self.queue.put(s)
@@ -109,6 +112,7 @@ class Stdin(Protocol):
 
     self.connected = False
     self.thread = None
+    self.proto = 'stdin'
 
   def connect(self):
 
@@ -130,17 +134,18 @@ class Stdin(Protocol):
   def disconnected(self):
     pass
 
-  def process(self):
+  def process(self,wait=0):
 
-    if not self.event_data.wait(1):
+    if not self.event_data.wait(wait):
       return
 
-    rule = ('w','admin@std.in','*')
-    if self.bot.opt('bw_list')[-1]!=rule:
-      self.bot.conf.opts['bw_list'].append(rule)
+    usr = Admin(USER,Message.PRIVATE)
+    text = self.queue.get()
 
-    usr = Admin('admin@std.in',Message.PRIVATE)
-    msg = Message(Message.PRIVATE,usr,self.queue.get())
+    if self.special_cmds(text):
+      return
+
+    msg = Message(Message.PRIVATE,usr,text)
     self.bot._cb_message(msg)
 
     if self.queue.empty():
@@ -153,15 +158,17 @@ class Stdin(Protocol):
   def shutdown(self):
     if self.thread:
       self.event_close.set()
-      self.thread.join()
 
   def send(self,text,to):
-    sys.__stdout__.write('sibyl@std.in: '+text+'\n')
+    if isinstance(text,str):
+      text = text.decode('utf')
+    text = text.encode(sys.__stdout__.encoding,'replace')
+    sys.__stdout__.write(SIBYL+': '+text+'\n')
 
   def broadcast(self,text,room,frm=None):
     self.send(text,None)
 
-  def join_room(self,room,nick,pword=None):
+  def join_room(self,room):
     pass
 
   def part_room(self,room):
@@ -177,11 +184,22 @@ class Stdin(Protocol):
     return []
 
   def get_nick(self,room):
-    return 'root'
+    return ''
 
   def get_real(self,room,nick):
     return Admin(nick,Message.PRIVATE)
 
+  def get_username(self):
+    return Admin(SIBYL,Message.PRIVATE)
+
   def new_user(self,user,typ):
     return Admin(user,typ)
 
+################################################################################
+
+  def special_cmds(self,text):
+    """process special admin commands"""
+    
+    if not text.startswith('/'):
+      return
+    args = text[1:].split(' ')

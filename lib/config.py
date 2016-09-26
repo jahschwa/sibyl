@@ -57,18 +57,17 @@ class Config(object):
     # OrderedDict containing full descriptions of options
     self.OPTS = odict([
 
-#option          default             requir  validate_func     parse_func
+#option         default             requir  validate_func     parse_func
 #-------------------------------------------------------------------------------
-('chat_proto',  (None,              True,   None,             self.parse_protocol)),
-('username',    (None,              True,   None,             None)),
-('password',    (None,              True,   None,             None)),
+('protocols',   ({},                True,   None,             self.parse_protocols)),
 ('enable',      ([],                False,  None,             self.parse_plugins)),
 ('disable',     ([],                False,  None,             self.parse_plugins)),
 ('cmd_dir',     ('cmds',            False,  self.valid_dir,   None)),
-('rooms',       ([],                False,  None,             self.parse_room)),
+('rooms',       ({},                False,  None,             self.parse_rooms)),
 ('nick_name',   ('Sibyl',           False,  None,             None)),
 ('log_level',   (logging.INFO,      False,  None,             self.parse_log)),
 ('log_file',    ('data/sibyl.log',  False,  self.valid_file,  None)),
+('log_append',  (True,              False,  None,             self.parse_bool)),
 ('log_requests',(False,             False,  None,             self.parse_bool)),
 ('log_urllib3', (False,             False,  None,             self.parse_bool)),
 ('bw_list',     ([('w','*','*')],   False,  self.valid_bw,    self.parse_bw)),
@@ -80,7 +79,8 @@ class Config(object):
 ('help_plugin', (False,             False,  None,             self.parse_bool)),
 ('recon_wait',  (60,                False,  None,             self.parse_int)),
 ('kill_stdout', (True,              False,  None,             self.parse_bool)),
-('tell_errors', (True,              False,  None,             self.parse_bool))
+('tell_errors', (True,              False,  None,             self.parse_bool)),
+('admin_protos',(['stdin'],         False,  self.valid_admin, self.parse_admin))
 
     ])
 
@@ -257,8 +257,11 @@ class Config(object):
   #   SUCCESS - no errors or warnings of any kind
   #   ERRORS  - ignored sections, ignore opts, parse fails, or validate fails
   #   FAIL    - missing any required opts
-  def reload(self):
+  def reload(self,log=True):
     """load opts from config file and check for errors"""
+
+    orig = self.logging
+    self.logging = log
 
     # parse options from the config file and store them in self.opts
     self.__update()
@@ -269,6 +272,8 @@ class Config(object):
       if self.OPTS[opt][self.REQ] and not self.opts[opt]:
         self.log('critical','Missing required option "%s"' % opt)
         errors.append(opt)
+
+    self.logging = orig
 
     # return status
     if len(errors):
@@ -302,8 +307,12 @@ class Config(object):
     config = cp.SafeConfigParser()
     try:
       config.readfp(FakeSecHead(open(self.conf_file)))
-    except:
+    except Exception as e:
+      full = traceback.format_exc(e)
+      short = full.split('\n')[-2]
       self.log('critical','Unable to read/parse config file')
+      self.log('error','  %s' % short)
+      self.log('debug',full)
       return {}
 
     # Sibyl config does not use sections; options in sections will be ignored
@@ -414,6 +423,16 @@ class Config(object):
     except:
       return False
 
+  def valid_admin(self,protos):
+    """return True if every protocol in the list exists"""
+
+    for proto in protos:
+      fname = os.path.join('protocols','sibyl_'+proto+os.path.extsep+'py')
+      if not os.path.isfile(fname):
+        return False
+
+    return True
+
 ################################################################################
 #                                                                              #
 # Parse functions                                                              #
@@ -423,32 +442,46 @@ class Config(object):
 #                                                                              #
 ################################################################################
 
-  # @return (tuple of (str,class)) the protocol name and class to use
-  def parse_protocol(self,opt,val):
-    """parse the protocol and return the subclass"""
+  # @return (dict of str:class) protocol names and classes to use
+  def parse_protocols(self,opt,val):
+    """parse the protocols and return the subclasses"""
 
-    if not os.path.isfile('protocols/sibyl_'+val+'.py'):
-      self.log('critical','No matching file in protocols/ for "%s"' % val)
+    val = util.split_strip(val,',')
+    protocols = {}
+    success = False
+
+    for proto in val:
+
+      protocols[proto] = None
+      fname = os.path.join('protocols','sibyl_'+proto+os.path.extsep+'py')
+      if not os.path.isfile(fname):
+        self.log('critical','No matching file in protocols/ for "%s"' % proto)
+
+      try:
+        mod = util.load_module('sibyl_'+proto,'protocols')
+        for (name,clas) in inspect.getmembers(mod,inspect.isclass):
+          if issubclass(clas,Protocol) and name.lower()==proto:
+            protocols[proto] = clas
+        if protocols[proto] is None:
+          self.log('critical',
+              'Protocol "%s" does not contain a lib.protocol.Protocol subclass' % proto)
+
+      except Exception as e:
+        full = traceback.format_exc(e)
+        short = full.split('\n')[-2]
+        self.log('critical','Exception importing protocols/%s:' % ('sibyl_'+proto))
+        self.log('critical','  %s' % short)
+        self.log('debug',full)
+
+    if None in protocols.values():
       raise ValueError
+    return protocols
 
-    try:
-      mod = util.load_module('sibyl_'+val,'protocols')
-      for (name,clas) in inspect.getmembers(mod,inspect.isclass):
-        if issubclass(clas,Protocol) and name.lower()==val:
-          return (val,clas)
-    except Exception as e:
-      full = traceback.format_exc(e)
-      short = full.split('\n')[-2]
-      
-      self.log('critical','Exception importing protocols/%s:' % ('sibyl_'+val))
-      self.log('critical','  %s' % short)
-      self.log('debug',full)
+  # @return (list) list of plugins to treat as admin
+  def parse_admin(self,opt,val):
+    """parse the list of protocols"""
 
-      raise e
-
-    self.log('critical',
-        'Protocol "%s" does not contain a lib.protocol.Protocol subclass' % val)
-    raise ValueError
+    return util.split_strip(val,',')
 
   # @return (list) a list of plugins to disable
   def parse_plugins(self,opt,val):
@@ -459,26 +492,31 @@ class Config(object):
     return val.split(',')
 
   # @return (dict) a room to join with keys [room, nick, pass]
-  def parse_room(self,opt,val):
+  def parse_rooms(self,opt,val):
     """parse the rooms into a list"""
 
     val = val.replace('\n','')
     entries = util.split_strip(val,';')
-    rooms = []
+    rooms = {}
     for entry in entries:
       if entry=='':
         continue
       params = util.split_strip(entry,',')
-      if not params[0]:
+      if not params[0] or not params[1]:
         raise ValueError
 
       # check for optional arguments
-      room = {'room':params[0],'nick':None,'pass':None}
-      if len(params)>1 and params[1]:
-        room['nick'] = params[1]
+      room = {'room':params[1],'nick':None,'pass':None}
       if len(params)>2 and params[2]:
-        room['pass'] = params[2]
-      rooms.append(room)
+        room['nick'] = params[2]
+      if len(params)>3 and params[3]:
+        room['pass'] = params[3]
+      
+      # add room to dict
+      if params[0] in rooms:
+        rooms[params[0]].append(room)
+      else:
+        rooms[params[0]] = [room]
     return rooms
 
   # @return (int) a log level from the logging module

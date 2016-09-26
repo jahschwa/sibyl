@@ -33,21 +33,27 @@
 ################################################################################
 
 from abc import ABCMeta,abstractmethod
+import os,inspect
 
 ################################################################################
 # Custom exceptions                                                            #
 ################################################################################
 
-class PingTimeout(Exception):
+class ProtocolError(Exception):
+  def __init__(self):
+    filename = os.path.basename(inspect.stack()[1][1])
+    self.protocol = filename.split(os.path.extsep)[0].split('_')[1]
+
+class PingTimeout(ProtocolError):
   pass
 
-class ConnectFailure(Exception):
+class ConnectFailure(ProtocolError):
   pass
 
-class AuthFailure(Exception):
+class AuthFailure(ProtocolError):
   pass
 
-class ServerShutdown(Exception):
+class ServerShutdown(ProtocolError):
   pass
 
 ################################################################################
@@ -90,8 +96,16 @@ class User(object):
   def __str__(self):
     pass
 
-  # initialise the User object and call parse
-  def __init__(self,user,typ):
+  # @param user (object) a user id to parse
+  # @param typ (int) either Message.GROUP or Message.PRIVATE
+  # @param proto (str) name of the associated protocol
+  def __init__(self,user,typ,proto=None):
+    if not proto:
+      filename = os.path.basename(inspect.stack()[1][1])
+      proto = filename.split(os.path.extsep)[0]
+    self.protocol = proto
+    if 'sibyl_' in self.protocol:
+      self.protocol = self.protocol.split('_')[-1]
     self.real = None
     self.parse(user,typ)
 
@@ -106,11 +120,78 @@ class User(object):
     """set the "real" User of this User"""
     self.real = real
 
+  # @return (str) the protocol associated with this User
+  def get_protocol(self):
+    """return the name of the protocol associated with this User"""
+    return self.protocol
+
   # override the != operator (you don't have to do this in the subclass)
   # @param other (object)
   # @return (bool) whether self!=other
   def __ne__(self,other):
     return not self==other
+
+  # override hashing to allow as dict keys
+  def __hash__(self):
+    return hash(self.__str__())
+
+################################################################################
+# Room class                                                                   #
+################################################################################
+
+class Room(object):
+
+  # @param room (str) the identifier for this Room
+  # @param nick (str) [None] the nick name to use in this Room
+  # @param pword (str) [None] the password for joining this Room
+  # @param proto (str) name of the associated protocol
+  def __init__(self,room,nick=None,pword=None,proto=None):
+    
+    if not proto:
+      filename = os.path.basename(inspect.stack()[1][1])
+      proto = filename.split(os.path.extsep)[0]
+    self.protocol = proto
+    if 'sibyl_' in self.protocol:
+      self.protocol = self.protocol.split('_')[-1]
+    
+    self.room = room
+    self.nick = nick
+    self.pword = pword
+
+  # @return (str) the protocol associated with this Room
+  def get_protocol(self):
+    """return the name of the protocol associated with this Room"""
+    return self.protocol
+
+  # @return (str) the name of this Room
+  def get_name(self):
+    """return the string representation of this Room"""
+    return self.room
+
+  # @return (str,None) the nick name to use in this Room
+  def get_nick(self):
+    """return the nick to use in this Room or None"""
+    return self.nick
+
+  # @return (str,None) the password to use when joining this Room
+  def get_password(self):
+    """return this Room's password or None"""
+    return self.pword
+
+  def __str__(self):
+    return self.room
+
+  def __eq__(self,other):
+    if not isinstance(other,Room):
+      return False
+    return self.room==other.room and self.protocol==other.protocol
+
+  def __ne__(self,other):
+    return not self==other
+
+  # override hashing to allow as dict keys
+  def __hash__(self):
+    return hash(self.__str__())
 
 ################################################################################
 # Message class                                                                #
@@ -142,8 +223,16 @@ class Message(object):
   # @param txt (str,unicode) the body of the msg
   # @param status (str) [None] status enum
   # @param msg (str) [None] custom status msg (e.g. "Doing awesome!")
-  def __init__(self,typ,frm,txt,status=None,msg=None):
+  # @param proto (str) [None] name of the associated protocol
+  def __init__(self,typ,frm,txt,status=None,msg=None,proto=None):
     """create a new Message"""
+
+    if not proto:
+      filename = os.path.basename(inspect.stack()[1][1])
+      proto = filename.split(os.path.extsep)[0]
+    self.protocol = proto
+    if 'sibyl_' in self.protocol:
+      self.protocol = self.protocol.split('_')[-1]
 
     if typ not in range(0,4):
       raise ValueError('Valid types: Message.STATUS, PRIVATE, GROUP, ERROR')
@@ -182,6 +271,11 @@ class Message(object):
   def get_status(self):
     """return the status (e.g. Message.OFFLINE)"""
     return (self.status,self.msg)
+
+  # @return (str) the protocol associated with this Message
+  def get_protocol(self):
+    """return the name of the protocol associated with this Message"""
+    return self.protocol
 
   # @param typ (int) Message type enum
   # @return (str) human-readable Message type
@@ -225,13 +319,14 @@ class Protocol(object):
   # receive/process messages and call bot._cb_message()
   # this function should take/block for around 1 second if possible
   # must ignore msgs from myself and from users not in any of our rooms
+  # @param wait (int) time to wait for new messages before returning
   # @call bot._cb_message(Message) upon receiving a valid status or message
   # @return (Message) the received Message
   # @raise (PingTimeout) if implemented
   # @raise (ConnectFailure) if disconnected
   # @raise (ServerShutdown) if server shutdown
   @abstractmethod
-  def process(self):
+  def process(self,wait=0):
     pass
 
   # called when the bot is exiting for whatever reason
@@ -302,6 +397,11 @@ class Protocol(object):
   # @return (User) the "real" User behind the specified nick/room
   @abstractmethod
   def get_real(self,room,nick):
+    pass
+
+  # @return (User) our username
+  @abstractmethod
+  def get_username(self):
     pass
 
   # create a new User using this Protocol's custom User subclass

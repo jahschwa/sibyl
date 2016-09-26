@@ -24,31 +24,17 @@
 #
 ################################################################################
 
-################################################################################
-# Required options
-################################################################################
-
-# Chat protocols: xmpp, matrix
-chat_proto =
-
-# Login info
-username =
-password =
-
-# If using Matrix, the homeserver to connect to
-#server =
-
-################################################################################
-# Common options
-################################################################################
-
-# Default nick to use in rooms (can be overridden in the "rooms" option)
-#nick_name = Sibyl
+# [REQUIRED] Comma-separated list of protocols to use
+protocols = stdin
 
 # Chat rooms to join on bot startup
-# Format for single entry: room,nick,pass OR room OR room,nick OR room,,pass
-# Multiple rooms separated by ";" e.g.: room,nick,pass; room,nick
+# Format for single entry: proto,room,nick,pass
+# Can also be: proto,room OR proto,room,nick OR proto,room,,pass
+# Multiple rooms separated by ";" e.g.: proto,room,nick,pass; proto,room,nick
 #rooms =
+
+# Default nick to use in rooms
+#nick_name = Sibyl
 
 # Character sequence used to give the bot a command in a MUC. Default is None.
 # Example: "!hello" instead of "Sibyl hello"
@@ -72,6 +58,87 @@ password =
 #tell_errors = True
 
 ################################################################################
+# XMPP options
+################################################################################
+
+# login info
+#xmpp.jid = 
+#xmpp.password = 
+
+# XMPP resource; default is the class name of the bot.
+#xmpp.resource = SibylBot
+
+# Server to connect to if different than in the JID given in "username"
+#xmpp.server = 
+
+# Port to connect to the XMPP server.
+#xmpp.port = 5222
+
+# Only accept subscriptions from the specified domain; can be either "True" to
+# use the domain specified by "username", a string specifying a domain, or
+# "False" to accept all subscribe requests.
+#xmpp.priv_domain = True
+
+# Interval (seconds) to ping the server to check for disconnect. 0 means never
+#xmpp.ping_freq = 60
+
+# Timeout for pings. Only matters if "ping_freq" is greater than 0
+#xmpp.ping_timeout = 3
+
+# Print XMPPPY stanza debug info to the terminal
+#xmpp.debug = False
+
+################################################################################
+# Matrix options
+################################################################################
+
+# username, password, homeserver
+#matrix.username = 
+#matrix.password = 
+#matrix.homeserver = 
+
+################################################################################
+# plugin options
+################################################################################
+
+# File in which to store bookmarks; format is tab-delineated text file
+#bookmark.file = data/sibyl_bm.txt
+
+# When resuming a playlist, whether to always start with the next item rather
+# than the bookmarked file itself
+#bookmark.resume_next = False
+
+# File in which to store library contents; format is python pickle
+#library.file = data/sibyl_lib.pickle
+
+# Maximum number of matches to reply with in chat when searching the library.
+# A value of 0 means no limit. Note that some servers will kick the bot for
+# sending very long replies.
+#library.max_matches = 10
+
+# Directories to search for audio and video files to add to the library.
+# Format for regular directories: /path/to/dir1; /path/to/dir2
+# Format for samba shares: server1,share1; server2,share2,username,password
+# Default for both options is None.
+#library.audio_dirs =
+#library.video_dirs =
+
+# File in which to store notes; format is tab-delineated text file
+#note.file = data/sibyl_note.txt
+
+# Whether to respond to links with the page title
+#room.link_echo = False
+
+# IP address where the XBMC/Kodi/OSMC/etc. web interface is running
+# Format is IP:PORT or just IP (port defaults to 80 if not specified)
+# The default assumes XBMC is running on the same host as Sibyl
+#xbmc.ip = 127.0.0.1:8080
+
+# Username and password to use to access the web interface; default is None
+#xbmc.username =
+#xbmc.password =
+
+################################################################################
 # Advanced options
 ################################################################################
 
@@ -84,6 +151,9 @@ password =
 # Log messages from other python modules
 #log_requests = False
 #log_urllib3 = False
+
+# If False overwrite the log file on bot init, if True append to the log file
+#log_append = True
 
 # Directory to search for plugins; note the default uses relative paths
 #cmd_dir = cmds
@@ -105,79 +175,9 @@ password =
 # to "False" for debugging purposes.
 #catch_except = True
 
-################################################################################
-# XMPP options
-################################################################################
+# If True, kill stdout to disable libraries from printing to the console
+# NOTE: the stdin protocol will work regardless of this setting
+#kill_stdout = True
 
-# XMPP resource; default is the class name of the bot.
-#resource = SibylBot
-
-# Server to connect to if different than in the JID given in "username"
-#server =
-
-# Port to connect to the XMPP server.
-#port = 5222
-
-# Only accept subscriptions from the specified domain; can be either "True" to
-# use the domain specified by "username", a string specifying a domain, or
-# "False" to accept all subscribe requests.
-#priv_domain = True
-
-# Interval (seconds) to ping the server to check for disconnect. 0 means never
-#ping_freq = 60
-
-# Timeout for pings. Only matters if "ping_freq" is greater than 0
-#ping_timeout = 3
-
-# Print XMPPPY stanza debug info to the terminal
-#xmpp_debug = False
-
-################################################################################
-# bookmark options
-################################################################################
-
-# File in which to store bookmarks; format is tab-delineated text file
-#bm_file = data/sibyl_bm.txt
-
-# When resuming a playlist, whether to always start with the next item rather
-# than the bookmarked file itself
-#resume_next = False
-
-################################################################################
-# library options
-################################################################################
-
-# File in which to store library contents; format is python pickle
-#lib_file = data/sibyl_lib.pickle
-
-# Maximum number of matches to reply with in chat when searching the library.
-# A value of 0 means no limit. Note that some servers will kick the bot for
-# sending very long replies.
-#max_matches = 10
-
-# Directories to search for audio and video files to add to the library.
-# Format for regular directories: /path/to/dir1; /path/to/dir2
-# Format for samba shares: server1,share1; server2,share2,username,password
-# Default for both options is None.
-#audio_dirs =
-#video_dirs =
-
-################################################################################
-# note options
-################################################################################
-
-# File in which to store notes; format is tab-delineated text file
-#note_file = data/sibyl_note.txt
-
-################################################################################
-# xbmc options
-################################################################################
-
-# IP address where the XBMC/Kodi/OSMC/etc. web interface is running
-# Format is IP:PORT or just IP (port defaults to 80 if not specified)
-# The default assumes XBMC is running on the same host as Sibyl
-#xbmc_ip = 127.0.0.1:8080
-
-# Username and password to use to access the web interface; default is None
-#xbmc_user =
-#xbmc_pass =
+# Ignore bw_list and allow every command for these protocols (comma-separated)
+#admin_protos = stdin

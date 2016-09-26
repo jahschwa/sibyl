@@ -32,10 +32,10 @@ __depends__ = ['xbmc','library']
 def conf(bot):
   """add config options"""
 
-  return [{'name':'bm_file',
+  return [{'name':'bookmark.file',
           'default':'data/sibyl_bm.txt',
           'valid':bot.conf.valid_file},
-          {'name':'resume_next',
+          {'name':'bookmark.resume_next',
           'default':False,
           'parse':bot.conf.parse_bool}]
 
@@ -43,10 +43,10 @@ def conf(bot):
 def init(bot):
   """initialize bookmark dict and last played str for bookmarking"""
   
-  if os.path.isfile(bot.opt('bm_file')):
+  if os.path.isfile(bot.opt('bookmark.file')):
     bm_store = bm_parse(bot)
   else:
-    with open(bot.opt('bm_file'),'w') as f:
+    with open(bot.opt('bookmark.file'),'w') as f:
       bm_store = {}
 
   bot.add_var('bm_store',bm_store)
@@ -77,7 +77,8 @@ def bookmark(bot,mess,args):
     # get info for bookmark
     pid = bot.last_played[0]
     path = bot.last_played[1]
-    result = bot.xbmc('Player.GetProperties',{'playerid':pid,'properties':['position','time']})
+    params = {'playerid':pid,'properties':['position','time']}
+    result = bot.xbmc('Player.GetProperties',params)
     pos = result['result']['position']
     t = str(util.time2str(result['result']['time']))
     add = time.time()
@@ -85,7 +86,8 @@ def bookmark(bot,mess,args):
     fil = os.path.basename(str(result['result']['item']['file']))
 
     # note that the position is stored 0-indexed
-    bot.bm_store[name] = {'path':path,'add':add,'time':t,'pid':pid,'pos':pos,'file':fil}
+    bot.bm_store[name] = {'path':path,'add':add,'time':t,
+                          'pid':pid,'pos':pos,'file':fil}
     bm_update(bot,name,bot.bm_store[name])
     return 'Bookmark added for "'+name+'" item '+str(pos+1)+' at '+t
 
@@ -117,8 +119,8 @@ def bookmark(bot,mess,args):
     item = bot.bm_store[m]
     pos = item['pos']
     t = item['time']
-    fil = item['file']
-    entries.append('"'+m+'" at item '+str(pos+1)+' and time '+t+' which is "'+fil+'"')
+    f = item['file']
+    entries.append('"%s" at item %s and time %s which is "%s"' % (m,pos+1,t,f))
   if len(entries)==0:
     return 'Found 0 bookmarks'
   if len(entries)==1:
@@ -143,7 +145,7 @@ def resume(bot,mess,args):
   if start_next or start_current:
     args = args[:-1]
 
-  start_next = (bot.opt('resume_next') and not start_current) or start_next
+  start_next |= (bot.opt('bookmark.resume_next') and not start_current)
 
   # check if a name was passed
   name = bm_recent(bot)
@@ -183,7 +185,7 @@ def bm_parse(bot):
   """read the bm_file into a dict"""
 
   d = {}
-  with open(bot.opt('bm_file'),'r') as f:
+  with open(bot.opt('bookmark.file'),'r') as f:
     lines = [l.strip() for l in f.readlines() if l!='\n']
 
   # tab-separated each line is: name path pid position file time added
@@ -191,7 +193,8 @@ def bm_parse(bot):
     (name,props) = bm_unformat(l)
     d[name] = props
 
-  bot.log.info('Parsed '+str(len(d))+' bookmarks from "'+bot.opt('bm_file')+'"')
+  fname = bot.opt('bookmark.file')
+  bot.log.info('Parsed %s bookmarks from "%s"' % (len(d),fname))
   return d
 
 def bm_update(bot,name,props):
@@ -209,7 +212,7 @@ def bm_add(bot,name,props):
   bot.bm_store[name] = props
 
   # the bookmark file should always end in a newline
-  with open(bot.opt('bm_file'),'a') as f:
+  with open(bot.opt('bookmark.file'),'a') as f:
     f.write(bm_format(name,props)+'\n')
 
 def bm_remove(bot,name):
@@ -219,7 +222,7 @@ def bm_remove(bot,name):
   # passing "*" removes all bookmarks
   if name=='*':
     bot.bm_store = {}
-    with open(bot.opt('bm_file'),'w') as f:
+    with open(bot.opt('bookmark.file'),'w') as f:
       f.write('')
     return True
 
@@ -229,12 +232,12 @@ def bm_remove(bot,name):
 
   del bot.bm_store[name]
 
-  with open(bot.opt('bm_file'),'r') as f:
+  with open(bot.opt('bookmark.file'),'r') as f:
     lines = f.readlines()
 
   lines = [l for l in lines if l.split('\t')[0]!=name]
 
-  with open(bot.bm_file,'w') as f:
+  with open(bot.opt('bookmark.file'),'w') as f:
     f.writelines(lines)
 
   # return True if name was removed
