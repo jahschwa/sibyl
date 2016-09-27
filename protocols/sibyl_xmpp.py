@@ -40,15 +40,15 @@ from lib.decorators import botconf
 @botconf
 def conf(bot):
   return [
-    {'name':'xmpp.jid','default':None,'req':True},
-    {'name':'xmpp.password','default':None,'req':True},
-    {'name':'xmpp.resource','default':'sibyl'},
-    {'name':'xmpp.server','default':None},
-    {'name':'xmpp.port','default':5222,'parse':bot.conf.parse_int},
-    {'name':'xmpp.ping_freq','default':60,'parse':bot.conf.parse_int},
-    {'name':'xmpp.ping_timeout','default':3,'parse':bot.conf.parse_int},
-    {'name':'xmpp.debug','default':False,'parse':bot.conf.parse_bool},
-    {'name':'xmpp.priv_domain','default':True,'parse':bot.conf.parse_bool}
+    {'name':'jid','req':True},
+    {'name':'password','req':True},
+    {'name':'resource','default':'sibyl'},
+    {'name':'server','default':None},
+    {'name':'port','default':5222,'parse':bot.conf.parse_int},
+    {'name':'ping_freq','default':60,'parse':bot.conf.parse_int},
+    {'name':'ping_timeout','default':3,'parse':bot.conf.parse_int},
+    {'name':'debug','default':False,'parse':bot.conf.parse_bool},
+    {'name':'priv_domain','default':True,'parse':bot.conf.parse_bool}
   ]
 
 ################################################################################

@@ -32,17 +32,17 @@ import lib.util as util
 def conf(bot):
   """add config options"""
 
-  return [{'name' : 'library.file',
+  return [{'name' : 'file',
             'default' : 'data/sibyl_lib.pickle',
             'valid' : bot.conf.valid_file},
-          {'name' : 'library.max_matches',
+          {'name' : 'max_matches',
             'default' : 10,
             'parse' : bot.conf.parse_int},
-          {'name' : 'library.audio_dirs',
+          {'name' : 'audio_dirs',
             'default' : [],
             'valid' : valid_lib,
             'parse' : parse_lib},
-          {'name' : 'library.video_dirs',
+          {'name' : 'video_dirs',
             'default' : [],
             'valid' : valid_lib,
             'parse' : parse_lib}]
@@ -267,7 +267,7 @@ def find(bot,fd,dirs):
       
       smb.opendir(share[:share.rfind('/')])
       ignore = [smbc.PermissionError]
-      typ = (smbc.DIR if fd=='dir' else smbc.FILE)
+      typ = (smbc.Dir if fd=='dir' else smbc.File)
       result.extend(rsamba(smb,share,typ,ignore))
     except Exception as e:
       msg = ('Unable to traverse "%s": %s' %
@@ -295,13 +295,13 @@ def rsamba(ctx,path,typ=None,ignore=None):
     cur_path = path+'/'+c.name
 
     # handle files
-    if c.smbc_type==smbc.FILE:
-      if typ in (smbc.FILE,None):
+    if c.smbc_type==smbc.File:
+      if typ in (smbc.File,None):
         allitems.append(cur_path)
 
     # handle directories
-    elif c.smbc_type==smbc.DIR and c.name not in ('.','..'):
-      if typ in (smbc.DIR,None):
+    elif c.smbc_type==smbc.Dir and c.name not in ('.','..'):
+      if typ in (smbc.Dir,None):
         allitems.append(cur_path+'/')
       try:
         allitems.extend(rsamba(ctx,cur_path,typ,ignore))

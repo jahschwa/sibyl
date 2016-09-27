@@ -32,12 +32,12 @@ __wants__ = ['library']
 def conf(bot):
   """add config options"""
 
-  return [{'name' : 'xbmc.ip',
+  return [{'name' : 'ip',
             'default' : '127.0.0.1:8080',
             'required' : True,
             'valid' : bot.conf.valid_ip},
-          {'name' : 'xbmc.username'},
-          {'name' : 'xbmc.password'}]
+          {'name' : 'username'},
+          {'name' : 'password'}]
 
 @botinit
 def init(bot):

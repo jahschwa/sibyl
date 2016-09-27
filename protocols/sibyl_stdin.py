@@ -44,7 +44,7 @@ SIBYL = 'sibyl@std.in'
 @botconf
 def conf(bot):
   return [
-    {'name':'stdin_log','default':'data/stdin.log','valid':bot.conf.valid_file}
+    {'name':'log_file','default':'data/stdin.log','valid':bot.conf.valid_file}
   ]
 
 ################################################################################

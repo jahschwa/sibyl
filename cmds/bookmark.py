@@ -32,10 +32,10 @@ __depends__ = ['xbmc','library']
 def conf(bot):
   """add config options"""
 
-  return [{'name':'bookmark.file',
+  return [{'name':'file',
           'default':'data/sibyl_bm.txt',
           'valid':bot.conf.valid_file},
-          {'name':'bookmark.resume_next',
+          {'name':'resume_next',
           'default':False,
           'parse':bot.conf.parse_bool}]
 

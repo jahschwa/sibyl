@@ -35,7 +35,7 @@ def conf(bot):
   """create the link_echo option"""
 
   return {
-    'name':'room.link_echo',
+    'name':'link_echo',
     'default':False,
     'parse':bot.conf.parse_bool,
     'valid':valid

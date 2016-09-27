@@ -325,6 +325,10 @@ class SibylBot(object):
         # conf.add_opts expects a list
         if not isinstance(opts,list):
           opts = [opts]
+
+        # append module name to front of config options
+        for opt in opts:
+          opt['name'] = ns+'.'+opt['name']
         success = (success and self.conf.add_opts(opts,ns))
 
     return success

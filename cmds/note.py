@@ -32,7 +32,7 @@ __wants__ = ['xbmc']
 def conf(bot):
   """add config options"""
 
-  return {'name':'note.file',
+  return {'name':'file',
           'default':'data/sibyl_note.txt',
           'valid':bot.conf.valid_file}
 
