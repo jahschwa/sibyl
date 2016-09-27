@@ -282,7 +282,7 @@ def find(bot,fd,dirs):
       smb.opendir(share[:share.rfind('/')])
       ignore = [smbc.PermissionError]
       typ = (bot.smbc_dir if fd=='dir' else bot.smbc_file)
-      result.extend(rsamba(smb,share,typ,ignore))
+      result.extend(rsamba(bot,smb,share,typ,ignore))
     except Exception as e:
       msg = ('Unable to traverse "%s": %s' %
           (share,traceback.format_exc(e).split('\n')[-2]))
@@ -290,12 +290,13 @@ def find(bot,fd,dirs):
 
   return (result,errors)
 
+# @param bot (SibylBot) the bot object
 # @param ctx (Context) the smbc Context (already authenticated if needed)
 # @param path (str) a samba directory
 # @param typ (long) the smbc type to return, or all types if None
 # @param ignore (list) exceptions to ignore (must derive from Exception)
 # @return (list) every item (recursive) in the given directory of type typ
-def rsamba(ctx,path,typ=None,ignore=None):
+def rsamba(bot,ctx,path,typ=None,ignore=None):
   """recursively list directories"""
 
   import smbc
@@ -318,7 +319,7 @@ def rsamba(ctx,path,typ=None,ignore=None):
       if typ in (bot.smbc_dir,None):
         allitems.append(cur_path+'/')
       try:
-        allitems.extend(rsamba(ctx,cur_path,typ,ignore))
+        allitems.extend(rsamba(bot,ctx,cur_path,typ,ignore))
       except Exception as e:
         ignored = False
         for i in ignore:
@@ -328,6 +329,6 @@ def rsamba(ctx,path,typ=None,ignore=None):
 
     # log unknown types
     else:
-      self.log.debug('Unknown smbc_type %s for "%s"' % (c.smbc_type,cur_path))
+      bot.log.debug('Unknown smbc_type %s for "%s"' % (c.smbc_type,cur_path))
 
   return allitems
