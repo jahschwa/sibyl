@@ -197,13 +197,13 @@ def play(bot,mess,args):
 
   # if args are passed, play the specified file
   # [TODO] make work with samba shares
-  if os.path.isfile(args[0]):
+  if args[0].startswith('smb://') or os.path.isfile(args[0]):
     result = bot.xbmc('Player.Open',{'item':{'file':args[0]}})
     if 'error' in result:
       s = 'Unable to open: '+args
-      bot.log.error(s)
+      bot.log.info(s)
       return s
-    return bot.run_cmd('info',None)
+    return bot.run_cmd('info')
   return 'Invalid file'
 
 @botcmd
