@@ -130,6 +130,7 @@ class SibylBot(object):
     self.__finished = False
     self.__reboot = False
     self.__recons = {}
+    self.__tell_rooms = []
     self.last_cmd = {}
 
     # load plug-in hooks from this file
@@ -778,12 +779,12 @@ class SibylBot(object):
   def __run_forever(self):
     """reconnect loop - catch known exceptions"""
 
-    self.__tell_rooms = []
-    for (proto,rooms) in self.opt('rooms').items():
-      for room in rooms:
-        room = Room(room['room'])
-        room.protocol = proto
-        self.__tell_rooms.append(room)
+    if self.opt('tell_errors'):
+      for (proto,rooms) in self.opt('rooms').items():
+        for room in rooms:
+          room = Room(room['room'])
+          room.protocol = proto
+          self.__tell_rooms.append(room)
 
     # try to reconnect forever unless self.quit()
     while not self.__finished:
