@@ -167,6 +167,10 @@ class MYPROTOCOL(Protocol):
   def get_real(self,room,nick):
     raise NotImplementedError
 
+  # @return (User) our username
+  def get_username(self):
+    raise NotImplementedError
+
   # create a new User using this Protocol's custom User subclass
   # @param user (str) the new username to convert
   # @param typ (int) Message type enum (either PRIVATE or GROUP)
