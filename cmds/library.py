@@ -110,7 +110,21 @@ def init(bot):
   else:
     bot.run_cmd('library',['rebuild'])
 
-  if not util.has_module('smbc'):
+  if util.has_module('smbc'):
+    import smbc
+
+    # account for older versions of pysmbc that don't specify these
+    FILE = 8
+    if hasattr(smbc,'FILE'):
+      FILE = smbc.FILE
+    DIR = 7
+    if hasattr(smbc,'DIR'):
+      DIR = smbc.DIR
+
+    bot.add_var('smbc_file',FILE)
+    bot.add_var('smbc_dir',DIR)
+
+  else:
     bot.log.error("Can't find module smbc; network shares will be disabled")
 
 @botcmd
@@ -253,9 +267,6 @@ def find(bot,fd,dirs):
           (path,traceback.format_exc(e).split('\n')[-2]))
       errors.append((path,msg))
 
-  if smbpaths:
-    import smbc
-
   # same as above but for samba shares
   for path in smbpaths:
     try:
@@ -267,7 +278,7 @@ def find(bot,fd,dirs):
       
       smb.opendir(share[:share.rfind('/')])
       ignore = [smbc.PermissionError]
-      typ = (smbc.Dir if fd=='dir' else smbc.File)
+      typ = (bot.smbc_dir if fd=='dir' else bot.smbc_file)
       result.extend(rsamba(smb,share,typ,ignore))
     except Exception as e:
       msg = ('Unable to traverse "%s": %s' %
@@ -295,13 +306,13 @@ def rsamba(ctx,path,typ=None,ignore=None):
     cur_path = path+'/'+c.name
 
     # handle files
-    if c.smbc_type==smbc.File:
-      if typ in (smbc.File,None):
+    if c.smbc_type==bot.smbc_file:
+      if typ in (bot.smbc_file,None):
         allitems.append(cur_path)
 
     # handle directories
-    elif c.smbc_type==smbc.Dir and c.name not in ('.','..'):
-      if typ in (smbc.Dir,None):
+    elif c.smbc_type==bot.smbc_dir and c.name not in ('.','..'):
+      if typ in (bot.smbc_dir,None):
         allitems.append(cur_path+'/')
       try:
         allitems.extend(rsamba(ctx,cur_path,typ,ignore))
@@ -311,5 +322,9 @@ def rsamba(ctx,path,typ=None,ignore=None):
           ignored = (ignored or isinstance(e,i))
         if not ignored:
           raise e
+
+    # log unknown types
+    else:
+      self.log.debug('Unknown smbc_type %s for "%s"' % (c.smbc_type,cur_path))
 
   return allitems
