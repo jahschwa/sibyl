@@ -267,6 +267,9 @@ def find(bot,fd,dirs):
           (path,traceback.format_exc(e).split('\n')[-2]))
       errors.append((path,msg))
 
+  if smbpaths:
+    import smbc
+
   # same as above but for samba shares
   for path in smbpaths:
     try:
