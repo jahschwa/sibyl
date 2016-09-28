@@ -25,7 +25,7 @@
 ################################################################################
 
 # [REQUIRED] Comma-separated list of protocols to use
-protocols = stdin
+protocols = cli
 
 # Chat rooms to join on bot startup
 # Format for single entry: proto,room,nick,pass
@@ -58,10 +58,17 @@ protocols = stdin
 #tell_errors = True
 
 ################################################################################
+# Socket options
+################################################################################
+
+# Default port (note that on linux only root can use ports below 1024)
+#socket.port = 8767
+
+################################################################################
 # XMPP options
 ################################################################################
 
-# login info
+# Login info
 #xmpp.jid = 
 #xmpp.password = 
 

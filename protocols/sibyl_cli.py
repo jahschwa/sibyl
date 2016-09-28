@@ -34,8 +34,8 @@ from lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
 
 from lib.decorators import botconf
 
-USER = 'admin@std.in'
-SIBYL = 'sibyl@std.in'
+USER = 'admin@cli'
+SIBYL = 'sibyl@cli'
 
 ################################################################################
 # Config options                                                               #
@@ -106,13 +106,12 @@ class Admin(User):
 # Protocol sub-class                                                           #
 ################################################################################
 
-class Stdin(Protocol):
+class CLI(Protocol):
 
   def setup(self):
 
     self.connected = False
     self.thread = None
-    self.proto = 'stdin'
 
   def connect(self):
 
@@ -124,7 +123,8 @@ class Stdin(Protocol):
     self.event_proc.set()
 
     sys.__stdout__.write('\n')
-    self.thread = BufferThread(self.queue,self.event_data,self.event_close,self.event_proc)
+    self.thread = BufferThread(
+        self.queue,self.event_data,self.event_close,self.event_proc)
     self.thread.start()
     self.connected = True
 
