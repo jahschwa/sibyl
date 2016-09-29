@@ -4,10 +4,6 @@
 # Sibyl: A modular Python chat bot framework
 # Copyright (c) 2015-2016 Joshua Haas <jahschwa.com>
 #
-# JabberBot: A simple jabber/xmpp bot framework
-# Copyright (c) 2007-2012 Thomas Perl <thp.io/about>
-# $Id: d1c7090edd754ff0da8ef4eb10d4b46883f34b9f $
-#
 # This file is part of Sibyl.
 #
 # Sibyl is free software; you can redistribute it and/or modify
@@ -97,7 +93,9 @@ class Admin(User):
     return self.user
 
   def __eq__(self,other):
-    return isinstance(other,Admin)
+    if not isinstance(Admin,other):
+      return False
+    return self.user==other.user
 
   def __str__(self):
     return self.user

@@ -8,13 +8,13 @@ def init(bot):
 
 @botconf
 def conf(bot):
-  return {'name':'room_alarms','default':True,'parse':bot.conf.parse_bool}
+  return {'name':'allow_rooms','default':True,'parse':bot.conf.parse_bool}
 
 @botcmd
 def alarm(bot,mess,args):
   """set an alarm to go off later - alarm H:MM"""
 
-  if mess.get_type()==Message.GROUP and not bot.opt('room_alarms'):
+  if mess.get_type()==Message.GROUP and not bot.opt('alarm.allow_rooms'):
     return 'Alarms are disabled in chat rooms'
 
   try:
@@ -37,7 +37,7 @@ def idle(bot):
     if alarm[1]<=now:
       frm = alarm[0].get_from()
       name = frm.get_name()
-      bot.protocol.send(name+': ALARM!',frm)
+      bot.send(name+': ALARM!',frm)
     else:
       not_triggered.append(alarm)
   bot.alarms = not_triggered

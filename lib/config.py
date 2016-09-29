@@ -80,7 +80,7 @@ class Config(object):
 ('recon_wait',  (60,                False,  None,             self.parse_int)),
 ('kill_stdout', (True,              False,  None,             self.parse_bool)),
 ('tell_errors', (True,              False,  None,             self.parse_bool)),
-('admin_protos',(['stdin'],         False,  self.valid_admin, self.parse_admin))
+('admin_protos',(['cli'],           False,  self.valid_admin, self.parse_admin))
 
     ])
 
@@ -456,11 +456,12 @@ class Config(object):
       fname = os.path.join('protocols','sibyl_'+proto+os.path.extsep+'py')
       if not os.path.isfile(fname):
         self.log('critical','No matching file in protocols/ for "%s"' % proto)
+        continue
 
       try:
         mod = util.load_module('sibyl_'+proto,'protocols')
         for (name,clas) in inspect.getmembers(mod,inspect.isclass):
-          if issubclass(clas,Protocol) and name.lower()==proto:
+          if issubclass(clas,Protocol):
             protocols[proto] = clas
         if protocols[proto] is None:
           self.log('critical',

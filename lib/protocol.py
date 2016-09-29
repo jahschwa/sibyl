@@ -141,11 +141,11 @@ class User(object):
 
 class Room(object):
 
-  # @param room (str) the identifier for this Room
+  # @param name (str) the identifier for this Room
   # @param nick (str) [None] the nick name to use in this Room
   # @param pword (str) [None] the password for joining this Room
   # @param proto (str) name of the associated protocol
-  def __init__(self,room,nick=None,pword=None,proto=None):
+  def __init__(self,name,nick=None,pword=None,proto=None):
     
     if not proto:
       filename = os.path.basename(inspect.stack()[1][1])
@@ -153,8 +153,8 @@ class Room(object):
     self.protocol = proto
     if 'sibyl_' in self.protocol:
       self.protocol = self.protocol.split('_')[-1]
-    
-    self.room = room
+
+    self.name = name
     self.nick = nick
     self.pword = pword
 
@@ -166,7 +166,7 @@ class Room(object):
   # @return (str) the name of this Room
   def get_name(self):
     """return the string representation of this Room"""
-    return self.room
+    return self.name
 
   # @return (str,None) the nick name to use in this Room
   def get_nick(self):
@@ -179,12 +179,12 @@ class Room(object):
     return self.pword
 
   def __str__(self):
-    return self.room
+    return self.name
 
   def __eq__(self,other):
     if not isinstance(other,Room):
       return False
-    return self.room==other.room and self.protocol==other.protocol
+    return self.name==other.name and self.protocol==other.protocol
 
   def __ne__(self,other):
     return not self==other

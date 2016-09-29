@@ -4,10 +4,6 @@
 # Sibyl: A modular Python chat bot framework
 # Copyright (c) 2015-2016 Joshua Haas <jahschwa.com>
 #
-# JabberBot: A simple jabber/xmpp bot framework
-# Copyright (c) 2007-2012 Thomas Perl <thp.io/about>
-# $Id: d1c7090edd754ff0da8ef4eb10d4b46883f34b9f $
-#
 # This file is part of Sibyl.
 #
 # Sibyl is free software; you can redistribute it and/or modify
@@ -99,12 +95,13 @@ class MYPROTOCOL(Protocol):
   # receive/process messages and call bot._cb_message()
   # this function should take/block for around 1 second if possible
   # must ignore msgs from myself and from users not in any of our rooms
+  # @param wait (int) time to wait for new messages before returning
   # @call bot._cb_message(Message) upon receiving a valid status or message
   # @return (Message) the received Message
   # @raise (PingTimeout) if implemented
   # @raise (ConnectFailure) if disconnected
   # @raise (ServerShutdown) if server shutdown
-  def process(self):
+  def process(self,wait=0):
     raise NotImplementedError
 
   # called when the bot is exiting for whatever reason
