@@ -18,6 +18,12 @@ NEXT RELEASE:
         ( ! ) write and test plug in
         ( ! ) write wiki page
 
+  ( # ) [cli ] write CLI interface
+
+  ( # ) [sock] write socket interface
+        ( # ) write protocol
+        ( # ) write client
+
   (jef) [main] write setup.py
 
   ( # ) [main] write systemd module
@@ -42,6 +48,7 @@ NEXT RELEASE:
         ( # ) writing plug in example (alarm)
         ( # ) write protocol sibyl_stdin.py
         ( . ) tutorial for threading
+        ( . ) tutorial for chat protocol
         ( # ) about unittests
         ( # ) add dependencies info to plug in pages
         ( # ) bookmark.py
@@ -60,21 +67,23 @@ NEXT RELEASE:
 
   (   ) [main] figure out if unicode is broken anywhere
 
-  ( # ) [main] review and add comments to everything
+  ( ! ) [main] review and add comments to everything
+
+  ( # ) [main] support multiple protocols
 
   ( # ) [plug] add chat_ctrl option to plugin framework
         ( # ) additional parameter to @botcmd decorator
 
   ( # ) [cmds] add tell command (send msg when specified user joins room)
 
-  ( ! ) [conf] add kill_stdout option
+  ( # ) [conf] add kill_stdout option
+  ( # ) [conf] add option to overwrite log
 
 FUTURE:
 
   (   ) [conf] add custom logging string config option
   (   ) [conf] add max reconnect attempts option
   (   ) [conf] allow user to set requests timeout (currently 60s)
-  (   ) [conf] add option to overwrite log
   (   ) [conf] add log rotate option
 
   (   ) [cmds] add ping command
@@ -88,4 +97,3 @@ MAYBE:
   (   ) [libr] read and search media tags (e.g. title, album, artist)
   (   ) [libr] allow searching xbmc library
   (   ) [main] daemonize inside python
-  (   ) [main] support multiple protocols or logins
