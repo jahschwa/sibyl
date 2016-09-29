@@ -1,6 +1,6 @@
 # sibyl
 
-a chat bot for controlling XBMC/Kodi
+a chat bot for controlling XBMC/Kodi and other fun things
 
 ## Intro
 
@@ -21,17 +21,20 @@ device that is running XBMC (e.g. an RPi).
 You'll need the following installed in order to use sibyl:
 
  - [requests][req] - HTTP request and wrapper library - `pip install requests`
+ - [dns][dns] - required for requests - `pip install dnspython`
+
+Most users will also want some optional packages:
+
  - [smbc][samba] - python samba bindings - `pip install pysmbc`
  - [lxml][lxml] - xml and html parsing - `pip install lxml`
- - [dns][dns] - required for requests - `pip install dnspython`
- - [JSON-RPC][json] - you have to enable the web server in XBMC
+ - [JSON-RPC][json] - you have to enable the web server in XBMC (see below)
 
 You also need the relevant dependencies for your chosen chat protocol. Visit the
 [Protocol][proto] page and read about your chosen protocol there.
 
-The following are optional but not having them may render some commands broken:
+The following is required for the `tv` command from the `general` plugin:
 
- - [cec-client][cec] - HDMI CEC client for tv commands
+ - [cec-client][cec] - control TV over HDMI ([more info][gen])
 
 One-liners for Ubuntu/Debian (not including protocol dependencies):
 
@@ -45,7 +48,7 @@ Setup is very easy, all you really have to do is make a config file.
  1. Clone the repository with `git clone https://github.com/TheSchwa/sibyl.git`
  2. Install dependencies (see above)
  3. Enter the `sibyl` directory and copy `sibyl.conf.default` to `sibyl.conf`
- 4. Edit `sibyl.conf` and set the required options
+ 4. Edit `sibyl.conf` and set `protocols` as well as options required for those protocols
  5. If you want the bot to join a room set `rooms`
  6. Start the bot with `python run.py`
  7. For a full explanation of config options, see `sibyl.conf.default` or [the wiki][wiki]
@@ -61,7 +64,7 @@ Dependencies section). Therefore, for `xbmc` plug-in commands, the bot does not
 actually have to be running on the Pi. It just needs to be able to reach the
 Pi's HTTP interface. The `library` plug-in commands, however, do assume the bot
 is running on the same box as XBMC. Plesae note the port on which the web
-server is running when you activate it. For example, you might set `xbmc_ip =
+server is running when you activate it. For example, you might set `xbmc.ip =
 127.0.0.1:8080` in the config.
 
 ## CEC
@@ -77,7 +80,7 @@ or similar to run `cec-client`.
 
 ## Search Directories
 
-You can add folders to `video_dirs` and `audio_dirs` in
+You can add folders to `library.video_dirs` and `library.audio_dirs` in
 order to search them using the `search`, `audio`, `audios`, `video`, and
 `videos` commands. You can add the following as list items:
 
@@ -88,7 +91,8 @@ order to search them using the `search`, `audio`, `audios`, `video`, and
 
 Also be aware that users cannot read `sshfs` mounts from other users by
 default. If this is a problem with your setup, you have to specify `sshfs -o
-allow_other ...` when you mount the share.
+allow_other ...` when you mount the share. For more info visit [the library
+plugin][lib].
 
 ## Init Script
 
@@ -104,7 +108,7 @@ defaults`.
 Many systems have recently switched to systemd. Simply copy
 `init/sibyl.service` to `/etc/systemd/system/sibyl.service` and modify the
 `ExecStart` line to point to `run.py` and make sure `run.py` is executable
-(e.g. `chmod +x run.py`).
+(e.g. `chmod +x run.py`). Finally, run `sudo systemctl enable sibyl`.
 
 ## More Info and Troubleshooting
 
@@ -122,10 +126,12 @@ the IRC channel `chat.freenode.net#sibyl`, or contact me at
  [req]: http://docs.python-requests.org/en/latest/
  [samba]: https://bitbucket.org/nosklo/pysmbclient/src/057512c24175?at=default
  [cec]: http://libcec.pulse-eight.com/
+ [gen]: https://github.com/TheSchwa/sibyl/wiki/General#dependencies
  [json]: http://kodi.wiki/view/Webserver#Enabling_the_webserver
  [mail]: mailto:haas.josh.a@gmail.com
  [lxml]: http://lxml.de/
  [dns]: http://www.dnspython.org/
  [proto]: https://github.com/TheSchwa/sibyl/wiki/Protocols
+ [lib]: https://github.com/TheSchwa/sibyl/wiki/Library
  [trouble]: https://github.com/TheSchwa/sibyl/wiki/Troubleshooting
  [cmd]: https://github.com/TheSchwa/sibyl/wiki/Commands
