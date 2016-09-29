@@ -315,7 +315,9 @@ def rsamba(bot,ctx,path,typ=None,ignore=None):
         allitems.append(cur_path)
 
     # handle directories
-    elif c.smbc_type==bot.smbc_dir and c.name not in ('.','..'):
+    elif c.smbc_type==bot.smbc_dir:
+      if c.name in ('.','..'):
+        continue
       if typ in (bot.smbc_dir,None):
         allitems.append(cur_path+'/')
       try:
