@@ -21,7 +21,7 @@
 #
 ################################################################################
 
-import socket,select,errno,time
+import socket,select,errno,time,traceback
 from threading import Thread,Event
 from Queue import Queue
 
@@ -38,6 +38,7 @@ from lib.decorators import botconf
 def conf(bot):
   return [
     {'name':'port','default':8767},
+    {'name':'password'},
     {'name':'internet','default':False,'parse':bot.conf.parse_bool}
   ]
 
@@ -47,7 +48,7 @@ def conf(bot):
 
 class ServerThread(Thread):
 
-  def __init__(self,log,q,d,c):
+  def __init__(self,log,q,d,c,pword=None):
     """create a new thread that handles socket connections"""
 
     super(ServerThread,self).__init__()
@@ -57,6 +58,7 @@ class ServerThread(Thread):
     self.queue = q
     self.event_data = d
     self.event_close = c
+    self.password = pword
 
     self.dead = Queue()
     self.clients = {}
@@ -89,7 +91,7 @@ class ServerThread(Thread):
       while not self.dead.empty():
         client = self.dead.get()
         del self.clients[client]
-        self.log.info('Remote closed connection %s:%s@socket' % client)
+        self.log.info('Connection closed %s:%s@socket' % client)
 
       time.sleep(0.1)
 
@@ -109,18 +111,27 @@ class ServerThread(Thread):
 
 class ClientThread(Thread):
 
+  MSG_AUTH = '0'
+  MSG_TEXT = '1'
+
+  AUTH_OKAY = 'OKAY'
+  AUTH_FAILED = 'FAILED'
+  AUTH_NONE = 'NONE'
+
   def __init__(self,srv,conn,addr,ipc):
 
     """cretae a new thread that handles client connections"""
 
     super(ClientThread,self).__init__()
     self.daemon = True
+    self.authed = (srv.password is None)
 
     self.server = srv
     self.socket = conn
     self.address = addr
     self.ipc = ipc
 
+    self.log = srv.log
     self.buffer = ''
 
   def run(self):
@@ -153,7 +164,21 @@ class ClientThread(Thread):
 
     msgs = []
     while self.buffer or not msgs:
-      msgs.append(self.get_msg())
+      (typ,msg) = self.get_msg()
+      self.log.debug('MESSAGE: "%s"' % msg)
+      if typ==ClientThread.MSG_AUTH:
+        self.do_auth(msg)
+        msg = None
+      elif typ==ClientThread.MSG_TEXT or typ is None:
+        if not self.authed:
+          self.log.warning('Remote %s:%s did not attempt Auth' % self.address)
+          self.send_msg(ClientThread.AUTH_FAILED,ClientThread.MSG_AUTH)
+          raise RuntimeError
+        msgs.append(msg)
+      else:
+        self.send_msg('Unsupported msg type "%s"; closing connection' % typ)
+        raise RuntimeError
+
     return msgs
 
   def get_msg(self):
@@ -161,8 +186,10 @@ class ClientThread(Thread):
     msg = self.buffer
     while ' ' not in msg:
       s = self.socket.recv(4096)
+      self.log.debug('RECEIVED: "%s"' % s)
       if not s:
-        raise RuntimeError
+        self.log.debug('Received EOS from %s:%s' % self.address)
+        return (None,None)
       msg += s
 
     length_str = msg.split(' ')[0]
@@ -170,11 +197,29 @@ class ClientThread(Thread):
     while len(msg)<target:
       msg += self.socket.recv(min(target-len(msg),4096))
 
-    self.buffer = msg[target:]
-    return msg[msg.find(' ')+1:]
+    (msg,self.buffer) = (msg[:target],msg[target:])
+    msg = msg[msg.find(' ')+1:]
+    return (msg[0],msg[2:])
 
-  def send_msg(self,msg):
+  def do_auth(self,msg):
 
+    if self.authed:
+      self.send_msg(ClientThread.AUTH_NONE,ClientThread.MSG_AUTH)
+      return
+
+    if self.server.password==msg:
+      self.authed = True
+      self.send_msg(ClientThread.AUTH_OKAY,ClientThread.MSG_AUTH)
+      self.log.debug('Successful auth from %s:%s' % self.address)
+    else:
+      self.send_msg(ClientThread.AUTH_FAILED,ClientThread.MSG_AUTH)
+      self.log.warning('Invalid password from %s:%s' % self.address)
+      raise RuntimeError
+
+  def send_msg(self,msg,typ=None):
+
+    typ = typ or ClientThread.MSG_TEXT
+    msg = typ+' '+msg
     length_str = str(len(msg))
     msg = (length_str+' '+msg)
     target = len(msg)
@@ -238,7 +283,8 @@ class SocketServer(Protocol):
     if self.opt('socket.internet'):
       hostname = socket.gethostname()
     port = self.opt('socket.port')
-    self.thread = ServerThread(self.log,self.queue,self.event_data,self.event_close)
+    self.thread = ServerThread(self.log,
+        self.queue,self.event_data,self.event_close,self.opt('socket.password'))
 
     self.log.info('Attempting to bind to %s:%s' % (hostname,port))
     try:

@@ -21,7 +21,7 @@
 #
 ################################################################################
 
-import sys,socket,select,argparse,time,traceback
+import sys,socket,select,argparse,time,traceback,getpass
 from threading import Thread,Event
 from Queue import Queue
 
@@ -38,6 +38,7 @@ def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('-n',default='localhost:8767',help='host:port to connect to',metavar='HOST')
   parser.add_argument('-t',action='store_true',help='include time stamps')
+  parser.add_argument('-p',action='store_true',help='prompt for password')
   args = parser.parse_args()
 
   if ':' not in args.n:
@@ -51,15 +52,23 @@ def main():
   send_queue = Queue()
   event_close = Event()
 
+  pword = None
+  if args.p:
+    print ''
+    pword = getpass.getpass()
+    print ''
+
   BufferThread(send_queue,event_close,args.t).start()
-  SocketThread(sock,send_queue,event_close,args.t).start()
+  SocketThread(sock,send_queue,event_close,args.t,pword).start()
 
   try:
     while not event_close.is_set():
       time.sleep(1)
+  except KeyboardInterrupt:
+    print '\n'
   except BaseException as e:
     print traceback.format_exc(e)
-    sock.close()
+  sock.close()
 
 ################################################################################
 # SocketThread class                                                           #
@@ -67,11 +76,19 @@ def main():
 
 class SocketThread(Thread):
 
-  def __init__(self,s,q,c,t):
+  MSG_AUTH = '0'
+  MSG_TEXT = '1'
+
+  AUTH_OKAY = 'OKAY'
+  AUTH_FAILED = 'FAILED'
+  AUTH_NONE = 'NONE'
+
+  def __init__(self,s,q,c,t,p):
     """create a new thread that reads from stdin and appends to a Queue"""
 
     super(SocketThread,self).__init__()
     self.daemon = True
+    self.auth_sent = False
 
     self.buffer = ''
 
@@ -79,9 +96,14 @@ class SocketThread(Thread):
     self.queue = q
     self.event_close = c
     self.time = t
+    self.password = p
 
   def run(self):
     """receive and send data on the socket"""
+
+    if self.password:
+      self.do_auth()
+    self.send_msg(' ')
 
     while not self.event_close.is_set():
       (read,write,err) = select.select([self.socket],[self.socket],[],1)
@@ -92,7 +114,8 @@ class SocketThread(Thread):
         except:
           break
         for msg in msgs:
-          self.nice_print(msg)
+          if msg:
+            self.nice_print(msg)
 
       if self.socket in write:
         while not self.queue.empty():
@@ -100,15 +123,25 @@ class SocketThread(Thread):
 
       time.sleep(0.1)
 
+  def die(self,msg):
+
     self.socket.close()
-    print '\n\nRemote closed connection\n'
+    print '\n\n  *** '+msg+'\n'
     self.event_close.set()
 
   def get_msgs(self):
 
     msgs = []
     while self.buffer or not msgs:
-      msgs.append(self.get_msg())
+      (typ,msg) = self.get_msg()
+      if typ==SocketThread.MSG_AUTH:
+        self.check_auth(msg)
+        msgs.append(None)
+      elif typ==SocketThread.MSG_TEXT or typ is None:
+        msgs.append(msg)
+      else:
+        self.die('Unsupported msg type "%s"; closing connection' % typ)
+
     return msgs
 
   def get_msg(self):
@@ -117,7 +150,8 @@ class SocketThread(Thread):
     while ' ' not in msg:
       s = self.socket.recv(4096)
       if not s:
-        raise RuntimeError
+        self.die('Remote closed connection')
+        return (None,None)
       msg += s
 
     length_str = msg.split(' ')[0]
@@ -125,11 +159,34 @@ class SocketThread(Thread):
     while len(msg)<target:
       msg += self.socket.recv(min(target-len(msg),4096))
 
-    self.buffer = msg[target:]
-    return msg[msg.find(' ')+1:]
+    (msg,self.buffer) = (msg[:target],msg[target:])
+    msg = msg[msg.find(' ')+1:]
+    return (msg[0],msg[2:])
 
-  def send_msg(self,msg):
+  def do_auth(self):
 
+    self.send_msg(self.password,SocketThread.MSG_AUTH)
+    self.auth_sent = True
+
+  def check_auth(self,msg):
+
+    if not self.auth_sent:
+      self.die('Server requires a password')
+      return
+
+    if msg==SocketThread.AUTH_OKAY:
+      return
+    elif msg==SocketThread.AUTH_FAILED:
+      self.die('Invalid username/password')
+    elif msg==SocketThread.AUTH_NONE:
+      self.nice_print('NOTICE: Server does not require a password')
+    else:
+      self.die('Received invalid Auth response from server')
+
+  def send_msg(self,msg,typ=None):
+
+    typ = typ or SocketThread.MSG_TEXT
+    msg = typ+' '+msg
     length_str = str(len(msg))
     msg = (length_str+' '+msg)
     target = len(msg)
