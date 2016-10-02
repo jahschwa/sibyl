@@ -34,7 +34,7 @@ def conf(bot):
 
   return [{'name' : 'file',
             'default' : 'data/sibyl_lib.pickle',
-            'valid' : bot.conf.valid_file},
+            'valid' : bot.conf.valid_wfile},
           {'name' : 'max_matches',
             'default' : 10,
             'parse' : bot.conf.parse_int},

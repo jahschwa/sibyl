@@ -66,7 +66,7 @@ class Config(object):
 ('rooms',       ({},                False,  None,             self.parse_rooms)),
 ('nick_name',   ('Sibyl',           False,  None,             None)),
 ('log_level',   (logging.INFO,      False,  None,             self.parse_log)),
-('log_file',    ('data/sibyl.log',  False,  self.valid_file,  None)),
+('log_file',    ('data/sibyl.log',  False,  self.valid_wfile, None)),
 ('log_append',  (True,              False,  None,             self.parse_bool)),
 ('log_requests',(False,             False,  None,             self.parse_bool)),
 ('log_urllib3', (False,             False,  None,             self.parse_bool)),
@@ -396,7 +396,16 @@ class Config(object):
     except:
       return False
 
-  def valid_file(self,s):
+  def valid_rfile(self,s):
+    """return True if we can read the file"""
+
+    try:
+      with open(s,'r') as f:
+        return True
+    except:
+      return False
+
+  def valid_wfile(self,s):
     """return True if we can write to the file"""
 
     try:

@@ -27,6 +27,13 @@ import requests
 
 from lib.decorators import *
 from lib.util import getcell
+from lib.protocol import Message
+
+@botconf
+def conf(bot):
+  """add config option"""
+
+  return {'name':'config_rooms','default':True,'parse':bot.conf.parse_bool}
 
 @botinit
 def init(bot):
@@ -38,6 +45,9 @@ def init(bot):
 def config(bot,mess,args):
   """view and edit config - config (show|set|save|diff|reset) (opt|*) [value]"""
 
+  if (not bot.opt('general.config_rooms')) and mess.get_type()==Message.GROUP:
+    return 'The config command is disabled in rooms'
+
   # default action is 'show'
   if not args or args[0] not in ('show','set','save','diff','reset'):
     args.insert(0,'show')
@@ -48,16 +58,28 @@ def config(bot,mess,args):
 
   if opt=='*' and cmd=='show':
     opts = bot.opt()
-    opts['password'] = 'REDACTED'
+    for opt in opts:
+      if opt.endswith('password'):
+        opts[opt] = 'REDACTED'
+    for proto in opts['rooms']:
+      for room in opts['rooms'][proto]:
+        if room['pass']:
+          room['pass'] = 'REDACTED'
     return str(opts)
   if opt not in bot.opt() and opt!='*':
     return 'Invalid opt'
-  if opt=='password':
-    return 'You may not access that option via chat!'
+  if opt.endswith('password'):
+    return 'You may not access passwords via chat!'
 
   # return the value of the specified opt
   if cmd=='show':
-    return opt+' = '+str(bot.opt(opt))
+    val = bot.opt(opt)
+    if opt=='rooms':
+      for proto in val:
+        for room in val[proto]:
+          if room['pass']:
+            room['pass'] = 'REDACTED'
+    return opt+' = '+str(val)
 
   # return opt values that have been edited but not saved
   if cmd=='diff':
@@ -73,7 +95,7 @@ def config(bot,mess,args):
         % (opt,bot.conf_diff[opt][0],bot.opt[opt]))
 
   # some options don't make sense to edit in chat
-  if opt in ('chat_proto','username','disabled','cmd_dir'):
+  if opt in ('protocols','disabled','enabled','cmd_dir','rooms'):
     return 'You may not edit that option via chat'
 
   # revert to original config

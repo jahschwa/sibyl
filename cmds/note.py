@@ -34,7 +34,7 @@ def conf(bot):
 
   return {'name':'file',
           'default':'data/sibyl_note.txt',
-          'valid':bot.conf.valid_file}
+          'valid':bot.conf.valid_wfile}
 
 @botinit
 def init(bot):

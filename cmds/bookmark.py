@@ -34,7 +34,7 @@ def conf(bot):
 
   return [{'name':'file',
           'default':'data/sibyl_bm.txt',
-          'valid':bot.conf.valid_file},
+          'valid':bot.conf.valid_wfile},
           {'name':'resume_next',
           'default':False,
           'parse':bot.conf.parse_bool}]
