@@ -39,6 +39,9 @@ def conf(bot):
   return [
     {'name':'port','default':8767},
     {'name':'password'},
+    {'name':'pubkey','valid':bot.conf.valid_rfile},
+    {'name':'privkey','valid':bot.conf.valid_rfile},
+    {'name':'key_password'},
     {'name':'internet','default':False,'parse':bot.conf.parse_bool}
   ]
 
@@ -48,7 +51,7 @@ def conf(bot):
 
 class ServerThread(Thread):
 
-  def __init__(self,log,q,d,c,pword=None):
+  def __init__(self,log,q,d,c,pword=None,ssl=None):
     """create a new thread that handles socket connections"""
 
     super(ServerThread,self).__init__()
@@ -59,6 +62,7 @@ class ServerThread(Thread):
     self.event_data = d
     self.event_close = c
     self.password = pword
+    self.context = ssl
 
     self.dead = Queue()
     self.clients = {}
@@ -82,11 +86,24 @@ class ServerThread(Thread):
 
       if self.socket in read:
         (conn,address) = self.socket.accept()
-        self.log.info('Got new connection from %s:%s' % address)
-        q = Queue()
-        self.clients[address] = q
-        ipc = {'rq':self.queue,'sq':q,'ed':self.event_data,'ec':self.event_close}
-        ClientThread(self,conn,address,ipc).start()
+
+        try:
+          if self.context:
+            conn = self.context.wrap_socket(conn,server_side=True)
+          self.log.info('Got new connection from %s:%s' % address)
+          q = Queue()
+          self.clients[address] = q
+          ipc = {'rq':self.queue,'sq':q,
+                  'ed':self.event_data,'ec':self.event_close}
+          ClientThread(self,conn,address,ipc).start()
+        except Exception as e:
+          self.log.warning('New connection %s:%s failed (%s)' %
+              (address+(e.__class__.__name__,)))
+          try:
+            conn.shutdown(socket.SHUT_RDWR)
+          except:
+            pass
+          conn.close()
 
       while not self.dead.empty():
         client = self.dead.get()
@@ -165,7 +182,6 @@ class ClientThread(Thread):
     msgs = []
     while self.buffer or not msgs:
       (typ,msg) = self.get_msg()
-      self.log.debug('MESSAGE: "%s"' % msg)
       if typ==ClientThread.MSG_AUTH:
         self.do_auth(msg)
         msg = None
@@ -186,10 +202,9 @@ class ClientThread(Thread):
     msg = self.buffer
     while ' ' not in msg:
       s = self.socket.recv(4096)
-      self.log.debug('RECEIVED: "%s"' % s)
       if not s:
         self.log.debug('Received EOS from %s:%s' % self.address)
-        return (None,None)
+        raise RuntimeError
       msg += s
 
     length_str = msg.split(' ')[0]
@@ -283,8 +298,27 @@ class SocketServer(Protocol):
     if self.opt('socket.internet'):
       hostname = socket.gethostname()
     port = self.opt('socket.port')
+
+    (key,crt) = (self.opt('socket.privkey'),self.opt('socket.pubkey'))
+    if key or crt:
+      if not (key and crt):
+        missing = [x for (x,y) in {'pubkey':crt,'privkey':key}.items() if not y]
+        self.log.error('Missing %s; not using SSL' % missing[0])
+        context = None
+      else:
+        import ssl
+        context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        context.verify_mode = ssl.CERT_NONE
+        try:
+          context.load_cert_chain(certfile=crt,keyfile=key,password=self.get_pass)
+        except Exception as e:
+          self.log.debug('Error loading cert chain (%s)' % e.__class__.__name__)
+          self.log.error('Invalid privkey password; not using SSL')
+          context = None
+
     self.thread = ServerThread(self.log,
-        self.queue,self.event_data,self.event_close,self.opt('socket.password'))
+        self.queue,self.event_data,self.event_close,
+        self.opt('socket.password'),context)
 
     self.log.info('Attempting to bind to %s:%s' % (hostname,port))
     try:
@@ -325,8 +359,10 @@ class SocketServer(Protocol):
       self.event_data.clear()
 
   def shutdown(self):
-    self.event_close.set()
-    self.thread.join()
+    if hasattr(self,'event_close'):
+      self.event_close.set()
+    if self.thread:
+      self.thread.join()
 
   def send(self,text,to):
     self.thread.send(text,to.address)
@@ -362,6 +398,11 @@ class SocketServer(Protocol):
     return Client((time.time(),user),typ)
 
 ################################################################################
+
+  def get_pass(self):
+    """get the cert password or raise an error"""
+
+    return self.opt('socket.key_password') or ''
 
   def special_cmds(self,text):
     """process special admin commands"""

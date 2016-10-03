@@ -21,14 +21,9 @@
 #
 ################################################################################
 
-import sys,socket,select,argparse,time,traceback,getpass
+import sys,socket,select,argparse,time,traceback,getpass,ssl
 from threading import Thread,Event
 from Queue import Queue
-
-try:
-  import readline
-except:
-  pass
 
 USER = 'human@socket'
 SIBYL = 'sibyl@socket'
@@ -36,30 +31,63 @@ SIBYL = 'sibyl@socket'
 def main():
 
   parser = argparse.ArgumentParser()
-  parser.add_argument('-n',default='localhost:8767',help='host:port to connect to',metavar='HOST')
-  parser.add_argument('-t',action='store_true',help='include time stamps')
-  parser.add_argument('-p',action='store_true',help='prompt for password')
+  parser.add_argument('-n','--host',default='localhost:8767',help='host:port to connect to',metavar='HOST')
+  parser.add_argument('-t','--timestamp',action='store_true',help='include time stamps')
+  parser.add_argument('-p','--password',action='store_true',help='prompt for password')
+  parser.add_argument('-v','--noverify',action='store_true',help="don't verify remote certificate")
+  parser.add_argument('-s','--ssl',action='store_true',help='use ssl')
+  parser.add_argument('-r','--noreadline',action='store_true',help="don't use GNU readline")
   args = parser.parse_args()
 
-  if ':' not in args.n:
-    args.n += ':8767'
-  (host,port) = args.n.split(':')
+  if not args.noreadline:
+    try:
+      import readline
+    except:
+      pass
+
+  if args.noverify and not args.ssl:
+    print '  *** Ignoring option --noverify (not using ssl)'
+
+  if ':' not in args.host:
+    args.host += ':8767'
+  (host,port) = args.host.split(':')
   port = int(port)
 
-  sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-  sock.connect((host,port))
-
-  send_queue = Queue()
-  event_close = Event()
-
   pword = None
-  if args.p:
+  if args.password:
     print ''
     pword = getpass.getpass()
     print ''
 
-  BufferThread(send_queue,event_close,args.t).start()
-  SocketThread(sock,send_queue,event_close,args.t,pword).start()
+  sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+
+  if args.ssl:
+    context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+    if not args.noverify:
+      context.verify_mode = ssl.CERT_REQUIRED
+      context.check_hostname = True
+      context.load_default_certs()
+    context.options |= (ssl.OP_NO_SSLv2 | ssl.OP_NO_SSLv3)
+    sock = context.wrap_socket(sock,server_hostname=host)
+    try:
+      sock.connect((host,port))
+    except ssl.SSLEOFError:
+      print '  *** SSL handshake failed; does the server support it?\n'
+      sock.close()
+      sys.exit(0)
+    except ssl.SSLError as e:
+      print ' ***SSL failed because: %s\n' % e.reason
+      if e.reason=='CERTIFICATE_VERIFY_FAILED':
+        print 'If the server certificate is self-signed, try again with -v\n'
+      sys.exit(0)
+  else:
+    sock.connect((host,port))
+
+  send_queue = Queue()
+  event_close = Event()
+
+  BufferThread(send_queue,event_close,args.timestamp).start()
+  SocketThread(sock,send_queue,event_close,args.timestamp,pword).start()
 
   try:
     while not event_close.is_set():
@@ -198,10 +226,16 @@ class SocketThread(Thread):
   def nice_print(self,s):
 
     prompt = ((time.asctime()+' | ') if self.time else '')+USER+': '
-    spaces = len(readline.get_line_buffer())+len(prompt)
-    sys.stdout.write('\r'+' '*spaces+'\r')
-    print ((time.asctime()+' | ') if self.time else '')+SIBYL+': '+s
-    sys.stdout.write(prompt+readline.get_line_buffer())
+    text = ((time.asctime()+' | ') if self.time else '')+SIBYL+': '+s
+
+    if 'readline' in sys.modules:
+      spaces = len(readline.get_line_buffer())+len(prompt)
+      sys.stdout.write('\r'+' '*spaces+'\r')
+      print text
+      sys.stdout.write(prompt+readline.get_line_buffer())
+    else:
+      sys.stdout.write('\n'+text+'\n'+prompt)
+
     sys.stdout.flush()
 
 ################################################################################

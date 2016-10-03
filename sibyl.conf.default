@@ -64,6 +64,18 @@ protocols = cli
 # Default port (note that on linux only root can use ports below 1024)
 #socket.port = 8767
 
+# If specified, clients must enter this password when connecting
+#socket.password =
+
+# If the first two are set, connections will be created using SSL
+# the first two are file paths; the last is if the private key is encrypted
+#socket.pubkey =
+#socket.privkey =
+#socket.key_password =
+
+# If True, listen for connections from the internet instead of just localhost
+#socket.internet = False
+
 ################################################################################
 # XMPP options
 ################################################################################
