@@ -470,7 +470,7 @@ class Config(object):
       try:
         mod = util.load_module('sibyl_'+proto,'protocols')
         for (name,clas) in inspect.getmembers(mod,inspect.isclass):
-          if issubclass(clas,Protocol):
+          if issubclass(clas,Protocol) and clas!=Protocol:
             protocols[proto] = clas
         if protocols[proto] is None:
           self.log('critical',
