@@ -21,9 +21,9 @@
 #
 ################################################################################
 
-import os,pickle,time,traceback
+import os,pickle,time,traceback,threading,Queue,multiprocessing
 
-# def rsamba() imports smbc
+# we import smbc in init(), find(), and rsamba() if needed
 
 from lib.decorators import *
 import lib.util as util
@@ -96,14 +96,18 @@ def parse_lib(conf,opt,val):
 
 @botinit
 def init(bot):
-  """create libraries"""
+  """create libraries and threading"""
 
-  bot.add_var('lib_last_rebuilt',time.asctime())
+  bot.add_var('lib_last_rebuilt')
   bot.add_var('lib_last_elapsed',0)
   bot.add_var('lib_audio_dir')
   bot.add_var('lib_audio_file')
   bot.add_var('lib_video_dir')
   bot.add_var('lib_video_file')
+
+  bot.add_var('lib_lock',threading.Lock())
+  bot.add_var('lib_last_op')
+  bot.add_var('lib_pending_send',Queue.Queue())
 
   if os.path.isfile(bot.opt('library.file')):
     bot.run_cmd('library',['load'])
@@ -127,88 +131,28 @@ def init(bot):
   else:
     bot.log.error("Can't find module smbc; network shares will be disabled")
 
+@botidle
+def idle(bot):
+  """send queue for thread safety"""
+
+  while not bot.lib_pending_send.empty():
+    try:
+      bot.send(*bot.lib_pending_send.get())
+    except:
+      pass
+
 @botcmd
 def library(bot,mess,args):
   """control media library - library (info|load|rebuild|save)"""
 
-  if not args:
-    args = ['info']
+  # use threading since rebuilding the library can take minutes
+  bot.log.debug('Spawning new thread')
+  thread = LibraryThread(bot,mess,args)
+  thread.start()
 
-  # read the library from a pickle and load it into sibyl
-  if args[0]=='load':
-    start = time.time()
-    with open(bot.opt('library.file'),'rb') as f:
-      d = pickle.load(f)
-    stop = time.time()
-    
-    bot.lib_last_rebuilt = d['lib_last_rebuilt']
-    bot.lib_last_elapsed = d['lib_last_elapsed']
-    bot.lib_video_dir = d['lib_video_dir']
-    bot.lib_video_file = d['lib_video_file']
-    bot.lib_audio_dir = d['lib_audio_dir']
-    bot.lib_audio_file = d['lib_audio_file']
-
-    n = len(bot.lib_audio_file)+len(bot.lib_video_file)
-    s = ('Library loaded from "%s" with %s files in %f sec' %
-        (bot.opt('library.file'),n,stop-start))
-    bot.log.info(s)
-    return s
-
-  # save sibyl's library to a pickle
-  elif args[0]=='save':
-    d = ({'lib_last_rebuilt':bot.lib_last_rebuilt,
-          'lib_last_elapsed':bot.lib_last_elapsed,
-          'lib_video_dir':bot.lib_video_dir,
-          'lib_video_file':bot.lib_video_file,
-          'lib_audio_dir':bot.lib_audio_dir,
-          'lib_audio_file':bot.lib_audio_file})
-    with open(bot.opt('library.file'),'wb') as f:
-      pickle.dump(d,f,-1)
-
-    s = 'Library saved to "'+bot.opt('library.file')+'"'
-    bot.log.info(s)
-    return s
-
-  # rebuild the library by traversing all paths then save it
-  elif args[0]=='rebuild':
-
-    # when sibyl calls this method on init mess is None
-    if mess is not None:
-      t = util.sec2str(bot.lib_last_elapsed)
-      bot.send('Working... (last rebuild took '+t+')',mess.get_from())
-
-    # time the rebuild and update library vars
-    start = time.time()
-    bot.lib_last_rebuilt = time.asctime()
-
-    libs = [('lib_video_dir','dir',bot.opt('library.video_dirs')),
-            ('lib_video_file','file',bot.opt('library.video_dirs')),
-            ('lib_audio_dir','dir',bot.opt('library.audio_dirs')),
-            ('lib_audio_file','file',bot.opt('library.audio_dirs'))]
-    errors = []
-    for lib in libs:
-      (r,e) = find(bot,lib[1],lib[2])
-      setattr(bot,lib[0],r)
-      for x in e:
-        if x not in errors:
-          bot.log.error(x[1])
-          errors.append(x)
-    
-    bot.lib_last_elapsed = int(time.time()-start)
-    result = bot.run_cmd('library',['save'])
-
-    s = bot.run_cmd('library')
-    bot.log.info(s)
-    if errors:
-      s += ' with errors (see log): '+str([x[0] for x in errors])
-    return s
-
-  # default prints some info
-  t = bot.lib_last_elapsed
-  s = str(int(t/60))+':'
-  s += str(int(t-60*int(t/60))).zfill(2)
-  n = len(bot.lib_audio_file)+len(bot.lib_video_file)
-  return 'Rebuilt on '+bot.lib_last_rebuilt+' in '+s+' with '+str(n)+' files'
+  # only block when called on bot init to keep logs looking nice
+  if not mess:
+    thread.join()
 
 @botcmd
 def search(bot,mess,args):
@@ -237,7 +181,7 @@ def search(bot,mess,args):
 
   return 'Found '+str(len(matches))+' match: '+str(matches[0])
 
-def find(bot,fd,dirs):
+def find(bot,dirs):
   """helper function for library()"""
 
   paths = []
@@ -250,18 +194,16 @@ def find(bot,fd,dirs):
     else:
       paths.append(path)
 
-  result = []
+  dirs = []
+  files = []
   errors = []
 
   # find all matching directories or files depending on fd parameter
   for path in paths:
     try:
-      if fd=='dir':
-        contents = util.rlistdir(unicode(path))
-      else:
-        contents = util.rlistfiles(unicode(path))
-      for entry in contents:
-        result.append(entry)
+      (temp_dirs,temp_files) = util.rlistdir(unicode(path))
+      dirs.extend(temp_dirs)
+      files.extend(temp_files)
     except Exception as e:
       msg = ('Unable to traverse "%s": %s' %
           (path,traceback.format_exc(e).split('\n')[-2]))
@@ -272,31 +214,64 @@ def find(bot,fd,dirs):
 
   # same as above but for samba shares
   for path in smbpaths:
+    temp_dirs = []
+    temp_files = []
+
     try:
       share = 'smb://'+path['server']+'/'+path['share']
       smb = smbc.Context()
       if path['username']:
         smb.functionAuthData = (lambda se,sh,w,u,p:
             (w,path['username'],path['password']))
-      
+
       smb.opendir(share[:share.rfind('/')])
       ignore = [smbc.PermissionError]
-      typ = (bot.smbc_dir if fd=='dir' else bot.smbc_file)
-      result.extend(rsamba(bot,smb,share,typ,ignore))
-    except Exception as e:
+
+      # even though we're just doing blocking I/O, threading isn't enough
+      # we need sub-processes via multiprocessing for samba shares
+      # because pysmbc doesn't release the GIL so it still blocks in threads
+      bot.log.debug('Starting new process for "%s"' % share)
+      q = multiprocessing.Queue()
+      e = multiprocessing.Queue()
+      args = (bot.smbc_dir,bot.smbc_file,q,e,smb,share,ignore)
+      p = multiprocessing.Process(target=rsamba,args=args)
+      p.start()
+
+      # we're using a Queue for message passing
+      while p.is_alive() or not q.empty():
+        while not q.empty():
+          (typ,name) = q.get()
+          if typ==bot.smbc_dir:
+            temp_dirs.append(name)
+          elif typ==bot.smbc_file:
+            temp_files.append(name)
+        time.sleep(0.1)
+
+      # the child process also reports errors using a Queue
+      bot.log.debug('Process done with%s errors' % ('out' if e.empty() else ''))
+      if e.empty():
+        dirs.extend(temp_dirs)
+        files.extend(temp_files)
+      else:
+        raise e.get()
+
+    except Exception as ex:
       msg = ('Unable to traverse "%s": %s' %
-          (share,traceback.format_exc(e).split('\n')[-2]))
+          (share,traceback.format_exc(ex).split('\n')[-2]))
       errors.append((share,msg))
 
-  return (result,errors)
+  return (dirs,files,errors)
 
-# @param bot (SibylBot) the bot object
+# @param smbc_dir (int) the smbc directory enum
+# @param smbc_file (int) the smbc file enum
+# @param q (Queue) the queue to add entries
+# @param e (Queue) the queue to add errors
 # @param ctx (Context) the smbc Context (already authenticated if needed)
 # @param path (str) a samba directory
 # @param typ (long) the smbc type to return, or all types if None
 # @param ignore (list) exceptions to ignore (must derive from Exception)
-# @return (list) every item (recursive) in the given directory of type typ
-def rsamba(bot,ctx,path,typ=None,ignore=None):
+# @return tuple(list,list) all (dirs,files) in the given path (recursive)
+def rsamba(smbc_dir,smbc_file,q,e,ctx,path,ignore=None):
   """recursively list directories"""
 
   import smbc
@@ -310,27 +285,166 @@ def rsamba(bot,ctx,path,typ=None,ignore=None):
     cur_path = path+'/'+c.name
 
     # handle files
-    if c.smbc_type==bot.smbc_file:
-      if typ in (bot.smbc_file,None):
-        allitems.append(cur_path)
+    if c.smbc_type==smbc_file:
+      q.put((smbc_file,cur_path))
 
     # handle directories
-    elif c.smbc_type==bot.smbc_dir:
+    elif c.smbc_type==smbc_dir:
       if c.name in ('.','..'):
         continue
-      if typ in (bot.smbc_dir,None):
-        allitems.append(cur_path+'/')
+      q.put((smbc_dir,cur_path+'/'))
       try:
-        allitems.extend(rsamba(bot,ctx,cur_path,typ,ignore))
-      except Exception as e:
+        if not rsamba(smbc_dir,smbc_file,q,e,ctx,cur_path,ignore):
+          return False
+      except Exception as ex:
         ignored = False
         for i in ignore:
-          ignored = (ignored or isinstance(e,i))
+          ignored = (ignored or isinstance(ex,i))
         if not ignored:
-          raise e
+          e.put(ex)
+          return False
 
-    # log unknown types
-    else:
-      bot.log.debug('Unknown smbc_type %s for "%s"' % (c.smbc_type,cur_path))
+  return True
 
-  return allitems
+################################################################################
+# LibraryThread class
+################################################################################
+
+class LibraryThread(threading.Thread):
+
+  def __init__(self,bot,mess,args):
+
+    super(LibraryThread,self).__init__()
+    self.daemon = True
+
+    self.bot = bot
+    self.mess = mess
+    self.args = args
+
+    self.lock = bot.lib_lock
+
+  def run(self):
+
+    # if a "rebuild" is executing return immediately, else wait for the lock
+    if not self.lock.acquire(False):
+      if self.bot.lib_last_op=='rebuild':
+        t = util.sec2str(time.time()-self.bot.lib_last_rebuilt)
+        self.send('Library locked for rebuild'+
+            ' (last took %s, current at %s)'
+            % (util.sec2str(self.bot.lib_last_elapsed),t))
+        self.bot.log.debug('Thread finished; closing')
+        return
+      else:
+        self.bot.log.debug('Waiting for other thread to release library lock')
+        self.lock.acquire(True)
+
+    try:
+
+      if self.args:
+        if self.args[0] not in ('load','save','rebuild','info'):
+          self.send('Unknown option "%s"' % self.args[0])
+          return
+      else:
+        self.args = ['info']
+
+      self.bot.lib_last_op = self.args[0]
+      msg = getattr(self,self.args[0])()
+      self.send(msg)
+
+    except Exception as ex:
+
+      self.bot.log.error('Error in thread while executing "%s"' % self.args[0])
+      full = traceback.format_exc(ex)
+      short = full.split('\n')[-2]
+
+      self.bot.log.error('  %s' % short)
+      self.bot.log.debug(full)
+
+    finally:
+
+      self.lock.release()
+      self.bot.log.debug('Thread finished; closing')
+
+  def send(self,text):
+    """queue a message to be sent thread-safely via our @botidle hook"""
+
+    # when called during bot init mess is None so don't send anything
+    if self.mess:
+      self.bot.lib_pending_send.put((text,self.mess.get_from()))
+
+  def load(self):
+    """read the library from a pickle and load it into sibyl"""
+
+    start = time.time()
+    with open(self.bot.opt('library.file'),'rb') as f:
+      d = pickle.load(f)
+    stop = time.time()
+
+    names = ['lib_last_rebuilt','lib_last_elapsed',
+        'lib_video_dir','lib_video_file','lib_audio_dir','lib_audio_file']
+    for name in names:
+      setattr(self.bot,name,d[name])
+
+    n = len(self.bot.lib_audio_file)+len(self.bot.lib_video_file)
+    s = ('Library loaded from "%s" with %s files in %f sec' %
+        (self.bot.opt('library.file'),n,stop-start))
+    self.bot.log.info(s)
+
+    return s
+
+  def save(self):
+    """save sibyl's library to a pickle"""
+
+    names = ['lib_last_rebuilt','lib_last_elapsed',
+        'lib_video_dir','lib_video_file','lib_audio_dir','lib_audio_file']
+    d = {name:getattr(self.bot,name) for name in names}
+
+    with open(self.bot.opt('library.file'),'wb') as f:
+      pickle.dump(d,f,-1)
+
+    s = 'Library saved to "%s"' % self.bot.opt('library.file')
+    self.bot.log.info(s)
+
+    return s
+
+  def rebuild(self):
+    """rebuild the library by traversing all paths then save it"""
+
+    t = util.sec2str(self.bot.lib_last_elapsed)
+    self.send('Working... (last rebuild took %s)' % t)
+
+    # time the rebuild and update library vars
+    start = time.time()
+    self.bot.lib_last_rebuilt = time.time()
+
+    # update library vars and log errors
+    errors = []
+    for lib in ('audio','video'):
+      (dirs,files,errs) = find(self.bot,self.bot.opt('library.%s_dirs' % lib))
+      setattr(self.bot,'lib_%s_dir' % lib,dirs)
+      setattr(self.bot,'lib_%s_file' % lib,files)
+      for e in errs:
+        if e not in errors:
+          self.bot.log.error(e[1])
+          errors.append(e)
+    
+    self.bot.lib_last_elapsed = int(time.time()-start)
+    result = self.save()
+
+    s = self.info()
+    self.bot.log.info(s)
+    if errors:
+      s += ' with errors (see log): '+str([x[0] for x in errors])
+
+    return s
+
+  def info(self):
+    """give some info"""
+
+    t = self.bot.lib_last_elapsed
+    s = str(int(t/60))+':'
+    s += str(int(t-60*int(t/60))).zfill(2)
+    n = len(self.bot.lib_audio_file)+len(self.bot.lib_video_file)
+    t = time.asctime(time.localtime(self.bot.lib_last_rebuilt))
+
+    return 'Rebuilt on %s in %s with %s files' % (t,s,n)
