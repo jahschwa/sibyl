@@ -195,8 +195,8 @@ protocols = cli
 #catch_except = True
 
 # If True, kill stdout to disable libraries from printing to the console
-# NOTE: the stdin protocol will work regardless of this setting
+# NOTE: the cli protocol will work regardless of this setting
 #kill_stdout = True
 
 # Ignore bw_list and allow every command for these protocols (comma-separated)
-#admin_protos = stdin
+#admin_protos = cli
