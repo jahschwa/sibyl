@@ -219,26 +219,18 @@ def str2sec(t):
   return time2sec(str2time(t))
 
 # @param path (str,unicode) a local directory
-# @return (list) every sub-directory (recursive) in the given directory
+# @return tuple(list,list) all (dirs,files) in given directory (recursive)
 def rlistdir(path,symlinks=True):
   """list folders recursively"""
 
-  alldirs = []
+  dirs = []
+  files = []
   for (cur_path,dirnames,filenames) in os.walk(path,followlinks=symlinks):
     for dirname in dirnames:
-      alldirs.append(os.path.join(cur_path,dirname)+os.path.sep)
-  return alldirs
-
-# @param path (str,unicode) a local directory
-# @return (list) every file (recursive) in the given directory
-def rlistfiles(path,symlinks=True):
-  """list files recursively"""
-
-  allfiles = []
-  for (cur_path,dirnames,filenames) in os.walk(path,followlinks=symlinks):
+      dirs.append(os.path.join(cur_path,dirname)+os.path.sep)
     for filename in filenames:
-      allfiles.append(os.path.join(cur_path,filename))
-  return allfiles
+      files.append(os.path.join(cur_path,filename))
+  return (dirs,files)
 
 # @param l (list of str) list of search terms
 # @param s (str) the string to test against each search term

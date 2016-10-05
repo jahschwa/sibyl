@@ -173,8 +173,8 @@ class SibylBot(object):
     self.conf.reload(log=False)
 
     # check for duplicate plugin files
-    files = [os.path.splitext(x)[0] for x in
-        util.rlistfiles(self.opt('cmd_dir')) if
+    (_,files) = util.rlistdir(self.opt('cmd_dir'))
+    files = [os.path.splitext(x)[0] for x in files if
         ('__init__' not in x and x.split(os.path.extsep)[-1]=='py')]
     files = sorted(files,key=os.path.basename)
     files = [x for x in files if os.path.basename(x) not in self.opt('disable')]
@@ -213,8 +213,9 @@ class SibylBot(object):
     success = True
 
     # build file list before-hand so we can check dependencies
-    files = [x for x in util.rlistfiles(d) if x.split(os.path.extsep)[-1]=='py']
-    files = [x for x in files if '__init__' not in x]
+    (_,files) = util.rlistdir(d)
+    files = [x for x in files if
+        (x.split(os.path.extsep)[-1]=='py' and '__init__' not in x)]
     files = sorted(files,key=os.path.basename)
     mods = {}
 
