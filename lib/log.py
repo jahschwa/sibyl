@@ -42,7 +42,7 @@ class Log(object):
 # the rest of the functions in this class emulate functionality from logging   #
 ################################################################################
 
-  def log(lvl,msg):
+  def log(self,lvl,msg):
 
     levels = {'debug':logging.DEBUG,
               'info':logging.INFO,

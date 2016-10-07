@@ -105,6 +105,7 @@ class SibylBot(object):
     # log config errors and check for success
     self.errors.extend([x[1] for x in self.conf.log_msgs])
     self.conf.process_log()
+    self.conf.log = self.log.log
     if dup_plugins:
       self.log.error(dup_plugins)
       self.log.critical('Duplicate plugin names; exiting')
