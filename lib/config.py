@@ -42,8 +42,9 @@ class Config(object):
   # indices in option tuple for convenience
   DEF = 0
   REQ = 1
-  VALID = 2
-  PARSE = 3
+  PARSE = 2
+  VALID = 3
+  POST = 4
 
   # config reload results
   FAIL = 0
@@ -57,30 +58,30 @@ class Config(object):
     # OrderedDict containing full descriptions of options
     self.OPTS = odict([
 
-#option         default             requir  validate_func     parse_func
-#-------------------------------------------------------------------------------
-('protocols',   ({},                True,   None,             self.parse_protocols)),
-('enable',      ([],                False,  None,             self.parse_plugins)),
-('disable',     ([],                False,  None,             self.parse_plugins)),
-('cmd_dir',     ('cmds',            False,  self.valid_dir,   None)),
-('rooms',       ({},                False,  None,             self.parse_rooms)),
-('nick_name',   ('Sibyl',           False,  None,             None)),
-('log_level',   (logging.INFO,      False,  None,             self.parse_log)),
-('log_file',    ('data/sibyl.log',  False,  self.valid_wfile, None)),
-('log_append',  (True,              False,  None,             self.parse_bool)),
-('log_requests',(False,             False,  None,             self.parse_bool)),
-('log_urllib3', (False,             False,  None,             self.parse_bool)),
-('bw_list',     ([('w','*','*')],   False,  self.valid_bw,    self.parse_bw)),
-('chat_ctrl',   (False,             False,  None,             self.parse_bool)),
-('cmd_prefix',  (None,              False,  None,             None)),
-('except_reply',(False,             False,  None,             self.parse_bool)),
-('only_direct', (True,              False,  None,             self.parse_bool)),
-('catch_except',(True,              False,  None,             self.parse_bool)),
-('help_plugin', (False,             False,  None,             self.parse_bool)),
-('recon_wait',  (60,                False,  None,             self.parse_int)),
-('kill_stdout', (True,              False,  None,             self.parse_bool)),
-('tell_errors', (True,              False,  None,             self.parse_bool)),
-('admin_protos',(['cli'],           False,  self.valid_admin, self.parse_admin))
+#option         default             requir  parse_func            validate_func       post_func
+#----------------------------------------------------------------------------------------------
+('protocols',   ({},                True,   self.parse_protocols, None,               None)), 
+('enable',      ([],                False,  self.parse_plugins,   None,               None)),
+('disable',     ([],                False,  self.parse_plugins,   None,               None)),
+('cmd_dir',     ('cmds',            False,  None,                 self.valid_dir,     None)),
+('rooms',       ({},                False,  self.parse_rooms,     None,               None)),
+('nick_name',   ('Sibyl',           False,  None,                 None,               None)),
+('log_level',   (logging.INFO,      False,  self.parse_log,       None,               None)),
+('log_file',    ('data/sibyl.log',  False,  None,                 self.valid_wfile,   None)),
+('log_append',  (True,              False,  self.parse_bool,      None,               None)),
+('log_requests',(False,             False,  self.parse_bool,      None,               None)),
+('log_urllib3', (False,             False,  self.parse_bool,      None,               None)),
+('bw_list',     ([('w','*','*')],   False,  self.parse_bw,        self.valid_bw,      None)),
+('chat_ctrl',   (False,             False,  self.parse_bool,      None,               None)),
+('cmd_prefix',  (None,              False,  None,                 None,               None)),
+('except_reply',(False,             False,  self.parse_bool,      None,               None)),
+('only_direct', (True,              False,  self.parse_bool,      None,               None)),
+('catch_except',(True,              False,  self.parse_bool,      None,               None)),
+('help_plugin', (False,             False,  self.parse_bool,      None,               None)),
+('recon_wait',  (60,                False,  self.parse_int,       None,               None)),
+('kill_stdout', (True,              False,  self.parse_bool,      None,               None)),
+('tell_errors', (True,              False,  self.parse_bool,      None,               None)),
+('admin_protos',(['cli'],           False,  self.parse_admin,     self.valid_admin,   None))
 
     ])
 
@@ -146,16 +147,16 @@ class Config(object):
           (name,self.NS[name],ns))
       raise DuplicateOptError
 
-    default = opt.get('default',None)
-    req = opt.get('req',False)
-    valid = opt.get('valid',None)
-    if valid:
-      valid = self.__bind(valid)
-    parse = opt.get('parse',None)
-    if parse:
-      parse = self.__bind(parse)
+    opt['default'] = opt.get('default',None)
+    opt['req'] = opt.get('req',False)
 
-    self.OPTS[name] = (default,req,valid,parse)
+    for hook in ('parse','valid','post'):
+      opt[hook] = opt.get(hook,None)
+      if opt[hook]:
+        opt[hook] = self.__bind(opt[hook])
+
+    self.OPTS[name] = (
+      opt['default'],opt['req'],opt['parse'],opt['valid'],opt['post'])
     self.NS[name] = ns
 
   # @param opt (str) the option to set
@@ -178,7 +179,15 @@ class Config(object):
       if not func(val):
         return False
 
-    # set the option in ourself and the bot
+    # try to post if necessary
+    try:
+      func = self.OPTS[opt][self.POST]
+      if func:
+        val = func(self.opts,opt,val)
+    except:
+      return False
+
+    # set the option in ourself
     self.opts[opt] = val
     return True
 
@@ -299,6 +308,9 @@ class Config(object):
     # update self.opts with parsed and valid values
     self.opts.update(opts)
 
+    # execute post hooks
+    self.__post(self.opts)
+
   # @return (dict) the values of all config options read from the file
   def __read(self):
     """return a dict representing config file in the form {opt:value}"""
@@ -347,7 +359,7 @@ class Config(object):
                 (opt,self.opts[opt]))
             del opts[opt]
 
-  # @params opts (dict) opt:value pairs to validate
+  # @param opts (dict) opt:value pairs to validate
   def __validate(self,opts):
     """delete opts that fail their validation function"""
 
@@ -358,6 +370,20 @@ class Config(object):
         self.log('error','Invalid value for "%s"; using default=%s' %
             (opt,self.opts[opt]))
         del opts[opt]
+
+  # @param opts (dict) opt:value pairs to run post triggers on
+  def __post(self,opts):
+    """allow opts to run code to check the values of other opts"""
+
+    for opt in opts.keys():
+      func = self.OPTS[opt][self.POST]
+      if func:
+        try:
+          opts[opt] = func(opts,opt,opts[opt])
+        except Exception as e:
+          self.log('error','Error running post for "%s"; using default=%s' %
+              (opt,self.opts[opt]))
+          del opts[opt]
 
   def write_default_conf(self):
     """write a default, completely commented-out config file"""
