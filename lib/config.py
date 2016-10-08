@@ -27,6 +27,7 @@ import ConfigParser as cp
 
 from lib.protocol import Protocol
 import lib.util as util
+from lib.password import Password
 
 DUMMY = 'dummy'
 
@@ -546,7 +547,7 @@ class Config(object):
       if len(params)>2 and params[2]:
         room['nick'] = params[2]
       if len(params)>3 and params[3]:
-        room['pass'] = params[3]
+        room['pass'] = Password(params[3])
       
       # add room to dict
       if params[0] in rooms:

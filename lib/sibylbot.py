@@ -769,12 +769,13 @@ class SibylBot(object):
       if proto.is_connected():
         proto.process()
       else:
-        if (name not in self.__recons) or (self.__recons[name]>time.time()):
+        if (name not in self.__recons) or (self.__recons[name]<time.time()):
           self.__run_hooks('recon',name)
           proto.connect()
           self.__run_hooks('con',name)
           for room in self.opt('rooms').get(name,[]):
-            proto.join_room(Room(room['room'],room['nick'],room['pass']))
+            pword = room['pass'] and room['pass'].get()
+            proto.join_room(Room(room['room'],room['nick'],pword))
           if name in self.__recons:
             del self.__recons[name]
 

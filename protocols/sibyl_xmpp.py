@@ -124,7 +124,8 @@ class XMPP(Protocol):
   DND, XA, OFFLINE = 'dnd', 'xa', 'unavailable'
 
   # MUC status
-  MUC_PARTED = -1
+  MUC_PARTED = -2
+  MUC_PENDING = -1
   MUC_OK = 0
   MUC_ERR = 1
   MUC_BANNED = 301
@@ -287,6 +288,8 @@ class XMPP(Protocol):
     """join a room and return True if joined successfully or False otherwise"""
 
     name = room.get_name()
+    nick = room.get_nick() or self.opt('nick_name')
+    pword = room.get_password()
 
     # do nothing if we're already trying to join that room
     for x in self.__muc_pending:
@@ -296,7 +299,8 @@ class XMPP(Protocol):
     # we'll receive a reply stanza with matching id telling us if we succeeded,
     # but due to the way xmpppy processes stanzas, we can't easily wait for the
     # given stanza inside a callback without blocking or race conditions
-    self.__muc_pending.append((name,room.get_nick(),room.get_password()))
+    self.mucs[name] = {'pass':pword,'nick':nick,'status':self.MUC_PENDING}
+    self.__muc_pending.append((name,nick,pword))
 
   def part_room(self,room):
     """leave the specified room"""
@@ -716,8 +720,10 @@ class XMPP(Protocol):
       # we only rejoin if we were able to rejoin successfully in the past
       except MUCJoinFailure as e:
         self.__muc_join_failure(room,e.message)
-        if room in self.mucs and self.mucs[room]['status'] > self.MUC_OK:
+        if self.mucs[room]['status'] > self.MUC_OK:
           self.log.debug('Rejoining room "%s" in %i sec' % (room,self.opt('recon_wait')))
+        else:
+          self.mucs[room]['status'] = self.MUC_PARTED
 
       # we need this to happen after successful joining to catch presences
       finally:
@@ -728,7 +734,7 @@ class XMPP(Protocol):
 
     # build the room join stanza
     NS_MUC = 'http://jabber.org/protocol/muc'
-    nick = (nick or self.opt('nick_name'))
+    nick = self.mucs[room]['nick']
     room_jid = room+'/'+nick
 
     # request no history and add password if we need one
@@ -757,7 +763,7 @@ class XMPP(Protocol):
       raise MUCJoinFailure(error)
 
     # we joined successfully
-    self.mucs[room] = {'pass':pword,'nick':nick,'status':self.MUC_OK}
+    self.mucs[room]['status'] = self.MUC_OK
     self.log.info('Success joining room "%s"' % room)
 
   def __muc_join_success(self,room):
@@ -796,7 +802,7 @@ class XMPP(Protocol):
   def __get_active_mucs(self):
     """return all mucs we are in or are trying to reconnect"""
 
-    return [room for room in self.mucs if self.mucs[room]['status']!=self.MUC_PARTED]
+    return [room for room in self.mucs if self.mucs[room]['status']>=self.MUC_OK]
 
   def __get_inactive_mucs(self):
     """return all mucs that we are currently not in"""

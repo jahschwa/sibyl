@@ -27,6 +27,7 @@ import os,pickle,time,traceback,threading,Queue,multiprocessing
 
 from lib.decorators import *
 import lib.util as util
+from lib.password import Password
 
 @botconf
 def conf(bot):
@@ -88,7 +89,7 @@ def parse_lib(conf,opt,val):
       if len(params)>2:
         item['username'] = params[2]
       if len(params)>3:
-        item['password'] = params[3]
+        item['password'] = Password(params[3])
     else:
       item = entry
     lib.append(item)
@@ -221,8 +222,9 @@ def find(bot,dirs):
       share = 'smb://'+path['server']+'/'+path['share']
       smb = smbc.Context()
       if path['username']:
+        pword = path['password'] and path['password'].get()
         smb.functionAuthData = (lambda se,sh,w,u,p:
-            (w,path['username'],path['password']))
+            (w,path['username'],pword))
 
       smb.opendir(share[:share.rfind('/')])
       ignore = [smbc.PermissionError]
@@ -242,9 +244,9 @@ def find(bot,dirs):
         while not q.empty():
           (typ,name) = q.get()
           if typ==bot.smbc_dir:
-            temp_dirs.append(name)
+            temp_dirs.append(unicode(name))
           elif typ==bot.smbc_file:
-            temp_files.append(name)
+            temp_files.append(unicode(name))
         time.sleep(0.1)
 
       # the child process also reports errors using a Queue
@@ -278,21 +280,23 @@ def rsamba(smbc_dir,smbc_file,q,e,ctx,path,ignore=None):
 
   ignore = (ignore or [])
   allitems = []
+  if isinstance(path,unicode):
+    path.encode('utf8')
   d = ctx.opendir(path)
   contents = d.getdents()
 
   for c in contents:
-    cur_path = path+'/'+c.name
+    cur_path = path+'/'+c.name.encode('utf8')
 
     # handle files
     if c.smbc_type==smbc_file:
-      q.put((smbc_file,cur_path))
+      q.put((smbc_file,cur_path.decode('utf8')))
 
     # handle directories
     elif c.smbc_type==smbc_dir:
       if c.name in ('.','..'):
         continue
-      q.put((smbc_dir,cur_path+'/'))
+      q.put((smbc_dir,(cur_path+'/').decode('utf8')))
       try:
         if not rsamba(smbc_dir,smbc_file,q,e,ctx,cur_path,ignore):
           return False
@@ -301,6 +305,7 @@ def rsamba(smbc_dir,smbc_file,q,e,ctx,path,ignore=None):
         for i in ignore:
           ignored = (ignored or isinstance(ex,i))
         if not ignored:
+          print traceback.format_exc(ex)
           e.put(ex)
           return False
 
