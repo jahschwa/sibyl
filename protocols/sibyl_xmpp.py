@@ -504,15 +504,13 @@ class XMPP(Protocol):
       code = pres.getStatusCode()
       if code:
         code = int(code)
-        if code not in self.MUC_CODES:
-          self.log.error('Unhandled MUC code: %s' % code)
-          code = 1
-        self.mucs[room]['status'] = code
-        self.last_join = time.time()
-        (text,func) = self.MUC_CODES[code]
-        func('Forced from room "%s" (%s)' % (room,text))
-        self.log.debug('Rejoining room "%s" in %i sec' % (room,self.opt('recon_wait')))
-        return
+        if code in self.MUC_CODES:
+          self.mucs[room]['status'] = code
+          self.last_join = time.time()
+          (text,func) = self.MUC_CODES[code]
+          func('Forced from room "%s" (%s)' % (room,text))
+          self.log.debug('Rejoining room "%s" in %i sec' % (room,self.opt('recon_wait')))
+          return
 
     # If subscription is private,
     # disregard anything not from the private domain
