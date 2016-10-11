@@ -364,17 +364,17 @@ def xbmc_cmp(a,b):
     if a[ia].isdigit() and b[ib].isdigit():
       astr = ''
       bstr = ''
-      while a[ia].isdigit():
+      while ia<len(a) and a[ia].isdigit():
         astr += a[ia]
         ia += 1
-      while b[ib].isdigit():
+      while ib<len(b) and b[ib].isdigit():
         bstr += b[ib]
         ib += 1
 
       # sort episodes correctly (e.g. 2 is before 10)
       if astr!=bstr:
         return (1 if int(astr)-int(bstr)>0 else -1)
-    if a[ia]!=b[ib]:
+    elif a[ia]!=b[ib]:
       return (1 if a[ia]>b[ib] else -1)
     ia += 1
     ib += 1
