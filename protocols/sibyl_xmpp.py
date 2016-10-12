@@ -30,8 +30,8 @@ import logging,time,re,traceback
 import xmpp
 from xmpp.protocol import SystemShutdown
 
-from lib.protocol import *
-from lib.decorators import botconf
+from sibyl.lib.protocol import *
+from sibyl.lib.decorators import botconf
 
 ################################################################################
 # Config options                                                               #

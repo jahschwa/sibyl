@@ -25,9 +25,9 @@ import time,os,socket,copy,logging,inspect,traceback
 from collections import OrderedDict as odict
 import ConfigParser as cp
 
-from lib.protocol import Protocol
-import lib.util as util
-from lib.password import Password
+from sibyl.lib.protocol import Protocol
+import sibyl.lib.util as util
+from sibyl.lib.password import Password
 
 DUMMY = 'dummy'
 

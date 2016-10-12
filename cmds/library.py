@@ -25,9 +25,9 @@ import os,pickle,time,traceback,threading,Queue,multiprocessing
 
 # we import smbc in init(), find(), and rsamba() if needed
 
-from lib.decorators import *
-import lib.util as util
-from lib.password import Password
+from sibyl.lib.decorators import *
+import sibyl.lib.util as util
+from sibyl.lib.password import Password
 
 @botconf
 def conf(bot):

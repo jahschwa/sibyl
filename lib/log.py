@@ -23,7 +23,7 @@
 
 import logging
 
-from lib.util import get_caller
+from sibyl.lib.util import get_caller
 
 class Log(object):
   """abstraction to name the logging module based on the calling function"""

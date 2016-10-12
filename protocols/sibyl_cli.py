@@ -25,10 +25,10 @@ import sys
 from threading import Thread,Event
 from Queue import Queue
 
-from lib.protocol import User,Room,Message,Protocol
-from lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
+from sibyl.lib.protocol import User,Room,Message,Protocol
+from sibyl.lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
 
-from lib.decorators import botconf
+from sibyl.lib.decorators import botconf
 
 USER = 'admin@cli'
 SIBYL = 'sibyl@cli'

@@ -25,9 +25,9 @@ import sys,os,subprocess,json,logging,socket
 
 import requests
 
-from lib.decorators import *
-from lib.util import getcell
-from lib.protocol import Message
+from sibyl.lib.decorators import *
+from sibyl.lib.util import getcell
+from sibyl.lib.protocol import Message
 
 @botconf
 def conf(bot):

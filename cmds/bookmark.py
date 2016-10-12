@@ -23,8 +23,8 @@
 
 import os,time
 
-from lib.decorators import *
-import lib.util as util
+from sibyl.lib.decorators import *
+import sibyl.lib.util as util
 
 __depends__ = ['xbmc','library']
 

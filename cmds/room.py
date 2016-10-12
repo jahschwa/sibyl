@@ -26,9 +26,9 @@ import re,time
 
 import requests
 
-from lib.decorators import *
-from lib.protocol import Message,Room
-import lib.util as util
+from sibyl.lib.decorators import *
+from sibyl.lib.protocol import Message,Room
+import sibyl.lib.util as util
 
 @botconf
 def conf(bot):

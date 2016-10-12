@@ -40,12 +40,12 @@
 
 import sys,logging,re,os,imp,inspect,traceback,time
 
-from lib.config import Config
-from lib.protocol import Message,Room
-from lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
-from lib.decorators import botcmd,botrooms
-import lib.util as util
-from lib.log import Log
+from sibyl.lib.config import Config
+from sibyl.lib.protocol import Message,Room
+from sibyl.lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
+from sibyl.lib.decorators import botcmd,botrooms
+import sibyl.lib.util as util
+from sibyl.lib.log import Log
 
 __author__ = 'Joshua Haas <haas.josh.a@gmail.com>'
 __version__ = 'v6.0.0'

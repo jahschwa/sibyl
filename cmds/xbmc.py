@@ -23,8 +23,8 @@
 
 import random,requests,json,os
 
-from lib.decorators import *
-import lib.util as util
+from sibyl.lib.decorators import *
+import sibyl.lib.util as util
 
 __wants__ = ['library']
 
