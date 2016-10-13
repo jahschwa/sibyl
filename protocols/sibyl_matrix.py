@@ -24,15 +24,20 @@
 
 import time
 
-from lib import protocol
-from lib.decorators import botconf
+from sibyl.lib import protocol
+from sibyl.lib.decorators import botconf
 from matrix_client.client import MatrixClient
 from matrix_client.api import MatrixRequestError
 
 @botconf
 def conf(bot):
-  return {'name':'server','default':None, 'req': True}
+    return [
 
+        {'name':'username', 'req':True},
+        {'name':'password', 'req':True},
+        {'name':'server', 'req':True}
+
+    ]
 
 class MXID(protocol.User):
 
@@ -68,9 +73,9 @@ class Matrix(protocol.Protocol):
         self.connect_time_millis = time.time() * 1000
 
     def connect(self):
-        homeserver = self.opt('server')
-        user = self.opt('username')
-        pw = self.opt('password')
+        homeserver = self.opt('matrix.server')
+        user = self.opt('matrix.username')
+        pw = self.opt('matrix.password')
 
         self.log.debug("Connecting to %s" % homeserver)
         self.client = MatrixClient(homeserver)
@@ -98,20 +103,23 @@ class Matrix(protocol.Protocol):
     def disconnected(self):
         print("TODO: disconnected()")
 
-    def process(self):
-        self.client.listen_for_events(timeout=1000)
+    def process(self,wait=0):
+        self.client.listen_for_events(timeout=int(1000*wait))
 
     def shutdown(self):
         print("TODO: shutdown()")
 
     def send(self, text, to):
+        # TODO: Support MXID or Room objects in "to" parameter
         room_id = to.room_id
         self.rooms[room_id].send_text(text)
+        print("TODO: send()")
 
     def broadcast(self, text, room, frm=None):
         print("TODO: broadcast()")
 
     def join_room(self, room, nick, pword=None):
+        # TODO: re-implement using Room object
         # TODO: Keep rooms variable up to date
         if(self.in_room(room)):
             self.log.info("Already in room %s" % room)
@@ -126,9 +134,11 @@ class Matrix(protocol.Protocol):
                 self.bot._cb_join_room_failure
 
     def part_room(self, room):
+        # TODO: implement using Room objects
         print("TODO: part_room")
 
     def in_room(self, room):
+        # TODO: implement using Room objects
         for roomid, existing_room in self.rooms.items():
             if(room[0] == '#'):
                 if(room in existing_room.aliases):
@@ -139,21 +149,30 @@ class Matrix(protocol.Protocol):
         return False
 
     def get_rooms(self, in_only=False):
+        # TODO: implement using Room objects
         print("TODO: get_rooms")
 
     def get_occupants(self, room):
+        # TODO: implement using Room objects
         print("TODO: get_occupants")
 
     def get_nick(self, room):
-        #TODO: Want to be able to use either username or mxid in config?
-        user = self.client.get_user(self.opt('username'))
+        # TODO: implement using Room objects
+        # TODO: Want to be able to use either username or mxid in config?
+        user = self.client.get_user(self.opt('matrix.username'))
         try:
             return user.get_display_name()
         except (MatrixRequestError, TypeError):
-            return self.opt('username')
+            return self.opt('matrix.username')
 
     def get_real(self, room, nick):
+        # TODO: implement using Room objects
         print("TODO: get_real")
+
+    def get_username(self):
+        # TODO: format it nicely
+        print("TODO: get_username")
+        return self.opt('matrix.username')
 
     def new_user(self, user, typ):
         print("TODO: new_user")

@@ -35,14 +35,20 @@ ignore = ['__init__',os.path.basename(__file__).split('.')[0],'skeleton']
 files = [x for x in os.listdir(pwd)
     if x.endswith('.py') and x.split('.')[0] not in ignore]
 
-__all__ = ['PROTOCOLS']
+__all__ = ['PROTOCOLS','FAILED']
 PROTOCOLS = {}
+FAILED = []
 
 for mod in files:
 
   fname = mod.split('.')[0]
   protocol = fname.split('_')[1]
-  mod = load_module(fname,pwd)
+
+  try:
+    mod = load_module(fname,pwd)
+  except:
+    FAILED.append(protocol)
+    continue
   
   for (name,clas) in inspect.getmembers(mod,inspect.isclass):
     if issubclass(clas,Protocol) and clas!=Protocol:
