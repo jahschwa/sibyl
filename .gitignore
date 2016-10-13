@@ -57,3 +57,9 @@ target/
 
 # Config
 sibyl.conf
+
+# User files
+.bash_history
+.bash_logout
+.bashrc
+.profile
