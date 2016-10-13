@@ -337,7 +337,7 @@ class Protocol(object):
   # send a message to a user
   # @param text (str,unicode) text to send
   # @param to (User) send to a User
-  # @param to (str) send to a room
+  # @param to (Room) send to a room
   @abstractmethod
   def send(self,text,to):
     pass
