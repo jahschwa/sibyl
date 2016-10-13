@@ -55,8 +55,8 @@ def init(bot):
   """create the pending_room variable to enable chat responses"""
 
   bot.add_var('pending_room',{})
-  bot.add_var('pending_tell',[])
-  
+  bot.add_var('pending_tell',[],persist=True)
+
   if not util.has_module('lxml'):
     bot.log.debug("Can't find module lxml; unregistering link_echo hook")
     del bot.hooks['group']['room.link_echo']

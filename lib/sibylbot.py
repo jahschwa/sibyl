@@ -38,7 +38,7 @@
 #
 ################################################################################
 
-import sys,logging,re,os,imp,inspect,traceback,time
+import sys,logging,re,os,imp,inspect,traceback,time,pickle
 
 from sibyl.lib.config import Config
 from sibyl.lib.protocol import Message,Room
@@ -143,6 +143,16 @@ class SibylBot(object):
     if not self.__load_plugins(self.opt('cmd_dir')):
       self.log.critical('Failed to load plugins; exiting')
       self.__fatal('duplicate @botcmd or @botfunc')
+
+    # load persistent vars
+    try:
+      if not self.opt('persistence'):
+        raise RuntimeError
+      with open(self.opt('state_file'),'rb') as f:
+        self.__state = pickle.load(f)
+    except:
+      self.__state = {}
+    self.__persist = []
 
     # run plug-in init hooks and exit if there were errors
     if self.__run_hooks('init'):
@@ -849,6 +859,14 @@ class SibylBot(object):
     for proto in self.protocols.values():
       proto.shutdown()
     self.__run_hooks('down')
+
+    if self.opt('persistence'):
+      d = {}
+      for name in self.__persist:
+        d[name] = getattr(self,name)
+      with open(self.opt('state_file'),'wb') as f:
+        pickle.dump(d,f,-1)
+
     sys.stdout = sys.__stdout__
     return self.__reboot
 
@@ -896,8 +914,9 @@ class SibylBot(object):
 
   # @param name (str) name of the instance variable to set
   # @param val (object) [None] value to set
+  # @param persist (bool) [False] save/load this var on bot start/stop
   # @raise (AttributeError) if the var already exists
-  def add_var(self,name,val=None):
+  def add_var(self,name,val=None,persist=False):
     """add a var to the bot, or raise an exception if it already exists"""
 
     caller = util.get_caller()
@@ -906,6 +925,10 @@ class SibylBot(object):
       self.log.critical('plugin "%s" tried to overwrite var "%s" from "%s"' %
           (caller,name,space))
       raise DuplicateVarError
+
+    if self.opt('persistence') and persist:
+      val = self.__state.get(name,val)
+      self.__persist.append(name)
 
     setattr(self,name,val)
     self.ns_opt[name] = caller

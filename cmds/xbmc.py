@@ -43,7 +43,7 @@ def conf(bot):
 def init(bot):
   """create empty vars"""
 
-  bot.add_var('last_played')
+  bot.add_var('last_played',persist=True)
 
 @botcmd
 def remote(bot,mess,args):

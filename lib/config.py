@@ -82,7 +82,9 @@ class Config(object):
 ('recon_wait',  (60,                False,  self.parse_int,       None,               None)),
 ('kill_stdout', (True,              False,  self.parse_bool,      None,               None)),
 ('tell_errors', (True,              False,  self.parse_bool,      None,               None)),
-('admin_protos',(['cli'],           False,  self.parse_admin,     self.valid_admin,   None))
+('admin_protos',(['cli'],           False,  self.parse_admin,     self.valid_admin,   None)),
+('persistence', (True,              False,  self.parse_bool,      None,               None)),
+('state_file',  ('data/sibyl.state',False,  None,                 self.valid_wfile,   None))
 
     ])
 
