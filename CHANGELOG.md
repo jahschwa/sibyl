@@ -4,11 +4,11 @@ To the full project is at the [Github Repo](https://github.com/TheSchwa/Sibyl).
 This project adheres to [Semantic Versioning](http://semver.org).
 This change log follows guidelines at [this site](http://keepachangelog.com/).
 
-## [v6.0.0] - RELEASEDATE
+## [Unreleased]
 ### Added
 - Actual change log tracking
 - Chat protocol plug-in framework that reads from `protocols` directory
-- Protocol-agnostic msg and presence classes with methods in `protocols.py`
+- Protocol-agnostic `Message` and `Room` classes with methods in `protocols.py`
 - XMPP plug-in (based on Jabberbot) at `protocols/sibyl_xmpp.py`
 - Matrix plug-in at `protocols/sibyl_matrix.py`
 - Decorators: botcon, botdiscon, botrecon, botdown, boterr, botpriv, botgroup
@@ -20,16 +20,18 @@ This change log follows guidelines at [this site](http://keepachangelog.com/).
 - New config option `disable` to disable plugins (supersedes `enable`)
 - New config option `help_plugin` that displays plugin names in help list
 - New config options `log_requests` and `log_urllib3` to enable logging
+- New config options `persistence` and `state_file` for use with `bot.add_var`
 - Disabled `stdout`; all plugins should use logging instead
 - Plugins can specify dependencies as a list via the `__depends__` variable
 - Plugins can specify "wants" as a list via the `__wants__` variable
+- New `@botconf` key `post` for validating against other config options
 - Some basic unit tests (more to follow)
 
 ### Changed
 - All decorators are now in `lib/decorators.py`
 - Chat commands now receive their args as a list (possibly empty)
 - Quote blocking now works for all commands (also preserves capitalization)
-- Decorator: botpres is now botstatus
+- Decorator: `botpres` is now `botstatus`
 - Moved `config.py`, `decorators.py`, `protocol.py`, `sibylbot.py`, `util.py` to dir `lib`
 - Pinging is now enabled by default for xmpp
 - If a @botidle hook raises an exception, it will be disabled forever
