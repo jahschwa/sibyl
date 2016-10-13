@@ -25,13 +25,13 @@ import os,sys,imp,inspect
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
 
-from lib.util import load_module
-from lib.protocol import Protocol
+from sibyl.lib.util import load_module
+from sibyl.lib.protocol import Protocol
 
 sys.path = sys.path[:-1]
 
 pwd = os.path.abspath(os.path.join(os.path.dirname(__file__),'.'))
-ignore = ['__init__',os.path.basename(__file__).split('.')[0]]
+ignore = ['__init__',os.path.basename(__file__).split('.')[0],'skeleton']
 files = [x for x in os.listdir(pwd)
     if x.endswith('.py') and x.split('.')[0] not in ignore]
 
@@ -45,7 +45,7 @@ for mod in files:
   mod = load_module(fname,pwd)
   
   for (name,clas) in inspect.getmembers(mod,inspect.isclass):
-    if issubclass(clas,Protocol) and name.lower()==protocol:
+    if issubclass(clas,Protocol) and clas!=Protocol:
       PROTOCOLS[fname] = {'class':clas,'config':None}
       __all__.append(name)
       exec('from %s import %s' % (fname,name))

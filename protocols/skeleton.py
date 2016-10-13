@@ -21,10 +21,10 @@
 #
 ################################################################################
 
-from lib.protocol import User,Message,Protocol
-from lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
+from sibyl.lib.protocol import User,Message,Protocol
+from sibyl.lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
 
-from lib.decorators import botconf
+from sibyl.lib.decorators import botconf
 
 ################################################################################
 # Config options                                                               #

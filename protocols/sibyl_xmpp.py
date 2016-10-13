@@ -25,13 +25,13 @@
 #
 ################################################################################
 
-import logging,time,re
+import logging,time,re,traceback
 
 import xmpp
 from xmpp.protocol import SystemShutdown
 
-from lib.protocol import *
-from lib.decorators import botconf
+from sibyl.lib.protocol import *
+from sibyl.lib.decorators import botconf
 
 ################################################################################
 # Config options                                                               #
@@ -250,6 +250,9 @@ class XMPP(Protocol):
       self.conn.Process(wait)
     except SystemShutdown:
       raise ServerShutdown
+    except StreamError as e:
+      self.log.error(traceback.format_exception_only(type(e),e)[:-1])
+      raise ConnectFailure
     
     self.__idle_proc()
 

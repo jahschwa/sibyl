@@ -23,8 +23,8 @@
 
 import random,requests,json,os
 
-from lib.decorators import *
-import lib.util as util
+from sibyl.lib.decorators import *
+import sibyl.lib.util as util
 
 __wants__ = ['library']
 
@@ -43,7 +43,7 @@ def conf(bot):
 def init(bot):
   """create empty vars"""
 
-  bot.add_var('last_played')
+  bot.add_var('last_played',persist=True)
 
 @botcmd
 def remote(bot,mess,args):

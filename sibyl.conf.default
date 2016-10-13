@@ -194,6 +194,12 @@ protocols = cli
 # to "False" for debugging purposes.
 #catch_except = True
 
+# If true, save/load state for plugins requesting variable persistence
+#persistence = True
+
+# File in which to save persistent variables
+#state_file = data/sibyl.state
+
 # If True, kill stdout to disable libraries from printing to the console
 # NOTE: the cli protocol will work regardless of this setting
 #kill_stdout = True

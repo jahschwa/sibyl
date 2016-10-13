@@ -26,9 +26,9 @@ import re,time
 
 import requests
 
-from lib.decorators import *
-from lib.protocol import Message,Room
-import lib.util as util
+from sibyl.lib.decorators import *
+from sibyl.lib.protocol import Message,Room
+import sibyl.lib.util as util
 
 @botconf
 def conf(bot):
@@ -55,8 +55,8 @@ def init(bot):
   """create the pending_room variable to enable chat responses"""
 
   bot.add_var('pending_room',{})
-  bot.add_var('pending_tell',[])
-  
+  bot.add_var('pending_tell',[],persist=True)
+
   if not util.has_module('lxml'):
     bot.log.debug("Can't find module lxml; unregistering link_echo hook")
     del bot.hooks['group']['room.link_echo']

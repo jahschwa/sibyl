@@ -23,13 +23,15 @@
 
 import sys,os,argparse,signal
 
-from lib.sibylbot import SibylBot,SigTermInterrupt
-
 def main():
 
-  # change directories so cmds can imports and saving files works correctly
+  # change directories so saving files to relatve paths works correctly
   current_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'.'))
   os.chdir(current_dir)
+
+  # add our parent directory to the path so we work with github cloning
+  sys.path.insert(0,os.path.dirname(current_dir))
+  from sibyl.lib.sibylbot import SibylBot,SigTermInterrupt
 
   # parse command line arguments
   parser = argparse.ArgumentParser()

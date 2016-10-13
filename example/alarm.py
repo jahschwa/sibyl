@@ -1,6 +1,6 @@
 import datetime
-from lib.protocol import Message
-from lib.decorators import botinit,botconf,botcmd,botidle
+from sibyl.lib.protocol import Message
+from sibyl.lib.decorators import botinit,botconf,botcmd,botidle
 
 @botinit
 def init(bot):
