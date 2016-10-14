@@ -1,7 +1,7 @@
 # Sibyl
 an XMPP bot for controlling XBMC/Kodi
 
-**IMPORTANT: Sibly is in Alpha. Updates may break existing configurations**
+**IMPORTANT: Sibyl is in Alpha. Updates may break existing configurations**
 
 **IMPORTANT: The wiki is currently outdated. Updates coming soon.**
 
