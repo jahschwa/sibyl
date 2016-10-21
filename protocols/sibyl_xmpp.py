@@ -28,7 +28,7 @@
 import logging,time,re,traceback
 
 import xmpp
-from xmpp.protocol import SystemShutdown
+from xmpp.protocol import SystemShutdown,StreamError
 
 from sibyl.lib.protocol import *
 from sibyl.lib.decorators import botconf
@@ -411,14 +411,16 @@ class XMPP(Protocol):
       # Ignore messages from myself
       room = jid.getStripped()
       if ((self.jid==jid) or
-          (room in self.__get_current_mucs() and jid.getResource()==self.mucs[room]['nick'])):
+          (room in self.__get_current_mucs()
+              and jid.getResource()==self.mucs[room]['nick'])):
         return
 
     # Ignore messages from users not seen by this bot
-    if (jid not in self.seen) and (jid not in self.real_jids.values()):
+    real = [j.getStripped() for j in self.real_jids.values()]
+    if (jid not in self.seen) and (jid.getStripped() not in real):
       self.log.info('Ignoring message from unseen guest: %s' % jid)
       self.log.debug("I've seen: %s" %
-        ["%s" % x for x in self.seen.keys()+self.real_jids.values()])
+        ["%s" % x for x in self.seen.keys()+real])
       return
 
     if len(text)>40:
