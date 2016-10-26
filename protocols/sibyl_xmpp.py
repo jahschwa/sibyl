@@ -112,6 +112,7 @@ class JID(User):
     if self.jid.getResource():
       return str(self.jid)
     return self.get_base()
+  __repr__ = __str__
 
 ################################################################################
 # XMPP(Protocol) class                                                         #
@@ -280,8 +281,9 @@ class XMPP(Protocol):
 
     # XMPP has no built-in broadcast, so we'll just highlight everyone
     s = ''
+    me = JID(room.get_name()+'/'+self.get_nick(room),Message.GROUP)
     for user in self.get_occupants(room):
-      if frm and frm!=user:
+      if user!=me and (not frm or user!=frm):
         s += (user.get_name()+': ')
 
     text = '%s[ %s ] %s' % (s,text,frm.get_name())
