@@ -31,7 +31,7 @@ def main():
 
   # add our parent directory to the path so we work with github cloning
   sys.path.insert(0,os.path.dirname(current_dir))
-  from sibyl.lib.sibylbot import SibylBot,SigTermInterrupt
+  from sibyl.lib.sibylbot import SibylBot
 
   # parse command line arguments
   parser = argparse.ArgumentParser()
@@ -66,6 +66,8 @@ def main():
     os.execv(python,args)
 
 def sigterm_handler(signal,frame):
+
+  from sibyl.lib.sibylbot import SigTermInterrupt
 
   raise SigTermInterrupt
 
