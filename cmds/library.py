@@ -305,7 +305,6 @@ def rsamba(smbc_dir,smbc_file,q,e,ctx,path,ignore=None):
         for i in ignore:
           ignored = (ignored or isinstance(ex,i))
         if not ignored:
-          print traceback.format_exc(ex)
           e.put(ex)
           return False
 
