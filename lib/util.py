@@ -339,6 +339,17 @@ def has_module(name):
   except ImportError:
     return False
 
+# @param s (str) string to test for being a number
+# @return (bool) whether the string is a valid integer
+def is_int(s):
+  """check if the given string is an integer"""
+
+  try:
+    int(s)
+    return True
+  except:
+    return False
+
 # @param files (list of str) a list of file paths
 # @return (list) the input sorted as XBMC default sort
 def xbmc_sorted(files):

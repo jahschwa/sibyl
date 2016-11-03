@@ -21,19 +21,23 @@
 #
 ################################################################################
 
-import sys,os,subprocess,json,logging,socket
+import sys,os,subprocess,json,logging,socket,re
 
 import requests
 
 from sibyl.lib.decorators import *
-from sibyl.lib.util import getcell
+from sibyl.lib.util import getcell,is_int
 from sibyl.lib.protocol import Message
 
 @botconf
 def conf(bot):
   """add config option"""
 
-  return {'name':'config_rooms','default':True,'parse':bot.conf.parse_bool}
+  return [
+    {'name':'config_rooms','default':True,'parse':bot.conf.parse_bool},
+    {'name':'log_time','default':True,'parse':bot.conf.parse_bool},
+    {'name':'log_lines','default':10,'parse':bot.conf.parse_int}
+  ]
 
 @botinit
 def init(bot):
@@ -266,25 +270,87 @@ def wiki(bot,mess,args):
 
 @botcmd(ctrl=True)
 def log(bot,mess,args):
-  """set the log level - log (critical|error|warning|info|debug|clear)"""
+  """set the log level - log (info|level|clear|tail|trace)"""
 
-  # default action is to print current level
+  # default print some info
   if not args:
-    return ('Current level: '+
-        logging.getLevelName(bot.log.getEffectiveLevel()).lower())
+    args = ['info']
+
+  # control log level
+  if args[0]=='level':
+
+    if len(args)<2:
+      return ('Current level: '+
+          logging.getLevelName(bot.log.getEffectiveLevel()).lower())
+
+    # set the log level for this instance only
+    levels = ({'critical' : logging.CRITICAL,
+               'error'    : logging.ERROR,
+               'warning'  : logging.WARNING,
+               'info'     : logging.INFO,
+               'debug'    : logging.DEBUG})
+
+    level = levels.get(args[1],logging.INFO)
+    logging.getLogger().setLevel(level)
+    return 'Logging level set to: '+logging.getLevelName(level)
 
   # clear the log
-  if args[0]=='clear':
+  elif args[0]=='clear':
+
     with open(bot.opt('log_file'),'w') as f:
       return 'Log cleared'
 
-  # set the log level for this instance only
-  levels = ({'critical' : logging.CRITICAL,
-             'error'    : logging.ERROR,
-             'warning'  : logging.WARNING,
-             'info'     : logging.INFO,
-             'debug'    : logging.DEBUG})
+  # return the last n lines from the log file
+  elif args[0]=='tail':
 
-  level = levels.get(args[0],logging.INFO)
-  logging.getLogger().setLevel(level)
-  return 'Logging level set to: '+logging.getLevelName(level)
+    n = bot.opt('general.log_lines')
+    r = None
+
+    # check if the user specified a number of lines
+    if len(args)>1:
+      if is_int(args[1]):
+        n = int(args[1])
+        del args[1]
+
+    # check if the user specified a regex
+    if len(args)>1:
+      r = ' '.join(args[1:])
+
+    # return n lines matching regex
+    with open(bot.opt('log_file'),'r') as f:
+      lines = f.readlines()
+    if r:
+      lines = [l for l in lines if re.search(r,l)]
+    lines = lines[-n:]
+    if not bot.opt('general.log_time'):
+      lines = [(l[l.find('|')+2:] if l.find('|') else l) for l in lines]
+    return ''.join(lines[:n])
+
+  # return the last traceback
+  elif args[0]=='trace':
+
+    with open(bot.opt('log_file'),'r') as f:
+      lines = f.readlines()
+
+    start = -1
+    for (i,l) in enumerate(lines):
+      if 'Traceback (most recent call last):' in l:
+        start = i
+    if start==-1:
+      return 'No traceback in logs'
+    lines = lines[start:]
+    end = -1
+    for (i,l) in enumerate(lines):
+      if l.strip()=='':
+        end = i
+        break
+    return ''.join(lines[:end])
+
+  # print log file stats
+  fname = os.path.abspath(bot.opt('log_file'))
+  fsize = os.path.getsize(fname)/1000.0
+  with open(fname,'r') as f:
+    for (i,l) in enumerate(f):
+      pass
+  lines = i+1
+  return 'Log file %s is %.1fKB with %s lines' % (fname,fsize,lines)

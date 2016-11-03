@@ -60,6 +60,7 @@ This change log follows guidelines at [this site](http://keepachangelog.com/).
 - The `prev` command from `xbmc.py` now jumps to playlist position instead of using the JSON-RPC built-in
 - Sibyl now catches `SIGTERM` and exits cleanly
 - All imports must now start with `sibyl`
+- The `log` command now has log viewing functionality
 
 ### Removed
 - Refactored `jabberbot.py` into `protocols/sibyl_xmpp.py` and `lib/sibylbot.py`
