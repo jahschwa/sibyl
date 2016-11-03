@@ -167,7 +167,7 @@ class CLI(Protocol):
     self.send(text,None)
 
   def join_room(self,room):
-    pass
+    self.bot._cb_join_room_failure(room,'not supported')
 
   def part_room(self,room):
     pass
@@ -175,7 +175,7 @@ class CLI(Protocol):
   def in_room(self,room):
     return False
 
-  def get_rooms(self,in_only=False):
+  def _get_rooms(self,flag):
     return []
 
   def get_occupants(self,room):

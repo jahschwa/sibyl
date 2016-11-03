@@ -331,10 +331,21 @@ class XMPP(Protocol):
 
     return room.get_name() in self.__get_current_mucs()
 
-  def get_rooms(self,in_only=False):
-    """return our rooms, optionally only those we are in"""
+  def _get_rooms(self,flag):
+    """return rooms matching the given flag"""
 
-    rooms = self.__get_current_mucs() if in_only else self.mucs
+    if flag==Room.FLAG_PARTED:
+      rooms = self.__get_inactive_mucs()
+    elif flag==Room.FLAG_PENDING:
+      rooms = [room for (room,d) in self.mucs.items()
+        if d['status']==self.MUC_PENDING or d['status']>self.MUC_OK]
+    elif flag==Room.FLAG_IN:
+      rooms = self.__get_current_mucs()
+    elif flag==Room.FLAG_ALL:
+      rooms = self.mucs.keys()
+    else:
+      rooms = []
+
     return [Room(room) for room in rooms]
 
   def get_occupants(self,room):
@@ -680,6 +691,7 @@ class XMPP(Protocol):
 # Joining a MUC (2 asynchronous execution paths)                               #
 #                                                                              #
 # (1) User calls self.join_room() which adds MUC info to self.__muc_pending    #
+#     with status MUC_PENDING
 #                                                                              #
 # (1) Approx once per second self.process() is called                          #
 # (2) Which calls self.__idle_proc()                                           #
@@ -700,15 +712,15 @@ class XMPP(Protocol):
 # (1) Approx once per second self.process() is called                          #
 # (2) Which calls self.__idle_proc()                                           #
 # (3) Which calls self.__idle_rejoin_muc()                                     #
-# (4) Which tries to rejoin every MUC with status != MUC_OK or MUC_PARTED      #
+# (4) Which tries to rejoin every MUC except MUC_PARTED, MUC_PENDING, MUC_OK   #
 # (5) By calling self.__muc_join() which sends a stanza and checks for success #
 # (6) On success self.mucs is updated to have MUC_OK                           #
-#     On failure self.mucs is not changed so we will try to rejoin again       #
+#     On failure self.mucs has the error code or MUC_ERR and we will rejoin    #
 ################################################################################
 # Parting a MUC                                                                #
 #                                                                              #
 # (1) User calls self.part_room()                                              #
-# (2) Which sends a stanza and updates self.mucs to MUC_PARTED                 #
+# (2) Which sends a stanza and updates self.mucs to have MUC_PARTED            #
 # (3) This can be used to either leave a room or cancel reconnection           #
 ################################################################################
 

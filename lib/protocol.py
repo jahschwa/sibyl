@@ -141,12 +141,24 @@ class User(object):
 
 class Room(object):
 
+  # get_room flags
+  FLAG_CONF = 0
+  FLAG_RUNTIME = 1
+
+  FLAG_PARTED = 2
+  FLAG_PENDING = 3
+  FLAG_IN = 4
+
+  FLAG_ACTIVE = 5
+  FLAG_OUT = 6
+  FLAG_ALL = 7
+
   # @param name (str) the identifier for this Room
   # @param nick (str) [None] the nick name to use in this Room
   # @param pword (str) [None] the password for joining this Room
   # @param proto (str) name of the associated protocol
   def __init__(self,name,nick=None,pword=None,proto=None):
-    
+
     if not proto:
       filename = os.path.basename(inspect.stack()[1][1])
       proto = filename.split(os.path.extsep)[0]
@@ -179,7 +191,10 @@ class Room(object):
     return self.pword
 
   def __str__(self):
-    return self.name
+    return self.protocol+':'+self.name
+
+  def __repr__(self):
+    return '<Room %s:%s>' % (self.protocol,self.name)
 
   def __eq__(self,other):
     if not isinstance(other,Room):
@@ -191,7 +206,7 @@ class Room(object):
 
   # override hashing to allow as dict keys
   def __hash__(self):
-    return hash(self.__str__())
+    return hash(str(self))
 
 ################################################################################
 # Message class                                                                #
@@ -373,11 +388,12 @@ class Protocol(object):
   def in_room(self,room):
     pass
 
-  # return the rooms we have joined in the past and present
-  # @param in_only (bool) [False] only return the rooms we are currently in
-  # @return (list of str) our rooms
+  # helper function for get_rooms() for protocol-specific flags
+  # only needs to handle: FLAG_PARTED, FLAG_PENDING, FLAG_IN, FLAG_ALL
+  # @param flag (enum) [None] one of Room.FLAG enums
+  # @return (list of Room) rooms matching the flag
   @abstractmethod
-  def get_rooms(self,in_only=False):
+  def _get_rooms(self,flag):
     pass
 
   # @param room (str) the room to query
@@ -422,3 +438,46 @@ class Protocol(object):
   # @return (object) the value of the option
   def opt(self,opt):
     return self.bot.opt(opt)
+
+  # @return (str) the name of the protocol based on filename
+  def get_name(self):
+    return self.__module__.split('_')[1]
+
+  # @param flags (enum OR list of enum) Room flags
+  # @return (list of Room) the Rooms matching all given flags
+  def get_rooms(self,flags=None):
+    """return our rooms, optionally only those we are in"""
+
+    if flags is None:
+      flags = [Room.FLAG_IN]
+    elif not isinstance(flags,list):
+      flags = [flags]
+    rooms = set(self._get_rooms(Room.FLAG_ALL))
+
+    for flag in flags:
+
+      if flag in (Room.FLAG_CONF,Room.FLAG_RUNTIME):
+        pname = self.get_name()
+        conf = [Room(room['room'],proto=pname) for room in
+          self.opt('rooms').get(pname,[])]
+        if flag==Room.FLAG_CONF:
+          rooms.intersection_update(conf)
+        elif flag==Room.FLAG_RUNTIME:
+          rooms.difference_update(conf)
+
+      elif flag==Room.FLAG_ACTIVE:
+        self.__add_rooms(rooms,[Room.FLAG_IN,Room.FLAG_PENDING])
+      elif flag==Room.FLAG_OUT:
+        self.__add_rooms(rooms,[Room.FLAG_PARTED,Room.FLAG_PENDING])
+      else:
+        rooms.intersection_update(self._get_rooms(flag))
+
+    return list(rooms)
+
+  def __add_rooms(self,rooms,flags):
+    """helper function for get_rooms"""
+
+    temp = set()
+    for flag in flags:
+      temp.update(self._get_rooms(flag))
+    rooms.intersection_update(temp)

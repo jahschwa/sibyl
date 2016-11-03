@@ -370,8 +370,8 @@ class SocketServer(Protocol):
   def broadcast(self,text,room,frm=None):
     pass
 
-  def join_room(self,room,nick,pword=None):
-    pass
+  def join_room(self,room):
+    self.bot._cb_join_room_failure(room,'not supported')
 
   def part_room(self,room):
     pass
@@ -379,7 +379,7 @@ class SocketServer(Protocol):
   def in_room(self,room):
     return False
 
-  def get_rooms(self,in_only=False):
+  def _get_rooms(self,flag):
     return []
 
   def get_occupants(self,room):
