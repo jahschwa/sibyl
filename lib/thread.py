@@ -21,7 +21,7 @@
 #
 ################################################################################
 
-import threading
+import threading,traceback
 
 class SmartThread(threading.Thread):
   """smart threads log exceptions"""
@@ -38,10 +38,17 @@ class SmartThread(threading.Thread):
 
   def run(self):
 
+    reply = None
     try:
-      self.func(self.mess,self.args)
+      reply = self.func(self.mess,self.args)
     except Exception as e:
       fname = self.func._sibylbot_dec_chat_name
       self.bot._log_ex(e,
           'Error while executing threaded cmd "%s":' % fname,
           '  Message text: "%s"' % self.mess.get_text())
+      reply = self.bot.MSG_ERROR_OCCURRED
+      if self.bot.opt('except_reply'):
+        reply = traceback.format_exc(e).split('\n')[-2]
+
+    if reply:
+      self.bot.send(reply,self.mess.get_from())
