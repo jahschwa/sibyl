@@ -48,6 +48,10 @@ def conf(bot):
     {'name':'cross_proto',
      'default':True,
      'parse':bot.conf.parse_bool
+    },
+    {'name':'trigger_file',
+     'default':'data/triggers.txt',
+     'valid':bot.conf.valid_wfile
     }
   ]
 
@@ -66,6 +70,13 @@ def init(bot):
 
   bot.add_var('pending_room',{})
   bot.add_var('pending_tell',[],persist=True)
+
+  bot.add_var('triggers',{})
+  try:
+    bot.triggers = trigger_read(bot)
+  except Exception as e:
+    bot.log.error('Failed to parse trigger_file')
+    bot.log.debug(e.message)
 
   if not util.has_module('lxml'):
     bot.log.debug("Can't find module lxml; unregistering link_echo hook")
@@ -256,6 +267,98 @@ def tell(bot,mess,args):
   msg = '%s: %s said "%s" at %s' % (to,frm,msg,t)
   bot.pending_tell.append((room,to,msg))
   return 'Added tell for "%s"' % to
+
+@botcmd
+def trigger(bot,mess,args):
+  """manage triggers - (info|list|add|remove)"""
+
+  if not args:
+    args = ['info']
+
+  if args[0]=='list':
+    triggers = bot.triggers.keys()
+    if not triggers:
+      return 'There are no triggers'
+    return ', '.join(sorted(triggers))
+
+  elif args[0]=='add':
+    if len(args)<2:
+      return 'You must specify a name and message'
+    if len(args)<3:
+      return 'You must specify a message'
+    (name,text) = (args[1],' '.join(args[2:]))
+
+    if name in bot.triggers:
+      return 'A trigger already exists by that name'
+    if name in bot.hooks['chat']:
+      return 'The %s plugin has a chat command by that name' % bot.ns_cmd[name]
+
+    bot.triggers[name] = text
+    trigger_write(bot)
+    return 'Added trigger "%s"' % name
+
+  elif args[0]=='remove':
+    if len(args)<2:
+      return 'You must specify a trigger to remove'
+    if args[1]=='*':
+      bot.triggers = {}
+      trigger_write(bot)
+      return 'Removed all triggers'
+    if args[1] not in bot.triggers:
+      return 'Invalid trigger'
+    del bot.triggers[args[1]]
+    return 'Removed trigger "%s"' % args[1]
+
+  return 'There are %s triggers' % len(bot.triggers)
+
+@botgroup
+def trigger_cb(bot,mess,cmd):
+  """execute triggers"""
+
+  if cmd and cmd in bot.triggers:
+    bot.send(bot.triggers[cmd],mess.get_from())
+
+def trigger_read(bot):
+  """read triggers from file into dict"""
+
+  fname = bot.opt('room.trigger_file')
+
+  if os.path.isfile(fname):
+    with open(bot.opt('room.trigger_file'),'r') as f:
+      lines = f.readlines()
+  else:
+    lines = []
+    trigger_write(bot)
+
+  triggers = {}
+  for (i,line) in enumerate(lines):
+    try:
+      if line.strip():
+        (name,text) = line.split('\t')
+        triggers[name.lower().strip()] = text.strip()
+    except Exception as e:
+      raise IOError('Error parsing trigger_file at line %s' % i)
+
+  removed = False
+  for name in triggers.keys():
+    if name in bot.hooks['chat']:
+      removed = True
+      del triggers[name]
+      bot.log.warning('Ignoring trigger "%s"; conflicts with cmd from plugin %s'
+          % (name,bot.ns_cmd[name]))
+
+  if removed:
+    bot.errors.append('Some triggers ignored due to name conflicts')
+
+  return triggers
+
+def trigger_write(bot):
+  """write triggers from bot to file"""
+
+  lines = [name+'\t'+text+'\n' for (name,text) in bot.triggers.items()]
+
+  with open(bot.opt('room.trigger_file'),'w') as f:
+    f.writelines(lines)
 
 @botstatus
 def tell_cb(bot,mess):
