@@ -22,7 +22,7 @@
 #
 ################################################################################
 
-import re,time
+import re,time,os
 
 import requests
 
@@ -355,7 +355,8 @@ def trigger_read(bot):
 def trigger_write(bot):
   """write triggers from bot to file"""
 
-  lines = [name+'\t'+text+'\n' for (name,text) in bot.triggers.items()]
+  t = [(k,v) for (k,v) in sorted(bot.triggers.items(),key=lambda i:i[0])]
+  lines = [name+'\t'+text+'\n' for (name,text) in t]
 
   with open(bot.opt('room.trigger_file'),'w') as f:
     f.writelines(lines)
