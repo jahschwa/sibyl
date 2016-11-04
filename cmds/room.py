@@ -290,7 +290,7 @@ def trigger(bot,mess,args):
 
     if name in bot.triggers:
       return 'A trigger already exists by that name'
-    if name in [h._sibylbot_dec_chat_name for h in bot.hooks['chat']]:
+    if name in [h._sibylbot_dec_chat_name for h in bot.hooks['chat'].values()]:
       return 'The %s plugin has a chat command by that name' % bot.ns_cmd[name]
 
     bot.triggers[name] = text
@@ -341,7 +341,7 @@ def trigger_read(bot):
 
   removed = False
   for name in triggers.keys():
-    if name in [h._sibylbot_dec_chat_name for h in bot.hooks['chat']]:
+    if name in [h._sibylbot_dec_chat_name for h in bot.hooks['chat'].values()]:
       removed = True
       del triggers[name]
       bot.log.warning('Ignoring trigger "%s"; conflicts with cmd from plugin %s'
