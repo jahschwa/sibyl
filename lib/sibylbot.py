@@ -38,7 +38,7 @@
 #
 ################################################################################
 
-import sys,logging,re,os,imp,inspect,traceback,time,pickle
+import sys,logging,re,os,imp,inspect,traceback,time,pickle,Queue
 
 from sibyl.lib.config import Config
 from sibyl.lib.protocol import Message,Room
@@ -46,6 +46,7 @@ from sibyl.lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShut
 from sibyl.lib.decorators import botcmd,botrooms
 import sibyl.lib.util as util
 from sibyl.lib.log import Log
+from sibyl.lib.thread import SmartThread
 
 __author__ = 'Joshua Haas <haas.josh.a@gmail.com>'
 __version__ = 'v6.0.0'
@@ -132,6 +133,7 @@ class SibylBot(object):
     self.__reboot = False
     self.__recons = {}
     self.__tell_rooms = []
+    self.__pending_send = Queue.Queue()
     self.last_cmd = {}
 
     # load plug-in hooks from this file
@@ -245,7 +247,7 @@ class SibylBot(object):
           mod = util.load_module(f,d)
         except Exception as e:
           msg = 'Error loading plugin "%s"' % f
-          self.__log_ex(e,msg)
+          self._log_ex(e,msg)
           self.errors.append(msg)
           continue
         
@@ -365,7 +367,7 @@ class SibylBot(object):
       try:
         func(*args)
       except Exception as e:
-        self.__log_ex(e,'Exception running %s hook %s:' % (hook,name))
+        self._log_ex(e,'Exception running %s hook %s:' % (hook,name))
 
         # disable idle hooks so that don't keep raising exceptions
         if hook=='idle':
@@ -375,11 +377,6 @@ class SibylBot(object):
         errors[name] = e
 
     return errors
-
-  def __idle_proc(self):
-    """This function will be called in the main loop."""
-
-    self.__run_hooks('idle')
 
 ################################################################################
 # CCC - Callbacks for Protocols                                                #
@@ -456,7 +453,7 @@ class SibylBot(object):
       if reply is None:
         reply = default_reply
       if reply:
-        self.send(reply,frm)
+        self.__send(reply,frm)
       return
     
     # check against bw_list
@@ -471,7 +468,7 @@ class SibylBot(object):
           continue
         applied = rule
     if applied[0]=='b':
-      self.send("You don't have permission to run that command",frm)
+      self.__send("You don't have permission to run that command",frm)
       return
 
     # if the command was redo, retrieve the last command from that user
@@ -490,14 +487,19 @@ class SibylBot(object):
     # check for chat_ctrl
     func = self.hooks['chat'][cmd_name]
     if not self.opt('chat_ctrl') and func._sibylbot_dec_chat_ctrl:
-      self.send('chat_ctrl is disabled',frm)
+      self.__send('chat_ctrl is disabled',frm)
       return
 
     # execute the command and catch exceptions
+    reply = None
     try:
-      reply = func(mess,args)
+      if func._sibylbot_dec_chat_thread:
+        self.log.debug('Spawning new thread for cmd "%s"' % cmd_name)
+        SmartThread(self,func,mess,args).start()
+      else:
+        reply = func(mess,args)
     except Exception as e:
-      self.__log_ex(e,
+      self._log_ex(e,
           'Error while executing cmd "%s":' % cmd_name,
           '  Message text: "%s"' % text)
 
@@ -505,7 +507,7 @@ class SibylBot(object):
       if self.opt('except_reply'):
         reply = traceback.format_exc(e).split('\n')[-2]
     if reply:
-      self.send(reply,frm)
+      self.__send(reply,frm)
 
   # @param room (str) the room we successfully joined
   def _cb_join_room_success(self,room):
@@ -590,7 +592,7 @@ class SibylBot(object):
     filename = os.path.basename(inspect.getfile(func))
     return os.path.extsep.join(filename.split(os.path.extsep)[:-1])
 
-  def __log_ex(self,ex,short_msg,long_msg=None):
+  def _log_ex(self,ex,short_msg,long_msg=None):
     """log the exception and traceback"""
 
     full = traceback.format_exc(ex)
@@ -601,6 +603,11 @@ class SibylBot(object):
     if long_msg:
       self.log.debug(long_msg)
     self.log.debug(full)
+
+  def __send(self,text,to):
+    """actually send a message"""
+
+    self.protocols[to.get_protocol()].send(text,to)
 
 ################################################################################
 # EEE - Chat commands                                                          #
@@ -767,7 +774,7 @@ class SibylBot(object):
       del self.__tell_rooms[self.__tell_rooms.index(room)]
       if self.errors:
         msg = 'Errors during startup: '
-        self.send(msg+self.run_cmd('errors'),room)
+        self.__send(msg+self.run_cmd('errors'),room)
     if not self.__tell_rooms:
       del self.hooks['rooms']['sibylbot._SibylBot__tell_errors']
 
@@ -834,6 +841,18 @@ class SibylBot(object):
       except SigTermInterrupt:
         self.quit('stopped by SIGTERM')
 
+  def __idle_proc(self):
+    """This function will be called in the main loop."""
+
+    self.__run_hooks('idle')
+    self.__idle_send()
+
+  def __idle_send(self):
+    """send queued messages synchronously"""
+
+    while not self.__pending_send.empty():
+      self.__send(*self.__pending_send.get())
+
 ################################################################################
 # HHH - User-facing functions                                                  #
 ################################################################################
@@ -870,12 +889,13 @@ class SibylBot(object):
     sys.stdout = sys.__stdout__
     return self.__reboot
 
+  # this function is thread-safe
   # @param text (str,unicode) the text to send
   # @param to (User,Room) the recipient
   def send(self,text,to):
-    """send a message without worrying about which protocol"""
-    
-    self.protocols[to.get_protocol()].send(text,to)
+    """send a message (this function is thread-safe)"""
+
+    self.__pending_send.put((text,to))
 
   # @param (str,User,Room,Message) the object to query
   # @return (Protocol) the Protocol associated with the given object

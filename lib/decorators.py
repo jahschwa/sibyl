@@ -56,11 +56,13 @@ def botcmd(*args,**kwargs):
   # @param name (str) [function name] the name to respond to in chat
   # @param ctrl (bool) [False] whether to restrict the command with "chat_ctrl"
   # @param hidden (bool) [False] whether to hide this command from help output
-  def decorate(func,name=None,ctrl=False,hidden=False):
+  # @param thread (bool) [False] whether to thread the command
+  def decorate(func,name=None,ctrl=False,hidden=False,thread=False):
     setattr(func, '_sibylbot_dec_chat', True)
     setattr(func, '_sibylbot_dec_chat_name', name or func.__name__)
     setattr(func, '_sibylbot_dec_chat_ctrl', ctrl)
     setattr(func, '_sibylbot_dec_chat_hidden', hidden)
+    setattr(func, '_sibylbot_dec_chat_thread', thread)
     return func
 
   if len(args):

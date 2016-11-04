@@ -15,6 +15,8 @@ This change log follows guidelines at [this site](http://keepachangelog.com/).
 - Socket plug-in at `protocols/sibyl_socket.py`
 - Decorators: botcon, botdiscon, botrecon, botdown, boterr, botpriv, botgroup
 - Ability to specify "chat_ctrl" cmds with `@botcmd(ctrl=True)`
+- Ability to execute chat commands in a separate thread with `@botcmd(thread=True)`
+- Made `bot.send()` threadsafe
 - New chat cmd "tell" in `room.py` to give messages once a user joins the room
 - New chat cmd "about" in `sibylbot.py`to give info about the bot
 - Checking for duplicate plugin (file) names

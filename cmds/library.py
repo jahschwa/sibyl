@@ -111,9 +111,11 @@ def init(bot):
   bot.add_var('lib_pending_send',Queue.Queue())
 
   if os.path.isfile(bot.opt('library.file')):
-    bot.run_cmd('library',['load'])
+    Library(bot,None,['load']).run()
+    #bot.run_cmd('library',['load'])
   else:
-    bot.run_cmd('library',['rebuild'])
+    Library(bot,None,['rebuild']).run()
+    #bot.run_cmd('library',['rebuild'])
 
   if util.has_module('smbc'):
     import smbc
@@ -132,28 +134,14 @@ def init(bot):
   else:
     bot.log.error("Can't find module smbc; network shares will be disabled")
 
-@botidle
-def idle(bot):
-  """send queue for thread safety"""
-
-  while not bot.lib_pending_send.empty():
-    try:
-      bot.send(*bot.lib_pending_send.get())
-    except:
-      pass
-
-@botcmd
+@botcmd(thread=True)
 def library(bot,mess,args):
   """control media library - library (info|load|rebuild|save)"""
 
-  # use threading since rebuilding the library can take minutes
-  bot.log.debug('Spawning new thread')
-  thread = LibraryThread(bot,mess,args)
-  thread.start()
-
-  # only block when called on bot init to keep logs looking nice
-  if not mess:
-    thread.join()
+  # before botcmd had the threading option, I implemented library as a subclass
+  # of threading.Thread and ran it; now that I'm using botcmd(thread=True),
+  # I just left all the logic in the Library object but removed the subclassing
+  Library(bot,mess,args).run()
 
 @botcmd
 def search(bot,mess,args):
@@ -314,17 +302,13 @@ def rsamba(smbc_dir,smbc_file,q,e,ctx,path,ignore=None):
 # LibraryThread class
 ################################################################################
 
-class LibraryThread(threading.Thread):
+class Library(object):
 
   def __init__(self,bot,mess,args):
-
-    super(LibraryThread,self).__init__()
-    self.daemon = True
 
     self.bot = bot
     self.mess = mess
     self.args = args
-
     self.lock = bot.lib_lock
 
   def run(self):
@@ -336,7 +320,6 @@ class LibraryThread(threading.Thread):
         self.send('Library locked for rebuild'+
             ' (last took %s, current at %s)'
             % (util.sec2str(self.bot.lib_last_elapsed),t))
-        self.bot.log.debug('Thread finished; closing')
         return
       else:
         self.bot.log.debug('Waiting for other thread to release library lock')
@@ -367,14 +350,13 @@ class LibraryThread(threading.Thread):
     finally:
 
       self.lock.release()
-      self.bot.log.debug('Thread finished; closing')
 
   def send(self,text):
-    """queue a message to be sent thread-safely via our @botidle hook"""
+    """queue a message to be sent"""
 
     # when called during bot init mess is None so don't send anything
     if self.mess:
-      self.bot.lib_pending_send.put((text,self.mess.get_from()))
+      self.bot.send(text,self.mess.get_from())
 
   def load(self):
     """read the library from a pickle and load it into sibyl"""
