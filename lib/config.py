@@ -59,32 +59,32 @@ class Config(object):
     # OrderedDict containing full descriptions of options
     self.OPTS = odict([
 
-#option         default             requir  parse_func            validate_func       post_func
-#----------------------------------------------------------------------------------------------
-('protocols',   ({},                True,   self.parse_protocols, None,               None)), 
-('enable',      ([],                False,  self.parse_plugins,   None,               None)),
-('disable',     ([],                False,  self.parse_plugins,   None,               None)),
-('cmd_dir',     ('cmds',            False,  None,                 self.valid_dir,     None)),
-('rooms',       ({},                False,  self.parse_rooms,     None,               None)),
-('nick_name',   ('Sibyl',           False,  None,                 None,               None)),
-('log_level',   (logging.INFO,      False,  self.parse_log,       None,               None)),
-('log_file',    ('data/sibyl.log',  False,  None,                 self.valid_wfile,   None)),
-('log_append',  (True,              False,  self.parse_bool,      None,               None)),
-('log_requests',(False,             False,  self.parse_bool,      None,               None)),
-('log_urllib3', (False,             False,  self.parse_bool,      None,               None)),
-('bw_list',     ([('w','*','*')],   False,  self.parse_bw,        self.valid_bw,      None)),
-('chat_ctrl',   (False,             False,  self.parse_bool,      None,               None)),
-('cmd_prefix',  (None,              False,  None,                 None,               None)),
-('except_reply',(False,             False,  self.parse_bool,      None,               None)),
-('only_direct', (True,              False,  self.parse_bool,      None,               None)),
-('catch_except',(True,              False,  self.parse_bool,      None,               None)),
-('help_plugin', (False,             False,  self.parse_bool,      None,               None)),
-('recon_wait',  (60,                False,  self.parse_int,       None,               None)),
-('kill_stdout', (True,              False,  self.parse_bool,      None,               None)),
-('tell_errors', (True,              False,  self.parse_bool,      None,               None)),
-('admin_protos',(['cli'],           False,  self.parse_admin,     self.valid_admin,   None)),
-('persistence', (True,              False,  self.parse_bool,      None,               None)),
-('state_file',  ('data/sibyl.state',False,  None,                 self.valid_wfile,   None))
+#option         default               requir  parse_func            validate_func       post_func
+#------------------------------------------------------------------------------------------------
+('protocols',   ({},                  True,   self.parse_protocols, None,               None)), 
+('enable',      ([],                  False,  self.parse_plugins,   None,               None)),
+('disable',     ([],                  False,  self.parse_plugins,   None,               None)),
+('cmd_dir',     ('cmds',              False,  None,                 self.valid_dir,     None)),
+('rooms',       ({},                  False,  self.parse_rooms,     None,               None)),
+('nick_name',   ('Sibyl',             False,  None,                 None,               None)),
+('log_level',   (logging.INFO,        False,  self.parse_log,       None,               None)),
+('log_file',    ('data/sibyl.log',    False,  None,                 self.valid_wfile,   None)),
+('log_append',  (True,                False,  self.parse_bool,      None,               None)),
+('log_requests',(False,               False,  self.parse_bool,      None,               None)),
+('log_urllib3', (False,               False,  self.parse_bool,      None,               None)),
+('bw_list',     ([('w','*','*')],     False,  self.parse_bw,        self.valid_bw,      None)),
+('chat_ctrl',   (False,               False,  self.parse_bool,      None,               None)),
+('cmd_prefix',  (None,                False,  None,                 None,               None)),
+('except_reply',(False,               False,  self.parse_bool,      None,               None)),
+('only_direct', (True,                False,  self.parse_bool,      None,               None)),
+('catch_except',(True,                False,  self.parse_bool,      None,               None)),
+('help_plugin', (False,               False,  self.parse_bool,      None,               None)),
+('recon_wait',  (60,                  False,  self.parse_int,       None,               None)),
+('kill_stdout', (True,                False,  self.parse_bool,      None,               None)),
+('tell_errors', (True,                False,  self.parse_bool,      None,               None)),
+('admin_protos',(['cli'],             False,  self.parse_admin,     self.valid_admin,   None)),
+('persistence', (True,                False,  self.parse_bool,      None,               None)),
+('state_file',  ('data/state.pickle', False,  None,                 self.valid_wfile,   None))
 
     ])
 

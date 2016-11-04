@@ -33,7 +33,7 @@ def conf(bot):
   """add config options"""
 
   return [{'name':'file',
-          'default':'data/sibyl_bm.txt',
+          'default':'data/bookmarks.txt',
           'valid':bot.conf.valid_wfile},
           {'name':'resume_next',
           'default':False,

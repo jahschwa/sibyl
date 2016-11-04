@@ -33,7 +33,7 @@ def conf(bot):
   """add config options"""
 
   return {'name':'file',
-          'default':'data/sibyl_note.txt',
+          'default':'data/notes.txt',
           'valid':bot.conf.valid_wfile}
 
 @botinit

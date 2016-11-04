@@ -34,7 +34,7 @@ def conf(bot):
   """add config options"""
 
   return [{'name' : 'file',
-            'default' : 'data/sibyl_lib.pickle',
+            'default' : 'data/library.pickle',
             'valid' : bot.conf.valid_wfile},
           {'name' : 'max_matches',
             'default' : 10,
