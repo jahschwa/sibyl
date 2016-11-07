@@ -243,6 +243,7 @@ class XMPP(Protocol):
     self.conn = None
     for muc in self.__get_current_mucs():
       self.mucs[muc]['status'] = self.MUC_PARTED
+    self.seen = {}
 
   def process(self,wait=0):
     """process messages and __idle_proc"""
