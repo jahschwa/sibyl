@@ -192,6 +192,7 @@ class ClientThread(Thread):
           raise RuntimeError
         msgs.append(msg)
       else:
+        self.log.error('Unsupported msg type "%s"' % typ)
         self.send_msg('Unsupported msg type "%s"; closing connection' % typ)
         raise RuntimeError
 
