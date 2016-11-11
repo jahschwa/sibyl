@@ -300,12 +300,12 @@ class SocketServer(Protocol):
       hostname = socket.gethostname()
     port = self.opt('socket.port')
 
+    context = None
     (key,crt) = (self.opt('socket.privkey'),self.opt('socket.pubkey'))
     if key or crt:
       if not (key and crt):
         missing = [x for (x,y) in {'pubkey':crt,'privkey':key}.items() if not y]
         self.log.error('Missing %s; not using SSL' % missing[0])
-        context = None
       else:
         import ssl
         context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
