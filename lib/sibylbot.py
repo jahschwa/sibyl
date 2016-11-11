@@ -426,15 +426,15 @@ class SibylBot(object):
 
       # convert args to list accounting for quote blocking
       (cmd_name,args) = self.__get_args(cmd)
-      cmd = [cmd_name]+args
+      cmd_list = [cmd_name]+args
 
     # Execute hooks even if cmd is None
     if typ==Message.PRIVATE:
-      self.__run_hooks('priv',mess,cmd)
-      self.__run_hooks('msg',mess,cmd)
+      self.__run_hooks('priv',mess,cmd_list)
+      self.__run_hooks('msg',mess,cmd_list)
     elif typ==Message.GROUP:
-      self.__run_hooks('group',mess,cmd)
-      self.__run_hooks('msg',mess,cmd)
+      self.__run_hooks('group',mess,cmd_list)
+      self.__run_hooks('msg',mess,cmd_list)
     else:
       self.log.error('Unknown message type "%s"' % typ)
       return

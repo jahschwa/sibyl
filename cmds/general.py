@@ -54,7 +54,7 @@ def init(bot):
 
 @botcmd
 def alias(bot,mess,args):
-  """add aliases for cmds (and args) - alias (info|list|add|remove|show)"""
+  """add aliases for cmds (and args) - alias (info|list|add|remove|show) [name] [cmd]"""
 
   if not args:
     args = ['info']
@@ -117,13 +117,15 @@ def alias_cb(bot,mess,cmd):
     new = bot.aliases[name]
     bot.log.debug('cmd "%s" is an alias for "%s"' % (name,new))
 
-    text = ' '.join([new]+mess.get_text().split(' ')[1:])
-    room = mess.get_from().get_room()
-    if room:
-      text = bot.get_protocol(mess).get_nick(room)+' '+text
-    mess.set_text(text)
-
-    bot._cb_message(mess)
+    for n in [x.strip() for x in new.split(';')]:
+      if not n:
+        continue
+      text = ' '.join([n]+mess.get_text().split(' ')[1:])
+      room = mess.get_from().get_room()
+      if room:
+        text = bot.get_protocol(mess).get_nick(room)+' '+text
+      mess.set_text(text)
+      bot._cb_message(mess)
 
 def alias_read(bot):
   """read aliases from file into dict"""
