@@ -23,6 +23,8 @@
 
 import sys,os,subprocess,json,logging,socket,re,codecs
 
+import inspect
+
 import requests
 
 from sibyl.lib.decorators import *
@@ -37,7 +39,8 @@ def conf(bot):
     {'name':'config_rooms','default':True,'parse':bot.conf.parse_bool},
     {'name':'log_time','default':True,'parse':bot.conf.parse_bool},
     {'name':'log_lines','default':10,'parse':bot.conf.parse_int},
-    {'name':'alias_file','default':'data/aliases.txt','valid':bot.conf.valid_wfile}
+    {'name':'alias_file','default':'data/aliases.txt','valid':bot.conf.valid_wfile},
+    {'name':'alias_depth','default':10,'parse':bot.conf.parse_int}
   ]
 
 @botinit
@@ -46,6 +49,8 @@ def init(bot):
 
   bot.add_var('conf_diff',{})
   bot.add_var('aliases',{})
+  bot.add_var('alias_stack',[])
+  bot.add_var('alias_exceeded',False)
   try:
     bot.aliases = alias_read(bot)
   except Exception as e:
@@ -112,11 +117,23 @@ def alias_cb(bot,mess,cmd):
     return
 
   name = cmd[0]
-  if name in bot.aliases:
+  if name not in bot.aliases:
+    return
 
-    new = bot.aliases[name]
-    bot.log.debug('cmd "%s" is an alias for "%s"' % (name,new))
+  if len(bot.alias_stack)>=bot.opt('general.alias_depth'):
+    if not bot.alias_exceeded:
+      bot.alias_exceeded = True
+      msg = ('Command terminated for exceeding alias_depth with stack: %s'
+          % bot.alias_stack)
+      bot.log.error(msg)
+      bot.send(msg,mess.get_from())
+    return
 
+  bot.alias_stack.append(name)
+  new = bot.aliases[name]
+  bot.log.debug('cmd "%s" is an alias for "%s"' % (name,new))
+
+  try:
     orig = mess.get_text()
     for n in new.split(';'):
       n = n.strip()
@@ -128,6 +145,11 @@ def alias_cb(bot,mess,cmd):
         text = bot.get_protocol(mess).get_nick(room)+' '+text
       mess.set_text(text)
       bot._cb_message(mess)
+
+  finally:
+    del bot.alias_stack[-1]
+    if not bot.alias_stack:
+      bot.alias_exceeded = False
 
 def alias_read(bot):
   """read aliases from file into dict"""
