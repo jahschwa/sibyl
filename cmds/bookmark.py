@@ -21,7 +21,7 @@
 #
 ################################################################################
 
-import os,time
+import os,time,codecs
 
 from sibyl.lib.decorators import *
 import sibyl.lib.util as util
@@ -185,8 +185,8 @@ def bm_parse(bot):
   """read the bm_file into a dict"""
 
   d = {}
-  with open(bot.opt('bookmark.file'),'r') as f:
-    lines = [l.strip() for l in f.readlines() if l!='\n']
+  with codecs.open(bot.opt('bookmark.file'),'r',encoding='utf8') as f:
+    lines = [l.strip() for l in f.readlines() if l.strip()]
 
   # tab-separated each line is: name path pid position file time added
   for l in lines:
@@ -212,7 +212,7 @@ def bm_add(bot,name,props):
   bot.bm_store[name] = props
 
   # the bookmark file should always end in a newline
-  with open(bot.opt('bookmark.file'),'a') as f:
+  with codecs.open(bot.opt('bookmark.file'),'a',encoding='utf8') as f:
     f.write(bm_format(name,props)+'\n')
 
 def bm_remove(bot,name):
@@ -222,7 +222,7 @@ def bm_remove(bot,name):
   # passing "*" removes all bookmarks
   if name=='*':
     bot.bm_store = {}
-    with open(bot.opt('bookmark.file'),'w') as f:
+    with codecs.open(bot.opt('bookmark.file'),'w',encoding='utf8') as f:
       f.write('')
     return True
 
@@ -232,12 +232,12 @@ def bm_remove(bot,name):
 
   del bot.bm_store[name]
 
-  with open(bot.opt('bookmark.file'),'r') as f:
+  with codecs.open(bot.opt('bookmark.file'),'r',encoding='utf8') as f:
     lines = f.readlines()
 
   lines = [l for l in lines if l.split('\t')[0]!=name]
 
-  with open(bot.opt('bookmark.file'),'w') as f:
+  with codecs.open(bot.opt('bookmark.file'),'w',encoding='utf8') as f:
     f.writelines(lines)
 
   # return True if name was removed
@@ -248,7 +248,7 @@ def bm_format(name,props):
 
   order = ['path','pid','pos','file','time','add']
   for prop in order:
-    name += ('\t'+str(props[prop]))
+    name += ('\t'+unicode(props[prop]))
   return name
 
 def bm_unformat(line):

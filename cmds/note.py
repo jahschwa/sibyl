@@ -21,7 +21,7 @@
 #
 ################################################################################
 
-import os
+import os,codecs
 
 from sibyl.lib.decorators import *
 import sibyl.lib.util as util
@@ -143,7 +143,7 @@ def note(bot,mess,args):
 def note_parse(bot):
   """read the note file into a list"""
 
-  with open(bot.opt('note.file'),'r') as f:
+  with codecs.open(bot.opt('note.file'),'r',encoding='utf8') as f:
     lines = f.readlines()
 
   notes = [l.strip() for l in lines if l!='\n']
@@ -156,5 +156,5 @@ def note_write(bot):
   lines = [l+'\n' for l in bot.notes]
   lines.append('\n')
 
-  with open(bot.opt('note.file'),'w') as f:
+  with codecs.open(bot.opt('note.file'),'w',encoding='utf8') as f:
     f.writelines(lines)

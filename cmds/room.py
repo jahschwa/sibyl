@@ -22,7 +22,7 @@
 #
 ################################################################################
 
-import re,time,os
+import re,time,os,codecs
 
 import requests
 
@@ -324,7 +324,7 @@ def trigger_read(bot):
   fname = bot.opt('room.trigger_file')
 
   if os.path.isfile(fname):
-    with open(bot.opt('room.trigger_file'),'r') as f:
+    with codecs.open(bot.opt('room.trigger_file'),'r',encoding='utf8') as f:
       lines = f.readlines()
   else:
     lines = []
@@ -334,7 +334,7 @@ def trigger_read(bot):
   for (i,line) in enumerate(lines):
     try:
       if line.strip():
-        (name,text) = line.decode('utf8').split('\t')
+        (name,text) = line.split('\t')
         triggers[name.lower().strip()] = text.strip()
     except Exception as e:
       raise IOError('Error parsing trigger_file at line %s' % i)
@@ -356,9 +356,9 @@ def trigger_write(bot):
   """write triggers from bot to file"""
 
   t = [(k,v) for (k,v) in sorted(bot.triggers.items(),key=lambda i:i[0])]
-  lines = [(name+'\t'+text+'\n').encode('utf8') for (name,text) in t]
+  lines = [(name+'\t'+text+'\n') for (name,text) in t]
 
-  with open(bot.opt('room.trigger_file'),'w') as f:
+  with codecs.open(bot.opt('room.trigger_file'),'w',encoding='utf8') as f:
     f.writelines(lines)
 
 @botstatus
