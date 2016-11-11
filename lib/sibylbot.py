@@ -413,6 +413,7 @@ class SibylBot(object):
 
     # check if the message contains a command
     cmd = self.__get_cmd(mess)
+    cmd_list = cmd
 
     # only do further processing if the message was a command
     if cmd:
