@@ -19,6 +19,8 @@ This change log follows guidelines at [this site](http://keepachangelog.com/).
 - Made `bot.send()` threadsafe
 - New chat cmd "tell" in `room.py` to give messages once a user joins the room
 - New chat cmd "about" in `sibylbot.py`to give info about the bot
+- New chat cmd "trigger" in `room.py` to add chat "cmds" that just echo text
+- New chat cmd "alias" in `general.py` to add bash-like aliases for cmd strings
 - Checking for duplicate plugin (file) names
 - Checking for duplicate config options from different plugins
 - New config option `enable` to enable only a specific list of plugins
@@ -28,6 +30,9 @@ This change log follows guidelines at [this site](http://keepachangelog.com/).
 - New config options `persistence` and `state_file` for use with `bot.add_var`
 - New config option `general.config_room` to disable `config` command in rooms
 - New config option `room.cross_proto` to disable using `room` commands across protocols
+- New config options `log_time` and `log_lines` for the `general.log` cmd
+- New config option `room.trigger_file` for storing triggers
+- New config option `general.alias_file` for storing aliases
 - Disabled `stdout`; all plugins should use logging instead
 - Plugins can specify dependencies as a list via the `__depends__` variable
 - Plugins can specify "wants" as a list via the `__wants__` variable
@@ -62,7 +67,9 @@ This change log follows guidelines at [this site](http://keepachangelog.com/).
 - The `prev` command from `xbmc.py` now jumps to playlist position instead of using the JSON-RPC built-in
 - Sibyl now catches `SIGTERM` and exits cleanly
 - All imports must now start with `sibyl`
-- The `log` command now has log viewing functionality
+- The `log` command now has log viewing functionality with `tail` and `trace`
+- Defaults changed for `bookmark.file`, `library.file`, `note.file`, `state_file`
+- Plugins that read/write files now use UTF-8
 
 ### Removed
 - Refactored `jabberbot.py` into `protocols/sibyl_xmpp.py` and `lib/sibylbot.py`

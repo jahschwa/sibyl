@@ -315,8 +315,8 @@ def trigger(bot,mess,args):
 def trigger_cb(bot,mess,cmd):
   """execute triggers"""
 
-  if cmd and cmd in bot.triggers:
-    bot.send(bot.triggers[cmd],mess.get_from())
+  if cmd and cmd[0] in bot.triggers:
+    bot.send(bot.triggers[cmd[0]],mess.get_from())
 
 def trigger_read(bot):
   """read triggers from file into dict"""

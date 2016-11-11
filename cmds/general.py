@@ -21,7 +21,7 @@
 #
 ################################################################################
 
-import sys,os,subprocess,json,logging,socket,re
+import sys,os,subprocess,json,logging,socket,re,codecs
 
 import requests
 
@@ -36,7 +36,8 @@ def conf(bot):
   return [
     {'name':'config_rooms','default':True,'parse':bot.conf.parse_bool},
     {'name':'log_time','default':True,'parse':bot.conf.parse_bool},
-    {'name':'log_lines','default':10,'parse':bot.conf.parse_int}
+    {'name':'log_lines','default':10,'parse':bot.conf.parse_int},
+    {'name':'alias_file','default':'data/aliases.txt','valid':bot.conf.valid_wfile}
   ]
 
 @botinit
@@ -44,6 +45,128 @@ def init(bot):
   """initialise config change tracking variable"""
 
   bot.add_var('conf_diff',{})
+  bot.add_var('aliases',{})
+  try:
+    bot.aliases = alias_read(bot)
+  except Exception as e:
+    bot.log.error('Failed to parse alias_file')
+    bot.log.debug(e.message)
+
+@botcmd
+def alias(bot,mess,args):
+  """add aliases for cmds (and args) - alias (info|list|add|remove|show)"""
+
+  if not args:
+    args = ['info']
+
+  if args[0]=='list':
+    aliases = bot.aliases.keys()
+    if not aliases:
+      return 'There are no aliases'
+    return ', '.join(sorted(aliases))
+
+  elif args[0]=='add':
+    if len(args)<2:
+      return 'You must specify a name and content'
+    if len(args)<3:
+      return 'You must specify some text'
+    (name,text) = (args[1],' '.join(args[2:]))
+
+    if name in bot.aliases:
+      return 'An alias already exists by that name'
+    if name in [h._sibylbot_dec_chat_name for h in bot.hooks['chat'].values()]:
+      return 'The %s plugin has a chat command by that name' % bot.ns_cmd[name]
+    if name==args[2]:
+      return 'An alias cannot reference itself'
+
+    bot.aliases[name] = text
+    alias_write(bot)
+    return 'Added alias "%s"' % name
+
+  elif args[0]=='remove':
+    if len(args)<2:
+      return 'You must specify an alias to remove'
+    if args[1]=='*':
+      bot.aliases = {}
+      alias_write(bot)
+      return 'Removed all aliases'
+    if args[1] not in bot.aliases:
+      return 'Invalid alias'
+    del bot.aliases[args[1]]
+    return 'Removed alias "%s"' % args[1]
+
+  elif args[0]=='show':
+    if len(args)<2:
+      return 'You must specify an alias'
+    if args[1] not in bot.aliases:
+      return 'Invalid alias'
+    return bot.aliases[args[1]]
+
+  return 'There are %s aliases' % len(bot.aliases)
+
+@botmsg
+def alias_cb(bot,mess,cmd):
+  """execute aliases"""
+
+  if not cmd:
+    return
+
+  name = cmd[0]
+  if name in bot.aliases:
+
+    new = bot.aliases[name]
+    bot.log.debug('cmd "%s" is an alias for "%s"' % (name,new))
+
+    text = ' '.join([new]+mess.get_text().split(' ')[1:])
+    room = mess.get_from().get_room()
+    if room:
+      text = bot.get_protocol(mess).get_nick(room)+' '+text
+    mess.set_text(text)
+
+    bot._cb_message(mess)
+
+def alias_read(bot):
+  """read aliases from file into dict"""
+
+  fname = bot.opt('general.alias_file')
+
+  if os.path.isfile(fname):
+    with codecs.open(fname,'r',encoding='utf8') as f:
+      lines = f.readlines()
+  else:
+    lines = []
+    alias_write(bot)
+
+  aliases = {}
+  for (i,line) in enumerate(lines):
+    try:
+      if line.strip():
+        (name,text) = line.split('\t')
+        aliases[name.lower().strip()] = text.strip()
+    except Exception as e:
+      raise IOError('Error parsing alias_file at line %s' % i)
+
+  removed = False
+  for name in aliases.keys():
+    if name in [h._sibylbot_dec_chat_name for h in bot.hooks['chat'].values()]:
+      removed = True
+      del aliases[name]
+      bot.log.warning('Ignoring alias "%s"; conflicts with cmd from plugin %s'
+          % (name,bot.ns_cmd[name]))
+
+  if removed:
+    bot.errors.append('Some aliases ignored due to name conflicts')
+
+  return aliases
+
+def alias_write(bot):
+  """write aliases from bot to file"""
+
+  a = [(k,v) for (k,v) in sorted(bot.aliases.items(),key=lambda i:i[0])]
+  lines = [(name+'\t'+text+'\n') for (name,text) in a]
+
+  with codecs.open(bot.opt('general.alias_file'),'w',encoding='utf8') as f:
+    f.writelines(lines)
 
 @botcmd(ctrl=True)
 def config(bot,mess,args):

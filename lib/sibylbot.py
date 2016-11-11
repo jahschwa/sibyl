@@ -414,7 +414,21 @@ class SibylBot(object):
     # check if the message contains a command
     cmd = self.__get_cmd(mess)
 
-    # Execute hooks, return if ERROR
+    # only do further processing if the message was a command
+    if cmd:
+
+      # account for double cmd_prefix = redo (e.g. !!)
+      if self.opt('cmd_prefix') and cmd.startswith(self.opt('cmd_prefix')):
+        new = self.__remove_prefix(cmd)
+        cmd = 'redo'
+        if len(new.strip())>0:
+          cmd += (' '+new.strip())
+
+      # convert args to list accounting for quote blocking
+      (cmd_name,args) = self.__get_args(cmd)
+      cmd = [cmd_name]+args
+
+    # Execute hooks even if cmd is None
     if typ==Message.PRIVATE:
       self.__run_hooks('priv',mess,cmd)
       self.__run_hooks('msg',mess,cmd)
@@ -425,19 +439,9 @@ class SibylBot(object):
       self.log.error('Unknown message type "%s"' % typ)
       return
 
-    # if cmd is None, the msg was not a chat cmd
+    # now that hooks are done, return if there was no command
     if not cmd:
       return
-    
-    # account for double cmd_prefix = redo (e.g. !!)
-    if self.opt('cmd_prefix') and cmd.startswith(self.opt('cmd_prefix')):
-      new = self.__remove_prefix(cmd)
-      cmd = 'redo'
-      if len(new.strip())>0:
-        cmd += (' '+new.strip())
-
-    # convert args to list accounting for quote blocking
-    (cmd_name,args) = self.__get_args(cmd)
 
     # check if the command exists
     if cmd_name not in self.hooks['chat']:
