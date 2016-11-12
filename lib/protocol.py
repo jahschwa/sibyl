@@ -75,7 +75,7 @@ class User(object):
   def get_name(self):
     pass
 
-  # @return (str) the room this User is a member of or None
+  # @return (Room) the room this User is a member of or None
   @abstractmethod
   def get_room(self):
     pass
@@ -86,7 +86,7 @@ class User(object):
     pass
 
   # @param other (object) you must check for class equivalence
-  # @return (bool) True if self==other
+  # @return (bool) True if self==other (including resource)
   @abstractmethod
   def __eq__(self,other):
     pass
@@ -100,12 +100,16 @@ class User(object):
   # @param typ (int) either Message.GROUP or Message.PRIVATE
   # @param proto (str) name of the associated protocol
   def __init__(self,user,typ,proto=None):
+
     if not proto:
       filename = os.path.basename(inspect.stack()[1][1])
       proto = filename.split(os.path.extsep)[0]
+      if 'sibyl_' in proto:
+        proto = proto.split('_')[-1]
+      else:
+        raise ValueError('You can only omit param "proto" in a Protocol subclass')
     self.protocol = proto
-    if 'sibyl_' in self.protocol:
-      self.protocol = self.protocol.split('_')[-1]
+
     self.real = None
     self.parse(user,typ)
 
@@ -156,15 +160,17 @@ class Room(object):
   # @param name (str) the identifier for this Room
   # @param nick (str) [None] the nick name to use in this Room
   # @param pword (str) [None] the password for joining this Room
-  # @param proto (str) name of the associated protocol
+  # @param proto (str) [auto-gen] name of the associated protocol
   def __init__(self,name,nick=None,pword=None,proto=None):
 
     if not proto:
       filename = os.path.basename(inspect.stack()[1][1])
       proto = filename.split(os.path.extsep)[0]
+      if 'sibyl_' in proto:
+        proto = proto.split('_')[-1]
+      else:
+        raise ValueError('You can only omit param "proto" in a Protocol subclass')
     self.protocol = proto
-    if 'sibyl_' in self.protocol:
-      self.protocol = self.protocol.split('_')[-1]
 
     self.name = name
     self.nick = nick
@@ -190,21 +196,28 @@ class Room(object):
     """return this Room's password or None"""
     return self.pword
 
+  # @return (str) the string version of this Room (includes protocol)
   def __str__(self):
     return self.protocol+':'+self.name
 
+  # @return (str) the string object representation of tihs Room (inc proto)
   def __repr__(self):
     return '<Room %s:%s>' % (self.protocol,self.name)
 
+  # @param other (object) another object for comparison
+  # @return (bool) true if other is a Room, and has same protocol and name
   def __eq__(self,other):
     if not isinstance(other,Room):
       return False
     return self.name==other.name and self.protocol==other.protocol
 
+  # @param other (object) another object for comparison
+  # @return (bool) true if other is not a Room, or has different protocol/name
   def __ne__(self,other):
     return not self==other
 
   # override hashing to allow as dict keys
+  # @return (str) a hash of this Room (depends on protocol and name)
   def __hash__(self):
     return hash(str(self))
 
@@ -245,9 +258,11 @@ class Message(object):
     if not proto:
       filename = os.path.basename(inspect.stack()[1][1])
       proto = filename.split(os.path.extsep)[0]
+      if 'sibyl_' in proto:
+        proto = proto.split('_')[-1]
+      else:
+        raise ValueError('You can only omit param "proto" in a Protocol subclass')
     self.protocol = proto
-    if 'sibyl_' in self.protocol:
-      self.protocol = self.protocol.split('_')[-1]
 
     if typ not in range(0,4):
       raise ValueError('Valid types: Message.STATUS, PRIVATE, GROUP, ERROR')
@@ -284,7 +299,7 @@ class Message(object):
 
   # @return (tuple of (int,str)) the Message status enum and status msg
   def get_status(self):
-    """return the status (e.g. Message.OFFLINE)"""
+    """return the status e.g. (Message.OFFLINE,'Be back later :]')"""
     return (self.status,self.msg)
 
   # @return (str) the protocol associated with this Message
@@ -297,8 +312,8 @@ class Message(object):
   @staticmethod
   def type_to_str(typ):
     """return a human-readable Message type given a Message type enum"""
-    if typ not in range(0,4):
-      return 'INVALID'
+    if typ not in range(0,len(Message.TYPES)):
+      raise ValueError('Invalid Message type')
     return Message.TYPES[typ]
 
 ################################################################################
@@ -332,11 +347,9 @@ class Protocol(object):
     pass
 
   # receive/process messages and call bot._cb_message()
-  # this function should take/block for around 1 second if possible
   # must ignore msgs from myself and from users not in any of our rooms
   # @param wait (int) time to wait for new messages before returning
   # @call bot._cb_message(Message) upon receiving a valid status or message
-  # @return (Message) the received Message
   # @raise (PingTimeout) if implemented
   # @raise (ConnectFailure) if disconnected
   # @raise (ServerShutdown) if server shutdown
@@ -345,14 +358,14 @@ class Protocol(object):
     pass
 
   # called when the bot is exiting for whatever reason
+  # NOTE: sibylbot will already call part_room() on every room in get_rooms()
   @abstractmethod
   def shutdown(self):
     pass
 
   # send a message to a user
   # @param text (str,unicode) text to send
-  # @param to (User) send to a User
-  # @param to (Room) send to a room
+  # @param to (User,Room) recipient
   @abstractmethod
   def send(self,text,to):
     pass
@@ -360,29 +373,29 @@ class Protocol(object):
   # send a message with text to every user in a room
   # optionally note that the broadcast was requested by a specific User
   # @param text (str,unicode) body of the message
-  # @param room (str) room to broadcast in
+  # @param room (Room) room to broadcast in
   # @param frm (User) [None] the User requesting the broadcast
   @abstractmethod
   def broadcast(self,text,room,frm=None):
     pass
 
-  # join the specified room user the specified nick and password
-  # @call bot._cb_join_room_success(room) on successful join
-  # @call bot._cb_join_room_failure(room,error) on failed join
-  # @param room (str) the room to join
+  # join the specified room using the specified nick and password
+  # @param room (Room) the room to join
   # @param nick (str) the nick name to use in the room
   # @param pword (str) [None] the password for the room
+  # @call bot._cb_join_room_success(room) on successful join
+  # @call bot._cb_join_room_failure(room,error) on failed join
   @abstractmethod
   def join_room(self,room,nick,pword=None):
     pass
 
   # part the specified room
-  # @param room (str) the room to leave
+  # @param room (Room) the room to leave
   @abstractmethod
   def part_room(self,room):
     pass
 
-  # @param room (str) the room to check
+  # @param room (Room) the room to check
   # @return (bool) whether we are currently connected and in the room
   @abstractmethod
   def in_room(self,room):
@@ -390,25 +403,25 @@ class Protocol(object):
 
   # helper function for get_rooms() for protocol-specific flags
   # only needs to handle: FLAG_PARTED, FLAG_PENDING, FLAG_IN, FLAG_ALL
-  # @param flag (enum) [None] one of Room.FLAG enums
+  # @param flag (int) one of Room.FLAG_* enums
   # @return (list of Room) rooms matching the flag
   @abstractmethod
   def _get_rooms(self,flag):
     pass
 
-  # @param room (str) the room to query
+  # @param room (Room) the room to query
   # @return (list of User) the Users in the specified room
   @abstractmethod
   def get_occupants(self,room):
     pass
 
-  # @param room (str) the room to query
+  # @param room (Room) the room to query
   # @return (str) the nick name we are using in the specified room
   @abstractmethod
   def get_nick(self,room):
     pass
 
-  # @param room (str) the room to query
+  # @param room (Room) the room to query
   # @param nick (str) the nick to examine
   # @return (User) the "real" User behind the specified nick/room
   @abstractmethod
@@ -443,8 +456,8 @@ class Protocol(object):
   def get_name(self):
     return self.__module__.split('_')[1]
 
-  # @param flags (enum OR list of enum) Room flags
-  # @return (list of Room) the Rooms matching all given flags
+  # @param flags (int, list of int) Room.FLAG_* enum(s)
+  # @return (list of Room) the Rooms matching all given flags (i.e. AND)
   def get_rooms(self,flags=None):
     """return our rooms, optionally only those we are in"""
 
@@ -474,6 +487,8 @@ class Protocol(object):
 
     return list(rooms)
 
+  # @param rooms (set) set to add rooms to
+  # @param flags (list of int) list of Room.FLAG_* enums
   def __add_rooms(self,rooms,flags):
     """helper function for get_rooms"""
 

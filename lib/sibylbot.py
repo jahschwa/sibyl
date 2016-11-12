@@ -797,7 +797,7 @@ class SibylBot(object):
           self.__run_hooks('con',name)
           for room in self.opt('rooms').get(name,[]):
             pword = room['pass'] and room['pass'].get()
-            proto.join_room(Room(room['room'],room['nick'],pword))
+            proto.join_room(Room(room['room'],room['nick'],pword,proto=proto))
           if name in self.__recons:
             del self.__recons[name]
 
@@ -807,8 +807,7 @@ class SibylBot(object):
     if self.opt('tell_errors'):
       for (proto,rooms) in self.opt('rooms').items():
         for room in rooms:
-          room = Room(room['room'])
-          room.protocol = proto
+          room = Room(room['room'],proto=proto)
           self.__tell_rooms.append(room)
 
     # try to reconnect forever unless self.quit()
@@ -845,6 +844,11 @@ class SibylBot(object):
         self.quit('stopped by KeyboardInterrupt')
       except SigTermInterrupt:
         self.quit('stopped by SIGTERM')
+
+    # leave all rooms gracefully
+    for (name,proto) in self.protocols.items():
+      for room in proto.get_rooms():
+        proto.part_room(room)
 
   def __idle_proc(self):
     """This function will be called in the main loop."""
