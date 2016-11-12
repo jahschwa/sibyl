@@ -27,6 +27,7 @@ from Queue import Queue
 
 try:
   from PyQt4 import QtGui,QtCore
+  from PyQt4.Qt import QApplication
 except:
   pass
 
@@ -387,6 +388,8 @@ class ChatBox(QtGui.QMainWindow):
     menu = self.menuBar().addMenu('&Chat')
     self.make_item(menu,'Connect','Ctrl+N')
     self.make_item(menu,'Disconnect','Ctrl+D')
+    self.make_item(menu,'Copy HTML','Ctrl+H')
+    self.make_item(menu,'Copy Plaintext','Ctrl+P')
     self.make_item(menu,'Quit','Ctrl+Q')
 
     # create the main grid where the buttons will be located
@@ -447,6 +450,10 @@ class ChatBox(QtGui.QMainWindow):
       if self.worker:
         self.worker.event_close.set()
         self.connected = False
+    elif t=='Copy HTML':
+      QApplication.clipboard().setText(self.chatpane.toHtml())
+    elif t=='Copy Plaintext':
+      QApplication.clipboard().setText(self.chatpane.toPlainText())
     elif t=='Quit':
       QtGui.qApp.quit()
 
@@ -491,7 +498,7 @@ class ChatBox(QtGui.QMainWindow):
         self.thread.wait()
 
   def said(self,txt):
-    self.chatpane.append('%s | %s: %s' % (time.asctime(),USER,txt))
+    self.chatpane.append('<font color="black">%s | %s: %s</font>' % (time.asctime(),USER,txt))
 
   @QtCore.pyqtSlot(str)
   def say(self,txt):
