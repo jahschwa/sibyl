@@ -21,13 +21,13 @@
 #
 ################################################################################
 
-from sibyl.lib.protocol import User,Message,Protocol
+from sibyl.lib.protocol import User,Room,Message,Protocol
 from sibyl.lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
 
 from sibyl.lib.decorators import botconf
 
 ################################################################################
-# Config options                                                               #
+# Config options
 ################################################################################
 
 @botconf
@@ -35,13 +35,15 @@ def conf(bot):
   return []
 
 ################################################################################
-# User sub-class                                                               #
+# User sub-class
 ################################################################################
 
 class MYUSER(User):
 
-  # called on object init to guarantee some variables are always initialised
-  # @param user (str) a full username
+  # called on bot init; the following are already created by __init__:
+  #   self.protocol = name of this User's protocol as a str
+  #   self.real = the "real" User behind this user (defaults to self)
+  # @param user (object) a full username
   # @param typ (int) is either Message.PRIVATE or Message.GROUP
   def parse(self,user,typ):
     raise NotImplementedError
@@ -50,7 +52,7 @@ class MYUSER(User):
   def get_name(self):
     raise NotImplementedError
 
-  # @return (str) the room this User is a member of or None
+  # @return (Room) the room this User is a member of or None
   def get_room(self):
     raise NotImplementedError
 
@@ -59,7 +61,7 @@ class MYUSER(User):
     raise NotImplementedError
 
   # @param other (object) you must check for class equivalence
-  # @return (bool) True if self==other
+  # @return (bool) True if self==other (including resource)
   def __eq__(self,other):
     raise NotImplementedError
 
@@ -68,12 +70,12 @@ class MYUSER(User):
     raise NotImplementedError
 
 ################################################################################
-# Protocol sub-class                                                           #
+# Protocol sub-class
 ################################################################################
 
 class MYPROTOCOL(Protocol):
 
-  # called on bot init; the following are guaranteed to exist:
+  # called on bot init; the following are already created by __init__:
   #   self.bot = SibylBot instance
   #   self.log = the logger you should use
   def setup(self):
@@ -93,11 +95,9 @@ class MYPROTOCOL(Protocol):
     raise NotImplementedError
 
   # receive/process messages and call bot._cb_message()
-  # this function should take/block for around 1 second if possible
   # must ignore msgs from myself and from users not in any of our rooms
   # @param wait (int) time to wait for new messages before returning
   # @call bot._cb_message(Message) upon receiving a valid status or message
-  # @return (Message) the received Message
   # @raise (PingTimeout) if implemented
   # @raise (ConnectFailure) if disconnected
   # @raise (ServerShutdown) if server shutdown
@@ -105,60 +105,54 @@ class MYPROTOCOL(Protocol):
     raise NotImplementedError
 
   # called when the bot is exiting for whatever reason
+  # NOTE: sibylbot will already call part_room() on every room in get_rooms()
   def shutdown(self):
     raise NotImplementedError
 
   # send a message to a user
   # @param text (str,unicode) text to send
-  # @param to (User) send to a User
-  # @param to (str) send to a room
+  # @param to (User,Room) recipient
   def send(self,text,to):
     raise NotImplementedError
 
   # send a message with text to every user in a room
   # optionally note that the broadcast was requested by a specific User
   # @param text (str,unicode) body of the message
-  # @param room (str) room to broadcast in
+  # @param room (Room) room to broadcast in
   # @param frm (User) [None] the User requesting the broadcast
   def broadcast(self,text,room,frm=None):
     raise NotImplementedError
 
-  # join the specified room user the specified nick and password
+  # join the specified room using the specified nick and password
+  # @param room (Room) the room to join
   # @call bot._cb_join_room_success(room) on successful join
   # @call bot._cb_join_room_failure(room,error) on failed join
-  # @param room (str) the room to join
-  # @param nick (str) the nick name to use in the room
-  # @param pword (str) [None] the password for the room
-  def join_room(self,room,nick,pword=None):
+  def join_room(self,room):
     raise NotImplementedError
 
   # part the specified room
-  # @param room (str) the room to leave
+  # @param room (Room) the room to leave
   def part_room(self,room):
     raise NotImplementedError
 
-  # @param room (str) the room to check
-  # @return (bool) whether we are currently connected and in the room
-  def in_room(self,room):
+  # helper function for get_rooms() for protocol-specific flags
+  # only needs to handle: FLAG_PARTED, FLAG_PENDING, FLAG_IN, FLAG_ALL
+  # @param flag (int) one of Room.FLAG_* enums
+  # @return (list of Room) rooms matching the flag
+  def _get_rooms(self,flag):
     raise NotImplementedError
 
-  # return the rooms we have joined in the past and present
-  # @param in_only (bool) [False] only return the rooms we are currently in
-  # @return (list of str) our rooms
-  def get_rooms(self,in_only=False):
-    raise NotImplementedError
-
-  # @param room (str) the room to query
+  # @param room (Room) the room to query
   # @return (list of User) the Users in the specified room
   def get_occupants(self,room):
     raise NotImplementedError
 
-  # @param room (str) the room to query
+  # @param room (Room) the room to query
   # @return (str) the nick name we are using in the specified room
   def get_nick(self,room):
     raise NotImplementedError
 
-  # @param room (str) the room to query
+  # @param room (Room) the room to query
   # @param nick (str) the nick to examine
   # @return (User) the "real" User behind the specified nick/room
   def get_real(self,room,nick):
@@ -168,12 +162,6 @@ class MYPROTOCOL(Protocol):
   def get_username(self):
     raise NotImplementedError
 
-  # create a new User using this Protocol's custom User subclass
-  # @param user (str) the new username to convert
-  # @param typ (int) Message type enum (either PRIVATE or GROUP)
-  def new_user(self,user,typ):
-    raise NotImplementedError
-
 ################################################################################
-# Helper functions                                                             #
+# Helper functions
 ################################################################################

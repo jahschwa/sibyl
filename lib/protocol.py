@@ -33,10 +33,10 @@
 ################################################################################
 
 from abc import ABCMeta,abstractmethod
-import os,inspect
+import os,sys,inspect
 
 ################################################################################
-# Custom exceptions                                                            #
+# Custom exceptions
 ################################################################################
 
 class ProtocolError(Exception):
@@ -57,14 +57,37 @@ class ServerShutdown(ProtocolError):
   pass
 
 ################################################################################
-# User abstract class                                                          #
+# Protocol auto-completion super class
 ################################################################################
 
-class User(object):
+class ProtocolAware(object):
+
+  def __init__(self,proto):
+
+    if not proto:
+
+      filepath = os.path.abspath(inspect.stack()[2][1])
+      dirname = os.path.dirname(filepath).split(os.path.sep)[-1]
+      proto = os.path.basename(filepath).split(os.path.extsep)[0]
+
+      if 'sibyl_' in proto and dirname=='protocols':
+        proto = proto.split('_')[-1]
+      else:
+        raise ValueError('You can only omit param "proto" in a Protocol subclass')
+
+    self.protocol = proto
+
+################################################################################
+# User abstract class
+################################################################################
+
+class User(ProtocolAware):
   __metaclass__ = ABCMeta
 
-  # called on object init to guarantee some variables are always initialised
-  # @param user (str) a full username
+  # called on bot init; the following are already created by __init__:
+  #   self.protocol = name of this User's protocol as a str
+  #   self.real = the "real" User behind this user (defaults to self)
+  # @param user (object) a full username
   # @param typ (int) is either Message.PRIVATE or Message.GROUP
   @abstractmethod
   def parse(self,user,typ):
@@ -96,21 +119,18 @@ class User(object):
   def __str__(self):
     pass
 
+  def __repr__(self):
+    return '<%s %s>' % (self.__class__.__name__,str(self))
+
   # @param user (object) a user id to parse
   # @param typ (int) either Message.GROUP or Message.PRIVATE
-  # @param proto (str) name of the associated protocol
-  def __init__(self,user,typ,proto=None):
+  # @param real (User) [self] the "real" user behind this user
+  # @param proto (str) [auto-gen] name of the associated protocol
+  def __init__(self,user,typ,real=None,proto=None):
 
-    if not proto:
-      filename = os.path.basename(inspect.stack()[1][1])
-      proto = filename.split(os.path.extsep)[0]
-      if 'sibyl_' in proto:
-        proto = proto.split('_')[-1]
-      else:
-        raise ValueError('You can only omit param "proto" in a Protocol subclass')
-    self.protocol = proto
+    super(User,self).__init__(proto)
 
-    self.real = None
+    self.real = real
     self.parse(user,typ)
 
   # @return (User subclass) the "real" username of this User or None
@@ -129,6 +149,15 @@ class User(object):
     """return the name of the protocol associated with this User"""
     return self.protocol
 
+  # @param (object) an object to check for base match (no resource)
+  # @return (bool) True if other is User and matching protocol and get_base()
+  def base_match(self,other):
+    if not isinstance(other,User):
+      return False
+    if self.protocol!=other.protocol:
+      return False
+    return self.get_base()==other.get_base()
+
   # override the != operator (you don't have to do this in the subclass)
   # @param other (object)
   # @return (bool) whether self!=other
@@ -143,7 +172,7 @@ class User(object):
 # Room class                                                                   #
 ################################################################################
 
-class Room(object):
+class Room(ProtocolAware):
 
   # get_room flags
   FLAG_CONF = 0
@@ -163,14 +192,7 @@ class Room(object):
   # @param proto (str) [auto-gen] name of the associated protocol
   def __init__(self,name,nick=None,pword=None,proto=None):
 
-    if not proto:
-      filename = os.path.basename(inspect.stack()[1][1])
-      proto = filename.split(os.path.extsep)[0]
-      if 'sibyl_' in proto:
-        proto = proto.split('_')[-1]
-      else:
-        raise ValueError('You can only omit param "proto" in a Protocol subclass')
-    self.protocol = proto
+    super(Room,self).__init__(proto)
 
     self.name = name
     self.nick = nick
@@ -225,7 +247,7 @@ class Room(object):
 # Message class                                                                #
 ################################################################################
 
-class Message(object):
+class Message(ProtocolAware):
 
   # Type enums
   STATUS = 0
@@ -251,18 +273,11 @@ class Message(object):
   # @param txt (str,unicode) the body of the msg
   # @param status (str) [None] status enum
   # @param msg (str) [None] custom status msg (e.g. "Doing awesome!")
-  # @param proto (str) [None] name of the associated protocol
+  # @param proto (str) [auto-gen] name of the associated protocol
   def __init__(self,typ,frm,txt,status=None,msg=None,proto=None):
     """create a new Message"""
 
-    if not proto:
-      filename = os.path.basename(inspect.stack()[1][1])
-      proto = filename.split(os.path.extsep)[0]
-      if 'sibyl_' in proto:
-        proto = proto.split('_')[-1]
-      else:
-        raise ValueError('You can only omit param "proto" in a Protocol subclass')
-    self.protocol = proto
+    super(Message,self).__init__(proto)
 
     if typ not in range(0,4):
       raise ValueError('Valid types: Message.STATUS, PRIVATE, GROUP, ERROR')
@@ -272,7 +287,7 @@ class Message(object):
       raise ValueError('Valid status: Message.UNKNOWN, OFFLINE, EXT_AWAY, '+
           'AWAY, DND, AVAILABLE')
     self.status = status
-    
+
     self.frm = frm
     self.txt = txt
     self.msg = msg
@@ -381,24 +396,16 @@ class Protocol(object):
 
   # join the specified room using the specified nick and password
   # @param room (Room) the room to join
-  # @param nick (str) the nick name to use in the room
-  # @param pword (str) [None] the password for the room
   # @call bot._cb_join_room_success(room) on successful join
   # @call bot._cb_join_room_failure(room,error) on failed join
   @abstractmethod
-  def join_room(self,room,nick,pword=None):
+  def join_room(self,room):
     pass
 
   # part the specified room
   # @param room (Room) the room to leave
   @abstractmethod
   def part_room(self,room):
-    pass
-
-  # @param room (Room) the room to check
-  # @return (bool) whether we are currently connected and in the room
-  @abstractmethod
-  def in_room(self,room):
     pass
 
   # helper function for get_rooms() for protocol-specific flags
@@ -433,16 +440,10 @@ class Protocol(object):
   def get_username(self):
     pass
 
-  # create a new User using this Protocol's custom User subclass
-  # @param user (str) the new username to convert
-  # @param typ (int) Message type enum (either PRIVATE or GROUP)
-  @abstractmethod
-  def new_user(self,user,typ):
-    pass
-
   # @param bot (SibylBot) the sibyl instance
   # @param log (Logger) the logger this protocol should use
   def __init__(self,bot,log):
+
     self.bot = bot
     self.log = log
     self.setup()
@@ -455,6 +456,18 @@ class Protocol(object):
   # @return (str) the name of the protocol based on filename
   def get_name(self):
     return self.__module__.split('_')[1]
+
+  # @param user (object) a user id to parse
+  # @param typ (int) either Message.GROUP or Message.PRIVATE
+  # @param real (User) [self] the "real" user behind this user
+  def new_user(self,user,typ,real=None):
+
+    return self.get_username().__class__(user,typ,real,proto=self.get_name())
+
+  # @param room (Room) the room to check
+  # @return (bool) whether we are currently connected and in the room
+  def in_room(self,room):
+    return room in self.get_rooms()
 
   # @param flags (int, list of int) Room.FLAG_* enum(s)
   # @return (list of Room) the Rooms matching all given flags (i.e. AND)

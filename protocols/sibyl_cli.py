@@ -172,9 +172,6 @@ class CLI(Protocol):
   def part_room(self,room):
     pass
 
-  def in_room(self,room):
-    return False
-
   def _get_rooms(self,flag):
     return []
 
@@ -189,9 +186,6 @@ class CLI(Protocol):
 
   def get_username(self):
     return Admin(SIBYL,Message.PRIVATE)
-
-  def new_user(self,user,typ):
-    return Admin(user,typ)
 
 ################################################################################
 

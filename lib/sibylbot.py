@@ -797,7 +797,7 @@ class SibylBot(object):
           self.__run_hooks('con',name)
           for room in self.opt('rooms').get(name,[]):
             pword = room['pass'] and room['pass'].get()
-            proto.join_room(Room(room['room'],room['nick'],pword,proto=proto))
+            proto.join_room(Room(room['room'],room['nick'],pword,proto=name))
           if name in self.__recons:
             del self.__recons[name]
 

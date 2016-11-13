@@ -377,9 +377,6 @@ class SocketServer(Protocol):
   def part_room(self,room):
     pass
 
-  def in_room(self,room):
-    return False
-
   def _get_rooms(self,flag):
     return []
 
@@ -394,9 +391,6 @@ class SocketServer(Protocol):
 
   def get_username(self):
     return Client((0,'sibyl@socket'),Message.PRIVATE)
-
-  def new_user(self,user,typ):
-    return Client((time.time(),user),typ)
 
 ################################################################################
 

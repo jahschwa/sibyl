@@ -34,7 +34,7 @@ from sibyl.lib.protocol import *
 from sibyl.lib.decorators import botconf
 
 ################################################################################
-# Config options                                                               #
+# Config options
 ################################################################################
 
 @botconf
@@ -52,14 +52,14 @@ def conf(bot):
   ]
 
 ################################################################################
-# Custom Exceptions                                                            #
+# Custom Exceptions
 ################################################################################
 
 class MUCJoinFailure(Exception):
   pass
 
 ################################################################################
-# JID(User) class                                                              #
+# JID(User) class
 ################################################################################
 
 class JID(User):
@@ -70,7 +70,7 @@ class JID(User):
     # format for a JID is: node@domain/resource
     # for private chat this looks like: user@domain/resource
     # for group chat this looks like: room@domain/nick
-    
+
     self.muc = (typ==Message.GROUP)
     if isinstance(jid,xmpp.JID):
       self.jid = jid
@@ -112,10 +112,9 @@ class JID(User):
     if self.jid.getResource():
       return str(self.jid)
     return self.get_base()
-  __repr__ = __str__
 
 ################################################################################
-# XMPP(Protocol) class                                                         #
+# XMPP(Protocol) class
 ################################################################################
 
 class XMPP(Protocol):
@@ -174,10 +173,10 @@ class XMPP(Protocol):
 
     self.conn = None
     self.jid = xmpp.JID(self.opt('xmpp.jid'))
-    
+
     self.roster = None
     self.seen = {}
-    
+
     self.mucs = {}
     self.__muc_pending = []
     self.real_jids = {}
@@ -224,7 +223,7 @@ class XMPP(Protocol):
 
     # Send initial presence stanza
     self.conn.sendInitPresence()
-    
+
     # Save roster and log Items
     self.roster = self.conn.Roster.getRoster()
     self.log.info('*** roster ***')
@@ -255,7 +254,7 @@ class XMPP(Protocol):
     except StreamError as e:
       self.log.error(traceback.format_exception_only(type(e),e)[:-1])
       raise ConnectFailure
-    
+
     self.__idle_proc()
 
   def shutdown(self):
@@ -330,11 +329,6 @@ class XMPP(Protocol):
     self.mucs[name]['status'] = self.MUC_PARTED
     self.log.debug('Parted room "%s"' % name)
 
-  def in_room(self,room):
-    """return True/False if we are in the specified room"""
-
-    return room.get_name() in self.__get_current_mucs()
-
   def _get_rooms(self,flag):
     """return rooms matching the given flag"""
 
@@ -390,16 +384,11 @@ class XMPP(Protocol):
 
   def get_username(self):
     """return our username"""
-    
+
     return JID(self.jid,Message.PRIVATE)
 
-  def new_user(self,user,typ):
-    """create a new user of this Protocol's User class"""
-
-    return JID(user,typ)
-
 ################################################################################
-# Internal callbacks                                                           #
+# Internal callbacks
 ################################################################################
 
   def callback_message(self, conn, mess):
@@ -451,7 +440,7 @@ class XMPP(Protocol):
     if jid in self.real_jids:
       real = self.real_jids[jid]
       frm.set_real(JID(real,Message.PRIVATE))
-    
+
     self.bot._cb_message(Message(typ,frm,text))
 
   def callback_presence(self,conn,pres):
@@ -589,7 +578,7 @@ class XMPP(Protocol):
     self.bot._cb_message(Message(typ,frm,None,status,status_msg))
 
 ################################################################################
-# Helper functions                                                             #
+# Helper functions
 ################################################################################
 
   def __status_type_changed(self, jid, new_status_type):
@@ -690,42 +679,42 @@ class XMPP(Protocol):
         raise PingTimeout
 
 ################################################################################
-# XEP-0045 Multi User Chat (MUC)                                               #
+# XEP-0045 Multi User Chat (MUC)
 ################################################################################
-# Joining a MUC (2 asynchronous execution paths)                               #
-#                                                                              #
-# (1) User calls self.join_room() which adds MUC info to self.__muc_pending    #
+# Joining a MUC (2 asynchronous execution paths)
+#
+# (1) User calls self.join_room() which adds MUC info to self.__muc_pending
 #     with status MUC_PENDING
-#                                                                              #
-# (1) Approx once per second self.process() is called                          #
-# (2) Which calls self.__idle_proc()                                           #
-# (3) Which calls self.__idle_join_muc()                                       #
-# (4) Which tries to join every MUC in self.__muc_pending                      #
-# (5) By calling self.__muc_join() which sends a stanza and checks for success #
-# (6) On success self.mucs is updated to have MUC_OK                           #
-#     On failure self.mucs is updated to have MUC_PARTED and we won't rejoin   #
+#
+# (1) Approx once per second self.process() is called
+# (2) Which calls self.__idle_proc()
+# (3) Which calls self.__idle_join_muc()
+# (4) Which tries to join every MUC in self.__muc_pending
+# (5) By calling self.__muc_join() which sends a stanza and checks for success
+# (6) On success self.mucs is updated to have MUC_OK
+#     On failure self.mucs is updated to have MUC_PARTED and we won't rejoin
 ################################################################################
-# Getting forced from a MUC                                                    #
-#                                                                              #
-# (1) self.callback_presence() receives a presence that forces us from the MUC #
-# (2) Which updates the status in self.mucs to any of those in self.MUC_CODES  #
-# (3) This can't result in MUC_PARTED or MUC_OK so we will try to rejoin       #
+# Getting forced from a MUC
+#
+# (1) self.callback_presence() receives a presence that forces us from the MUC
+# (2) Which updates the status in self.mucs to any of those in self.MUC_CODES
+# (3) This can't result in MUC_PARTED or MUC_OK so we will try to rejoin
 ################################################################################
-# Rejoining a MUC                                                              #
-#                                                                              #
-# (1) Approx once per second self.process() is called                          #
-# (2) Which calls self.__idle_proc()                                           #
-# (3) Which calls self.__idle_rejoin_muc()                                     #
-# (4) Which tries to rejoin every MUC except MUC_PARTED, MUC_PENDING, MUC_OK   #
-# (5) By calling self.__muc_join() which sends a stanza and checks for success #
-# (6) On success self.mucs is updated to have MUC_OK                           #
-#     On failure self.mucs has the error code or MUC_ERR and we will rejoin    #
+# Rejoining a MUC
+#
+# (1) Approx once per second self.process() is called
+# (2) Which calls self.__idle_proc()
+# (3) Which calls self.__idle_rejoin_muc()
+# (4) Which tries to rejoin every MUC except MUC_PARTED, MUC_PENDING, MUC_OK
+# (5) By calling self.__muc_join() which sends a stanza and checks for success
+# (6) On success self.mucs is updated to have MUC_OK
+#     On failure self.mucs has the error code or MUC_ERR and we will rejoin
 ################################################################################
-# Parting a MUC                                                                #
-#                                                                              #
-# (1) User calls self.part_room()                                              #
-# (2) Which sends a stanza and updates self.mucs to have MUC_PARTED            #
-# (3) This can be used to either leave a room or cancel reconnection           #
+# Parting a MUC
+#
+# (1) User calls self.part_room()
+# (2) Which sends a stanza and updates self.mucs to have MUC_PARTED
+# (3) This can be used to either leave a room or cancel reconnection
 ################################################################################
 
   def __idle_join_muc(self):
