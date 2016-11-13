@@ -387,6 +387,7 @@ class ChatBox(QtGui.QMainWindow):
     # create a file menu and add options to it
     menu = self.menuBar().addMenu('&Chat')
     self.make_item(menu,'Connect','Ctrl+N')
+    self.make_item(menu,'Reconnect','Ctrl+R')
     self.make_item(menu,'Disconnect','Ctrl+D')
     self.make_item(menu,'Copy HTML','Ctrl+H')
     self.make_item(menu,'Copy Plaintext','Ctrl+P')
@@ -446,6 +447,8 @@ class ChatBox(QtGui.QMainWindow):
       if dialog.exec_():
         (self.args.host,self.pword,self.args.ssl,self.args.noverify) = dialog.get()
         self.start_thread()
+    elif t=='Reconnect':
+      self.start_thread()
     elif t=='Disconnect':
       if self.worker:
         self.worker.event_close.set()
@@ -498,21 +501,31 @@ class ChatBox(QtGui.QMainWindow):
         self.thread.wait()
 
   def said(self,txt):
-    self.chatpane.append('<font color="black">%s | %s: %s</font>' % (time.asctime(),USER,txt))
+    self.chat('%s: %s' % (USER,txt))
 
   @QtCore.pyqtSlot(str)
   def say(self,txt):
-    txt = txt.replace('\n','<br/>')
-    self.chatpane.append('<font color="hotpink">%s | %s: %s</font>' % (time.asctime(),SIBYL,txt))
+    self.chat('%s: %s' % (SIBYL,txt),color='hotpink')
 
   @QtCore.pyqtSlot(str)
   def log(self,txt):
-    self.chatpane.append('<font color="darkgray">INFO: %s</font>' % txt)
+    self.chat('INFO: '+txt,color='darkgray',ts=False)
 
   @QtCore.pyqtSlot(str)
   def error(self,txt):
     self.connected = False
-    self.chatpane.append('<strong><font color="red"> *** %s</font></strong>' % txt)
+    self.chat(' *** '+txt,color='red',ts=False,strong=True)
+
+  def chat(self,txt,color=None,ts=True,strong=False):
+
+    color = (color or 'black')
+    txt = txt.replace('<','&lt;').replace('>','&gt;').replace('\n','<br/>')
+    if ts:
+      txt = time.asctime()+' | '+txt
+    txt = '<font color="%s">%s</font>' % (color,txt)
+    if strong:
+      txt = '<strong>%s</strong>' % txt
+    self.chatpane.append(txt)
 
 ################################################################################
 # Qt Connect Dialog class
