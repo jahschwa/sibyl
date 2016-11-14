@@ -43,7 +43,7 @@ class MYUSER(User):
   # called on bot init; the following are already created by __init__:
   #   self.protocol = name of this User's protocol as a str
   #   self.real = the "real" User behind this user (defaults to self)
-  # @param user (object) a full username
+  # @param user (str) username to parse
   # @param typ (int) is either Message.PRIVATE or Message.GROUP
   def parse(self,user,typ):
     raise NotImplementedError

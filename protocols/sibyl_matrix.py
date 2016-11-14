@@ -3,7 +3,6 @@
 #
 # Sibyl: A modular Python chat bot framework
 # Copyright (c) 2015-2016 Joshua Haas <jahschwa.com>
-# Copyright (c) 2016 Jonathan Frederickson <jonathan@terracrypt.net>
 #
 # This file is part of Sibyl.
 #
@@ -22,172 +21,207 @@
 #
 ################################################################################
 
-import time
+from sibyl.lib.protocol import User,Room,Message,Protocol
+from sibyl.lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
 
-from sibyl.lib import protocol
 from sibyl.lib.decorators import botconf
+
 from matrix_client.client import MatrixClient
-from matrix_client.api import MatrixRequestError
+from matrix_client.api import MatrixRequestError, MatrixHttpApi
+import matrix_client.user as mxUser
+import matrix_client.room as mxRoom
+
+################################################################################
+# Config options
+################################################################################
 
 @botconf
 def conf(bot):
-    return [
+  return [
+    {"name": "username", "req": True},
+    {"name": "password", "req": True},
+    {"name": "server", "req": True}
+  ]
 
-        {'name':'username', 'req':True},
-        {'name':'password', 'req':True},
-        {'name':'server', 'req':True}
+################################################################################
+# User sub-class
+################################################################################
 
-    ]
+class MatrixUser(User):
 
-class MXID(protocol.User):
+  # called on User init; the following are already created by __init__:
+  #   self.protocol = name of this User's protocol as a str
+  #   self.real = the "real" User behind this user (defaults to self)
+  # @param user (str) username to parse
+  # @param typ (int) is either Message.PRIVATE or Message.GROUP
+  def parse(self,user,typ):
+    if(isinstance(user,mxUser)):
+      self.user = user
+    elif(isinstance(user,basestring)):
+      self.user = client.get_user(user)
+    else:
+      raise TypeError("User parameter to parse must be a string")
 
-    mxid = ''
-    room_id = ''
+  # @return (str) the username in private chat or the nick name in a room
+  def get_name(self):
+    return self.user.get_display_name()
 
-    def parse(self, id_dict, typ):
-        self.mxid = id_dict['mxid']
-        self.room_id = id_dict['room_id']
-        self.set_real(self)
+  # @return (Room) the room this User is a member of or None
+  def get_room(self):
+    return self.room
 
-    def get_name(self):
-        print("TODO stuff")
-        #TODO: Display name calculation
+  # @return (str) the username without resource identifier
+  def get_base(self):
+    return self.user.user_id
 
-    def get_room(self):
-        return self.room_id
+  # @param other (object) you must check for class equivalence
+  # @return (bool) True if self==other (including resource)
+  def __eq__(self,other):
+    if(not isinstance(other,MatrixUser)):
+      return False
+    return(self.get_base() == other.get_base())
 
-    def get_base(self):
-        return self.mxid
+  # @return (str) the full username
+  def __str__(self):
+    return self.get_base()
 
-    def __eq__(self, other):
-        return (self.get_base() == other.get_base() and (self.room_id == other.room_id))
+  def __init__(self,client,user,typ,roomid=None,real=None,proto=None):
+    super(MatrixUser,self).__init__(user,typ,real,proto)
+    self.client = client
+    self.room = MatrixRoom(roomid)
 
-    def __str__(self):
-        return self.mxid
+################################################################################
+# Room sub-class
+################################################################################
 
-class Matrix(protocol.Protocol):
+class MatrixRoom(Room):
 
-    def setup(self):
-        self.connected = False
-        self.rooms = {}
-        self.connect_time_millis = time.time() * 1000
+  def __init__(self,client,name,proto=None):
 
-    def connect(self):
-        homeserver = self.opt('matrix.server')
-        user = self.opt('matrix.username')
-        pw = self.opt('matrix.password')
+    super(MatrixRoom,self).__init__()
 
-        self.log.debug("Connecting to %s" % homeserver)
-        self.client = MatrixClient(homeserver)
+    self.room = mxRoom(client,name) # Assumes a room ID for now
 
-        token = ""
+    # Jon: if name is an alias resolve it to an id and store it
 
-        try:
-            self.log.debug("Logging in as %s" % user)
-            self.token = self.client.login_with_password(user, pw)
-            self.rooms = self.client.get_rooms()
-            self.log.debug("Already in rooms: %s" % self.rooms)
-            self.connected = True
-            self.client.add_listener(self._cb_message)
-        except MatrixRequestError as e:
-            self.log.error(e)
-            if(e.code == 403):
-                raise protocol.AuthFailure
-            else:
-                raise protocol.ConnectFailure
+################################################################################
+# Protocol sub-class
+################################################################################
 
-    def is_connected(self):
-        print("TODO: is_connected()")
-        return self.connected
+class MatrixProtocol(Protocol):
 
-    def disconnected(self):
-        print("TODO: disconnected()")
+  # called on bot init; the following are already created by __init__:
+  #   self.bot = SibylBot instance
+  #   self.log = the logger you should use
+  def setup(self):
+    self.connected = False
+    self.rooms = {}
+    bot.add_var("credentials",persist=True)
 
-    def process(self,wait=0):
-        self.client.listen_for_events(timeout=int(1000*wait))
+  # @raise (ConnectFailure) if can't connect to server
+  # @raise (AuthFailure) if failed to authenticate to server
+  def connect(self):
+    homeserver = self.opt('matrix.server')
+    user = self.opt('matrix.username')
+    pw = self.opt('matrix.password')
 
-    def shutdown(self):
-        print("TODO: shutdown()")
+    self.log.debug("Connecting to %s" % homeserver)
+    self.client = MatrixClient(homeserver)
 
-    def send(self, text, to):
-        # TODO: Support MXID or Room objects in "to" parameter
-        room_id = to.room_id
-        self.rooms[room_id].send_text(text)
-        print("TODO: send()")
+    try:
+      self.log.debug("Logging in as %s" % user)
 
-    def broadcast(self, text, room, frm=None):
-        print("TODO: broadcast()")
+      # Log in with the existing access token if we already have a token
+      if(bot.credentials and bot.credentials[0] == user):
 
-    def join_room(self, room, nick, pword=None):
-        # TODO: re-implement using Room object
-        # TODO: Keep rooms variable up to date
-        if(self.in_room(room)):
-            self.log.info("Already in room %s" % room)
-            self.bot._cb_join_room_success
-        else:
-            self.log.info("Joining room %s" % room)
-            ret = self.client.join_room(room)
-            if(ret != None):
-                self.bot._cb_join_room_success
-                self.rooms[ret.room_id] = ret
-            else:
-                self.bot._cb_join_room_failure
+      token = self.client.login_with_password(user,pw)
+      bot.credentials = (user, token)
+      self.rooms = self.client.get_rooms()
+      self.log.debug("Already in rooms: %s" % self.rooms)
+    except
 
-    def part_room(self, room):
-        # TODO: implement using Room objects
-        print("TODO: part_room")
+  # @return (bool) True if we are connected to the server
+  def is_connected(self):
+    raise NotImplementedError
 
-    def in_room(self, room):
-        # TODO: implement using Room objects
-        for roomid, existing_room in self.rooms.items():
-            if(room[0] == '#'):
-                if(room in existing_room.aliases):
-                    return True
-            elif(room[0] == '!'):
-                if(room == roomid):
-                    return True
-        return False
+  # called whenever the bot detects a disconnect as insurance
+  def disconnected(self):
+    raise NotImplementedError
 
-    def get_rooms(self, in_only=False):
-        # TODO: implement using Room objects
-        print("TODO: get_rooms")
+  # receive/process messages and call bot._cb_message()
+  # must ignore msgs from myself and from users not in any of our rooms
+  # @param wait (int) time to wait for new messages before returning
+  # @call bot._cb_message(Message) upon receiving a valid status or message
+  # @raise (PingTimeout) if implemented
+  # @raise (ConnectFailure) if disconnected
+  # @raise (ServerShutdown) if server shutdown
+  def process(self,wait=0):
+    raise NotImplementedError
 
-    def get_occupants(self, room):
-        # TODO: implement using Room objects
-        print("TODO: get_occupants")
+  # called when the bot is exiting for whatever reason
+  # NOTE: sibylbot will already call part_room() on every room in get_rooms()
+  def shutdown(self):
+    raise NotImplementedError
 
-    def get_nick(self, room):
-        # TODO: implement using Room objects
-        # TODO: Want to be able to use either username or mxid in config?
-        user = self.client.get_user(self.opt('matrix.username'))
-        try:
-            return user.get_display_name()
-        except (MatrixRequestError, TypeError):
-            return self.opt('matrix.username')
+  # send a message to a user
+  # @param text (str,unicode) text to send
+  # @param to (User,Room) recipient
+  def send(self,text,to):
+    raise NotImplementedError
 
-    def get_real(self, room, nick):
-        # TODO: implement using Room objects
-        print("TODO: get_real")
+  # send a message with text to every user in a room
+  # optionally note that the broadcast was requested by a specific User
+  # @param text (str,unicode) body of the message
+  # @param room (Room) room to broadcast in
+  # @param frm (User) [None] the User requesting the broadcast
+  def broadcast(self,text,room,frm=None):
+    raise NotImplementedError
 
-    def get_username(self):
-        # TODO: format it nicely
-        print("TODO: get_username")
-        return self.opt('matrix.username')
+  # join the specified room using the specified nick and password
+  # @param room (Room) the room to join
+  # @call bot._cb_join_room_success(room) on successful join
+  # @call bot._cb_join_room_failure(room,error) on failed join
+  def join_room(self,room):
+    raise NotImplementedError
 
-    def new_user(self, user, typ):
-        print("TODO: new_user")
+  # part the specified room
+  # @param room (Room) the room to leave
+  def part_room(self,room):
+    raise NotImplementedError
 
-    def _cb_message(self, event):
-        self.log.debug(event)
-        if(event['type'] == 'm.room.message'):
-            room = event['room_id']
-            if(self.in_room(room) and self.connect_time_millis < int(event['origin_server_ts'])):
-                body = event['content']['body']
-                user = MXID({'mxid': event['sender'], 'room_id': event['room_id']}, protocol.Message.GROUP)
-                msg = protocol.Message(protocol.Message.GROUP, user, body)
-                self.bot._cb_message(msg)
+  # helper function for get_rooms() for protocol-specific flags
+  # only needs to handle: FLAG_PARTED, FLAG_PENDING, FLAG_IN, FLAG_ALL
+  # @param flag (int) one of Room.FLAG_* enums
+  # @return (list of Room) rooms matching the flag
+  def _get_rooms(self,flag):
+    raise NotImplementedError
 
-    def _find_room(self, roomid_str):
-        for roomid, room in self.rooms.items():
-            if(alias_str in room.aliases):
-                return room
+  # @param room (Room) the room to query
+  # @return (list of User) the Users in the specified room
+  def get_occupants(self,room):
+    raise NotImplementedError
+
+  # @param room (Room) the room to query
+  # @return (str) the nick name we are using in the specified room
+  def get_nick(self,room):
+    raise NotImplementedError
+
+  # @param room (Room) the room to query
+  # @param nick (str) the nick to examine
+  # @return (User) the "real" User behind the specified nick/room
+  def get_real(self,room,nick):
+    raise NotImplementedError
+
+  # @return (User) our username
+  def get_username(self):
+    raise NotImplementedError
+
+  def new_user(self,user,typ,real=None):
+    return MatrixUser(self.client,user,typ,real,proto='matrix')
+
+  def new_room(self,room_id_or_alias):
+    raise NotImplementedError
+
+################################################################################
+# Helper functions
+################################################################################
