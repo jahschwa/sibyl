@@ -41,7 +41,7 @@
 import sys,logging,re,os,imp,inspect,traceback,time,pickle,Queue
 
 from sibyl.lib.config import Config
-from sibyl.lib.protocol import Message,Room
+from sibyl.lib.protocol import Message
 from sibyl.lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
 from sibyl.lib.decorators import botcmd,botrooms
 import sibyl.lib.util as util
@@ -389,8 +389,9 @@ class SibylBot(object):
     """figure out if the message is a command and respond"""
 
     frm = mess.get_from()
-    usr = frm.get_base()
-    real = frm.get_real()
+    user = mess.get_user()
+    usr = user.get_base()
+    real = user.get_real()
     if real:
       real = real.get_base()
     else:
@@ -408,7 +409,7 @@ class SibylBot(object):
       return
 
     # empty messages aren't relevant for anything else
-    if not text:
+    if not text.strip():
       return
 
     # check if the message contains a command
@@ -462,9 +463,9 @@ class SibylBot(object):
       return
     
     # check against bw_list
-    proto = mess.get_protocol()
-    if proto in self.opt('admin_protos'):
-      applied = ('w','proto:'+proto,'*')
+    pname = mess.get_protocol().get_name()
+    if pname in self.opt('admin_protos'):
+      applied = ('w','proto:'+pname,'*')
     else:
       for rule in self.opt('bw_list'):
         if (rule[1]!='*') and (rule[1] not in real):
@@ -535,15 +536,15 @@ class SibylBot(object):
     """return the body of mess with nick and prefix removed, or None"""
 
     text = mess.get_text().strip()
-    frm = mess.get_from()
+    frm = mess.get_user()
+    room = mess.get_room()
+    proto = mess.get_protocol()
 
     direct = False
     prefix = False
 
     # if text starts with our nick name, remove it
     if mess.get_type()==Message.GROUP:
-      room = frm.get_room()
-      proto = self.protocols[frm.protocol]
       nick = proto.get_nick(room).lower()
       if proto.in_room(room) and text.lower().startswith(nick):
         direct = True
@@ -555,7 +556,7 @@ class SibylBot(object):
 
     # if text starts with cmd_prefix, remove it
     text = self.__remove_prefix(text)
-    prefix = (text!=mess.get_text())
+    prefix = (text!=mess.get_text().strip())
 
     # always respond to private msgs
     if mess.get_type()==Message.PRIVATE:
@@ -612,7 +613,7 @@ class SibylBot(object):
   def __send(self,text,to):
     """actually send a message"""
 
-    self.protocols[to.get_protocol()].send(text,to)
+    to.get_protocol().send(text,to)
 
 ################################################################################
 # EEE - Chat commands                                                          #
@@ -757,7 +758,7 @@ class SibylBot(object):
 
     for (name,proto) in self.protocols.items():
       self.log.info('Chat : %s' % name)
-      self.log.info('User : %s' % proto.get_username())
+      self.log.info('User : %s' % proto.get_user())
       for room in self.opt('rooms').get(name,[]):
         self.log.info('Room : %s/%s' %
             (room['room'],(room['nick'] if room['nick'] else 'Sibyl')))
@@ -781,7 +782,7 @@ class SibylBot(object):
         msg = 'Errors during startup: '
         self.__send(msg+self.run_cmd('errors'),room)
     if not self.__tell_rooms:
-      del self.hooks['rooms']['sibylbot._SibylBot__tell_errors']
+      self.del_hook(self.__tell_errors)
 
   def __serve(self):
     """process loop - connect and process messages"""
@@ -797,7 +798,7 @@ class SibylBot(object):
           self.__run_hooks('con',name)
           for room in self.opt('rooms').get(name,[]):
             pword = room['pass'] and room['pass'].get()
-            proto.join_room(Room(room['room'],room['nick'],pword,proto=name))
+            proto.join_room(proto.new_room(room['room'],room['nick'],pword))
           if name in self.__recons:
             del self.__recons[name]
 
@@ -805,9 +806,9 @@ class SibylBot(object):
     """reconnect loop - catch known exceptions"""
 
     if self.opt('tell_errors'):
-      for (proto,rooms) in self.opt('rooms').items():
+      for (pname,rooms) in self.opt('rooms').items():
         for room in rooms:
-          room = Room(room['room'],proto=proto)
+          room = self.protocols[pname].new_room(room['room'])
           self.__tell_rooms.append(room)
 
     # try to reconnect forever unless self.quit()
@@ -906,12 +907,12 @@ class SibylBot(object):
 
     self.__pending_send.put((text,to))
 
-  # @param (str,User,Room,Message) the object to query
+  # @param (str) the name of a protocol
   # @return (Protocol) the Protocol associated with the given object
-  def get_protocol(self,obj):
+  def get_protocol(self,name):
     """return the Protocol object associated with the given object"""
 
-    return self.protocols[obj if isinstance(obj,str) else obj.protocol]
+    return self.protocols[name]
 
   # @param msg (str) [None] message to log
   def quit(self,msg=None):
@@ -976,6 +977,23 @@ class SibylBot(object):
     if args is None:
       args = []
     return self.hooks['chat'][cmd](mess,args)
+
+  # @param func (function) the function to remove from our hooks
+  # @param dec (str) the hook type to remove e.g. 'chat', 'mess', 'rooms'
+  def del_hook(self,func,dec=None):
+    """delete a hook (i.e. decorated function)"""
+
+    if not dec:
+      decs = self.hooks.keys()
+    else:
+      decs = [dec]
+
+    for dec in decs:
+      hooks = self.hooks[dec]
+      for name in hooks.keys():
+        if hooks[name]==func:
+          self.log.debug('Disabling %s hook %s' % (dec,name))
+          del hooks[name]
 
   # @param plugin (str) [None] name of plugin to check for, or return all
   # @return (bool,list) True if the plugin was loaded, or list all

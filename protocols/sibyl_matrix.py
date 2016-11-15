@@ -49,26 +49,22 @@ def conf(bot):
 
 class MatrixUser(User):
 
-  # called on User init; the following are already created by __init__:
-  #   self.protocol = name of this User's protocol as a str
-  #   self.real = the "real" User behind this user (defaults to self)
-  # @param user (str) username to parse
-  # @param typ (int) is either Message.PRIVATE or Message.GROUP
-  def parse(self,user,typ):
+  # called on object init; the following are already created by __init__:
+  #   self.protocol = (Protocol) name of this User's protocol as a str
+  #   self.typ = (int) either Message.PRIVATE or Message.GROUP
+  #   self.real = (User) the "real" User behind this user (defaults to self)
+  # @param user (object) a full username
+  def parse(self,user):
     if(isinstance(user,mxUser)):
       self.user = user
     elif(isinstance(user,basestring)):
-      self.user = client.get_user(user)
+      self.user = self.protocol.client.get_user(user)
     else:
       raise TypeError("User parameter to parse must be a string")
 
   # @return (str) the username in private chat or the nick name in a room
   def get_name(self):
     return self.user.get_display_name()
-
-  # @return (Room) the room this User is a member of or None
-  def get_room(self):
-    return self.room
 
   # @return (str) the username without resource identifier
   def get_base(self):
@@ -85,24 +81,34 @@ class MatrixUser(User):
   def __str__(self):
     return self.get_base()
 
-  def __init__(self,client,user,typ,roomid=None,real=None,proto=None):
-    super(MatrixUser,self).__init__(user,typ,real,proto)
-    self.client = client
-    self.room = MatrixRoom(roomid)
-
 ################################################################################
 # Room sub-class
 ################################################################################
 
 class MatrixRoom(Room):
 
-  def __init__(self,client,name,proto=None):
+  # called on object init; the following are already created by __init__:
+  #   self.protocol = name of this Room's protocol as a str
+  #   self.nick = the nick name to use in the room (defaults to None)
+  #   self.pword = the password for this room (defaults to None)
+  # @param name (object) a full roomid
+  def parse(self,name):
+    if(isinstance(name,mxRoom)):
+      self.room = room
+    elif(isinstance(user,basestring)):
+      self.room = mxRoom(self.protocol.client,name) # [TODO] Assumes a room ID for now
+    else:
+      raise TypeError("User parameter to parse must be a string")
 
-    super(MatrixRoom,self).__init__()
+  # the return value must be the same for equal Rooms and unique for different
+  # @return (str) the name of this Room
+  def get_name(self):
+    raise NotImplementedError
 
-    self.room = mxRoom(client,name) # Assumes a room ID for now
-
-    # Jon: if name is an alias resolve it to an id and store it
+  # @param other (object) you must check for class equivalence
+  # @return (bool) true if other is the same room (ignore nick/pword if present)
+  def __eq__(self,other):
+    raise NotImplementedError
 
 ################################################################################
 # Protocol sub-class
@@ -213,14 +219,22 @@ class MatrixProtocol(Protocol):
     raise NotImplementedError
 
   # @return (User) our username
-  def get_username(self):
+  def get_user(self):
     raise NotImplementedError
 
+  # @param user (str) a user id to parse
+  # @param typ (int) either Message.GROUP or Message.PRIVATE
+  # @param real (User) [self] the "real" user behind this user
+  # @return (User) a new instance of this protocol's User subclass
   def new_user(self,user,typ,real=None):
-    return MatrixUser(self.client,user,typ,real,proto='matrix')
+    return MatrixUser(self,user,typ,real,proto='matrix')
 
-  def new_room(self,room_id_or_alias):
-    raise NotImplementedError
+  # @param name (object) the identifier for this Room
+  # @param nick (str) [None] the nick name to use in this Room
+  # @param pword (str) [None] the password for joining this Room
+  # @return (Room) a new instance of this protocol's Room subclass
+  def new_room(self,room_id_or_alias,nick=None,pword=None):
+    return MatrixRoom(self,room_id_or_alias,nick,pword)
 
 ################################################################################
 # Helper functions

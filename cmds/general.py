@@ -140,9 +140,9 @@ def alias_cb(bot,mess,cmd):
       if not n:
         continue
       text = ' '.join([n]+orig.split(' ')[1:])
-      room = mess.get_from().get_room()
+      room = mess.get_room()
       if room:
-        text = bot.get_protocol(mess).get_nick(room)+' '+text
+        text = room.get_protocol().get_nick(room)+' '+text
       mess.set_text(text)
       bot._cb_message(mess)
 

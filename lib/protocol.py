@@ -57,50 +57,24 @@ class ServerShutdown(ProtocolError):
   pass
 
 ################################################################################
-# Protocol auto-completion super class
-################################################################################
-
-class ProtocolAware(object):
-
-  def __init__(self,proto):
-
-    if not proto:
-
-      filepath = os.path.abspath(inspect.stack()[2][1])
-      dirname = os.path.dirname(filepath).split(os.path.sep)[-1]
-      proto = os.path.basename(filepath).split(os.path.extsep)[0]
-
-      if 'sibyl_' in proto and dirname=='protocols':
-        proto = proto.split('_')[-1]
-      else:
-        raise ValueError('You can only omit param "proto" in a Protocol subclass')
-
-    self.protocol = proto
-
-################################################################################
 # User abstract class
 ################################################################################
 
-class User(ProtocolAware):
+class User(object):
   __metaclass__ = ABCMeta
 
-  # called on bot init; the following are already created by __init__:
-  #   self.protocol = name of this User's protocol as a str
-  #   self.real = the "real" User behind this user (defaults to self)
+  # called on object init; the following are already created by __init__:
+  #   self.protocol = (Protocol) name of this User's protocol as a str
+  #   self.typ = (int) either Message.PRIVATE or Message.GROUP
+  #   self.real = (User) the "real" User behind this user (defaults to self)
   # @param user (object) a full username
-  # @param typ (int) is either Message.PRIVATE or Message.GROUP
   @abstractmethod
-  def parse(self,user,typ):
+  def parse(self,user):
     pass
 
   # @return (str) the username in private chat or the nick name in a room
   @abstractmethod
   def get_name(self):
-    pass
-
-  # @return (Room) the room this User is a member of or None
-  @abstractmethod
-  def get_room(self):
     pass
 
   # @return (str) the username without resource identifier
@@ -122,16 +96,20 @@ class User(ProtocolAware):
   def __repr__(self):
     return '<%s %s>' % (self.__class__.__name__,str(self))
 
+  # @param proto (Protocol) the associated protocol
   # @param user (object) a user id to parse
   # @param typ (int) either Message.GROUP or Message.PRIVATE
   # @param real (User) [self] the "real" user behind this user
-  # @param proto (str) [auto-gen] name of the associated protocol
-  def __init__(self,user,typ,real=None,proto=None):
+  def __init__(self,proto,user,typ,real=None):
+    self.protocol = proto
+    self.typ = typ
+    self.real = (real or self)
+    self.parse(user)
 
-    super(User,self).__init__(proto)
-
-    self.real = real
-    self.parse(user,typ)
+  # @return (int) the type of this User (Message class type enum)
+  def get_type(self):
+    """return the typ of the User"""
+    return self.typ
 
   # @return (User subclass) the "real" username of this User or None
   def get_real(self):
@@ -144,7 +122,7 @@ class User(ProtocolAware):
     """set the "real" User of this User"""
     self.real = real
 
-  # @return (str) the protocol associated with this User
+  # @return (Protocol) the protocol associated with this User
   def get_protocol(self):
     """return the name of the protocol associated with this User"""
     return self.protocol
@@ -172,7 +150,7 @@ class User(ProtocolAware):
 # Room class                                                                   #
 ################################################################################
 
-class Room(ProtocolAware):
+class Room(object):
 
   # get_room flags
   FLAG_CONF = 0
@@ -186,27 +164,41 @@ class Room(ProtocolAware):
   FLAG_OUT = 6
   FLAG_ALL = 7
 
-  # @param name (str) the identifier for this Room
+  # called on object init; the following are already created by __init__:
+  #   self.protocol = name of this Room's protocol as a str
+  #   self.nick = the nick name to use in the room (defaults to None)
+  #   self.pword = the password for this room (defaults to None)
+  # @param name (object) a full roomid
+  @abstractmethod
+  def parse(self,name):
+    pass
+
+  # the return value must be the same for equal Rooms and unique for different
+  # @return (str) the name of this Room
+  @abstractmethod
+  def get_name(self):
+    pass
+
+  # @param other (object) you must check for class equivalence
+  # @return (bool) true if other is the same room (ignore nick/pword if present)
+  @abstractmethod
+  def __eq__(self,other):
+    pass
+
+  # @param proto (Protocol) the associated protocol
+  # @param name (object) the identifier for this Room
   # @param nick (str) [None] the nick name to use in this Room
   # @param pword (str) [None] the password for joining this Room
-  # @param proto (str) [auto-gen] name of the associated protocol
-  def __init__(self,name,nick=None,pword=None,proto=None):
-
-    super(Room,self).__init__(proto)
-
-    self.name = name
+  def __init__(self,proto,name,nick=None,pword=None):
+    self.protocol = proto
     self.nick = nick
     self.pword = pword
+    self.parse(name)
 
-  # @return (str) the protocol associated with this Room
+  # @return (Protocol) the protocol associated with this Room
   def get_protocol(self):
     """return the name of the protocol associated with this Room"""
     return self.protocol
-
-  # @return (str) the name of this Room
-  def get_name(self):
-    """return the string representation of this Room"""
-    return self.name
 
   # @return (str,None) the nick name to use in this Room
   def get_nick(self):
@@ -220,18 +212,11 @@ class Room(ProtocolAware):
 
   # @return (str) the string version of this Room (includes protocol)
   def __str__(self):
-    return self.protocol+':'+self.name
+    return self.protocol.get_name()+':'+self.get_name()
 
   # @return (str) the string object representation of tihs Room (inc proto)
   def __repr__(self):
-    return '<Room %s:%s>' % (self.protocol,self.name)
-
-  # @param other (object) another object for comparison
-  # @return (bool) true if other is a Room, and has same protocol and name
-  def __eq__(self,other):
-    if not isinstance(other,Room):
-      return False
-    return self.name==other.name and self.protocol==other.protocol
+    return '<Room %s>' % self
 
   # @param other (object) another object for comparison
   # @return (bool) true if other is not a Room, or has different protocol/name
@@ -247,7 +232,7 @@ class Room(ProtocolAware):
 # Message class                                                                #
 ################################################################################
 
-class Message(ProtocolAware):
+class Message(object):
 
   # Type enums
   STATUS = 0
@@ -269,15 +254,15 @@ class Message(ProtocolAware):
 
   # create a new message object with given info
   # @param typ (int) a Message type enum
-  # @param frm (User) the User who sent the Message
+  # @param user (User) the User who sent the Message
   # @param txt (str,unicode) the body of the msg
   # @param status (str) [None] status enum
   # @param msg (str) [None] custom status msg (e.g. "Doing awesome!")
-  # @param proto (str) [auto-gen] name of the associated protocol
-  def __init__(self,typ,frm,txt,status=None,msg=None,proto=None):
+  # @param room (Room) [None] the room that sent the message
+  def __init__(self,typ,user,txt,status=None,msg=None,room=None):
     """create a new Message"""
 
-    super(Message,self).__init__(proto)
+    self.protocol = user.get_protocol()
 
     if typ not in range(0,4):
       raise ValueError('Valid types: Message.STATUS, PRIVATE, GROUP, ERROR')
@@ -288,14 +273,25 @@ class Message(ProtocolAware):
           'AWAY, DND, AVAILABLE')
     self.status = status
 
-    self.frm = frm
+    self.user = user
     self.txt = txt
     self.msg = msg
+    self.room = room
+
+  # @return (User,Room) the sender of this Message usable for a reply
+  def get_from(self):
+    """return the sender of this Message"""
+    return (self.room or self.user)
 
   # @return (User) the User who sent this Message
-  def get_from(self):
-    """return the User who sent this messge"""
-    return self.frm
+  def get_user(self):
+    """return the User who sent this Message"""
+    return self.user
+
+  # @return (Room,None) the Room that sent this Message
+  def get_room(self):
+    """return the Room that sent this Message"""
+    return self.room
 
   # @return (str,unicode) the body of this Message
   def get_text(self):
@@ -317,7 +313,7 @@ class Message(ProtocolAware):
     """return the status e.g. (Message.OFFLINE,'Be back later :]')"""
     return (self.status,self.msg)
 
-  # @return (str) the protocol associated with this Message
+  # @return (Protocol) the protocol associated with this Message
   def get_protocol(self):
     """return the name of the protocol associated with this Message"""
     return self.protocol
@@ -437,7 +433,23 @@ class Protocol(object):
 
   # @return (User) our username
   @abstractmethod
-  def get_username(self):
+  def get_user(self):
+    pass
+
+  # @param user (str) a user id to parse
+  # @param typ (int) either Message.GROUP or Message.PRIVATE
+  # @param real (User) [self] the "real" user behind this user
+  # @return (User) a new instance of this protocol's User subclass
+  @abstractmethod
+  def new_user(self,user,typ,real=None):
+    pass
+
+  # @param name (object) the identifier for this Room
+  # @param nick (str) [None] the nick name to use in this Room
+  # @param pword (str) [None] the password for joining this Room
+  # @return (Room) a new instance of this protocol's Room subclass
+  @abstractmethod
+  def new_room(self,name,nick=None,pword=None):
     pass
 
   # @param bot (SibylBot) the sibyl instance
@@ -448,6 +460,19 @@ class Protocol(object):
     self.log = log
     self.setup()
 
+  # @param other (object) another object for comparison
+  # @return (bool) if other is a Protocol and has the same name
+  def __eq__(self,other):
+    if not isinstance(other,Protocol):
+      return False
+    return self.get_name()==other.get_name()
+
+  # override the != operator (you don't have to do this in the subclass)
+  # @param other (object)
+  # @return (bool) whether self!=other
+  def __ne__(self,other):
+    return not self==other
+
   # @param opt (str) name of the option to get
   # @return (object) the value of the option
   def opt(self,opt):
@@ -456,13 +481,6 @@ class Protocol(object):
   # @return (str) the name of the protocol based on filename
   def get_name(self):
     return self.__module__.split('_')[1]
-
-  # @param user (object) a user id to parse
-  # @param typ (int) either Message.GROUP or Message.PRIVATE
-  # @param real (User) [self] the "real" user behind this user
-  def new_user(self,user,typ,real=None):
-
-    return self.get_username().__class__(user,typ,real,proto=self.get_name())
 
   # @param room (Room) the room to check
   # @return (bool) whether we are currently connected and in the room

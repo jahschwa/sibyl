@@ -35,8 +35,8 @@ def idle(bot):
   not_triggered = []
   for alarm in bot.alarms:
     if alarm[1]<=now:
+      name = alarm[0].get_user().get_name()
       frm = alarm[0].get_from()
-      name = frm.get_name()
       bot.send(name+': ALARM!',frm)
     else:
       not_triggered.append(alarm)

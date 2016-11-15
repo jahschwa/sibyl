@@ -64,14 +64,13 @@ class MUCJoinFailure(Exception):
 
 class JID(User):
 
-  def parse(self,jid,typ):
+  def parse(self,jid):
     """accept either xmpp.JID for internal use, or str for external use"""
 
     # format for a JID is: node@domain/resource
     # for private chat this looks like: user@domain/resource
     # for group chat this looks like: room@domain/nick
 
-    self.muc = (typ==Message.GROUP)
     if isinstance(jid,xmpp.JID):
       self.jid = jid
     else:
@@ -80,20 +79,14 @@ class JID(User):
   def get_name(self):
     """return username or nick name"""
 
-    if self.muc:
+    if self.typ==Message.GROUP:
       return self.jid.getResource()
     return self.jid.getNode()
-
-  def get_room(self):
-    """return room name or None"""
-
-    if self.muc:
-      return Room(self.jid.getStripped())
 
   def get_base(self):
     """return JID without resource, or full MUC JID"""
 
-    if self.muc:
+    if self.typ==Message.GROUP:
       return str(self.jid)
     return self.jid.getStripped()
 
@@ -107,11 +100,26 @@ class JID(User):
   def __str__(self):
     """return full JID, including resources if we have one"""
 
-    if self.muc:
+    if self.typ==Message.GROUP:
       return self.get_base()
-    if self.jid.getResource():
-      return str(self.jid)
-    return self.get_base()
+    return str(self.jid)
+
+################################################################################
+# Room sub-class
+################################################################################
+
+class MUC(Room):
+
+  def parse(self,name):
+    self.name = name
+
+  def get_name(self):
+    return self.name
+
+  def __eq__(self,other):
+    if not isinstance(other,MUC):
+      return False
+    return self.name==other.name
 
 ################################################################################
 # XMPP(Protocol) class
@@ -267,8 +275,6 @@ class XMPP(Protocol):
 
     mess = self.__build_message(text)
     mess.setType('chat')
-    if isinstance(to,JID) and to.get_room():
-      to = to.get_room()
     if isinstance(to,Room):
       mess.setType('groupchat')
       to = to.get_name()
@@ -284,7 +290,7 @@ class XMPP(Protocol):
 
     # XMPP has no built-in broadcast, so we'll just highlight everyone
     s = ''
-    me = JID(room.get_name()+'/'+self.get_nick(room),Message.GROUP)
+    me = JID(self,room.get_name()+'/'+self.get_nick(room),Message.GROUP)
     for user in self.get_occupants(room):
       if user!=me and (not frm or user!=frm):
         s += (user.get_name()+': ')
@@ -344,7 +350,7 @@ class XMPP(Protocol):
     else:
       rooms = []
 
-    return [Room(room) for room in rooms]
+    return [MUC(self,room) for room in rooms]
 
   def get_occupants(self,room):
     """return the Users in the given room, or None if we are not in the room"""
@@ -356,9 +362,9 @@ class XMPP(Protocol):
     for jid in self.seen:
       if ((name==jid.getStripped())
           and (self.mucs[name]['nick']!=jid.getResource())):
-        users.append(JID(jid,Message.GROUP))
+        users.append(JID(self,jid,Message.GROUP))
 
-    me = JID(name+'/'+self.get_nick(room),Message.GROUP)
+    me = JID(self,name+'/'+self.get_nick(room),Message.GROUP)
     if me not in users:
       users.append(me)
 
@@ -373,19 +379,29 @@ class XMPP(Protocol):
     """return the real username of the given nick"""
 
     if nick==self.get_nick(room):
-      return JID(self.jid,Message.PRIVATE)
+      return JID(self,self.jid,Message.PRIVATE)
 
     jid = xmpp.JID(room.get_name()+'/'+nick)
     real = self.real_jids.get(jid,nick)
     if real==nick:
-      return JID(jid,Message.GROUP)
+      return JID(self,jid,Message.GROUP)
 
-    return JID(real,Message.PRIVATE)
+    return JID(self,real,Message.PRIVATE)
 
-  def get_username(self):
+  def get_user(self):
     """return our username"""
 
-    return JID(self.jid,Message.PRIVATE)
+    return JID(self,self.jid,Message.PRIVATE)
+
+  def new_user(self,user,typ,real=None):
+    """return a new JID object"""
+
+    return JID(self,user,typ,real)
+
+  def new_room(self,name,nick=None,pword=None):
+    """return a new MUC object"""
+
+    return MUC(self,name,nick,pword)
 
 ################################################################################
 # Internal callbacks
@@ -400,6 +416,7 @@ class XMPP(Protocol):
     props = mess.getProperties()
     text = mess.getBody()
     username = self.__get_sender_username(mess)
+    room = None
 
     if text is None:
       return
@@ -436,12 +453,15 @@ class XMPP(Protocol):
     self.log.debug('Got %s from %s: "%s"' % (typ,jid,txt))
 
     typ = self.TYPES[typ]
-    frm = JID(jid,typ)
+    real = None
     if jid in self.real_jids:
-      real = self.real_jids[jid]
-      frm.set_real(JID(real,Message.PRIVATE))
+      real = JID(self,self.real_jids[jid],Message.PRIVATE)
+    user = JID(self,jid,typ,real=real)
 
-    self.bot._cb_message(Message(typ,frm,text))
+    if room:
+      room = MUC(self,room)
+
+    self.bot._cb_message(Message(typ,user,text,room=room))
 
   def callback_presence(self,conn,pres):
     """run upon receiving a presence stanza to keep track of subscriptions"""
@@ -569,8 +589,8 @@ class XMPP(Protocol):
     if jid.getStripped() in self.__get_current_mucs():
       jid_typ = Message.GROUP
       if jid in self.real_jids:
-        real = JID(self.real_jids[jid],Message.PRIVATE)
-    frm = JID(jid,jid_typ)
+        real = JID(self,self.real_jids[jid],Message.PRIVATE)
+    frm = JID(self,jid,jid_typ)
     if real:
       frm.set_real(real)
 
@@ -779,12 +799,12 @@ class XMPP(Protocol):
   def __muc_join_success(self,room):
     """execute callbacks on successfull MUC join"""
 
-    self.bot._cb_join_room_success(Room(room))
+    self.bot._cb_join_room_success(MUC(self,room))
 
   def __muc_join_failure(self,room,error):
     """execute callbacks on successfull MUC join"""
 
-    self.bot._cb_join_room_failure(Room(room),self.MUC_JOIN_ERROR[error])
+    self.bot._cb_join_room_failure(MUC(self,room),self.MUC_JOIN_ERROR[error])
 
   def __idle_rejoin_muc(self):
     """attempt to rejoin the MUC if needed"""

@@ -34,7 +34,7 @@ USER = 'admin@cli'
 SIBYL = 'sibyl@cli'
 
 ################################################################################
-# Config options                                                               #
+# Config options
 ################################################################################
 
 @botconf
@@ -44,7 +44,7 @@ def conf(bot):
   ]
 
 ################################################################################
-# BufferThread class                                                           #
+# BufferThread class
 ################################################################################
 
 class BufferThread(Thread):
@@ -74,14 +74,13 @@ class BufferThread(Thread):
       self.event_data.set()
 
 ################################################################################
-# User sub-class                                                               #
+# User sub-class
 ################################################################################
 
 class Admin(User):
 
-  def parse(self,user,typ):
+  def parse(self,user):
     self.user = user
-    self.real = self
 
   def get_name(self):
     return self.user
@@ -101,7 +100,24 @@ class Admin(User):
     return self.user
 
 ################################################################################
-# Protocol sub-class                                                           #
+# Room sub-class
+################################################################################
+
+class FakeRoom(Room):
+
+  def parse(self,name):
+    self.name = name
+
+  def get_name(self):
+    return self.name
+
+  def __eq__(self,other):
+    if not isinstance(other,FakeRoom):
+      return False
+    return self.name==other.name
+
+################################################################################
+# Protocol sub-class
 ################################################################################
 
 class CLI(Protocol):
@@ -137,7 +153,7 @@ class CLI(Protocol):
     if not self.event_data.wait(wait):
       return
 
-    usr = Admin(USER,Message.PRIVATE)
+    usr = Admin(self,USER,Message.PRIVATE)
     text = self.queue.get()
 
     if self.special_cmds(text):
@@ -182,10 +198,16 @@ class CLI(Protocol):
     return ''
 
   def get_real(self,room,nick):
-    return Admin(nick,Message.PRIVATE)
+    return Admin(self,nick,Message.PRIVATE)
 
-  def get_username(self):
-    return Admin(SIBYL,Message.PRIVATE)
+  def get_user(self):
+    return Admin(self,SIBYL,Message.PRIVATE)
+
+  def new_user(self,user,typ,real=None):
+    return Admin(self,user,typ,real)
+
+  def new_room(self,name,nick=None,pword=None):
+    return FakeRoom(self,name,nick,pword)
 
 ################################################################################
 

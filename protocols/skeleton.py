@@ -40,20 +40,16 @@ def conf(bot):
 
 class MYUSER(User):
 
-  # called on bot init; the following are already created by __init__:
-  #   self.protocol = name of this User's protocol as a str
-  #   self.real = the "real" User behind this user (defaults to self)
-  # @param user (str) username to parse
-  # @param typ (int) is either Message.PRIVATE or Message.GROUP
-  def parse(self,user,typ):
+  # called on object init; the following are already created by __init__:
+  #   self.protocol = (Protocol) name of this User's protocol as a str
+  #   self.typ = (int) either Message.PRIVATE or Message.GROUP
+  #   self.real = (User) the "real" User behind this user (defaults to self)
+  # @param user (object) a full username
+  def parse(self,user):
     raise NotImplementedError
 
   # @return (str) the username in private chat or the nick name in a room
   def get_name(self):
-    raise NotImplementedError
-
-  # @return (Room) the room this User is a member of or None
-  def get_room(self):
     raise NotImplementedError
 
   # @return (str) the username without resource identifier
@@ -67,6 +63,30 @@ class MYUSER(User):
 
   # @return (str) the full username
   def __str__(self):
+    raise NotImplementedError
+
+################################################################################
+# Room class                                                                   #
+################################################################################
+
+class MYROOM(Room):
+
+  # called on object init; the following are already created by __init__:
+  #   self.protocol = name of this Room's protocol as a str
+  #   self.nick = the nick name to use in the room (defaults to None)
+  #   self.pword = the password for this room (defaults to None)
+  # @param name (object) a full roomid
+  def parse(self,name):
+    raise NotImplementedError
+
+  # the return value must be the same for equal Rooms and unique for different
+  # @return (str) the name of this Room
+  def get_name(self):
+    raise NotImplementedError
+
+  # @param other (object) you must check for class equivalence
+  # @return (bool) true if other is the same room (ignore nick/pword if present)
+  def __eq__(self,other):
     raise NotImplementedError
 
 ################################################################################
@@ -159,7 +179,21 @@ class MYPROTOCOL(Protocol):
     raise NotImplementedError
 
   # @return (User) our username
-  def get_username(self):
+  def get_user(self):
+    raise NotImplementedError
+
+  # @param user (str) a user id to parse
+  # @param typ (int) either Message.GROUP or Message.PRIVATE
+  # @param real (User) [self] the "real" user behind this user
+  # @return (User) a new instance of this protocol's User subclass
+  def new_user(self,user,typ,real=None):
+    raise NotImplementedError
+
+  # @param name (object) the identifier for this Room
+  # @param nick (str) [None] the nick name to use in this Room
+  # @param pword (str) [None] the password for joining this Room
+  # @return (Room) a new instance of this protocol's Room subclass
+  def new_room(self,name,nick=None,pword=None):
     raise NotImplementedError
 
 ################################################################################

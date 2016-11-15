@@ -25,7 +25,7 @@ import socket,select,errno,time,traceback
 from threading import Thread,Event
 from Queue import Queue
 
-from sibyl.lib.protocol import User,Message,Protocol
+from sibyl.lib.protocol import User,Room,Message,Protocol
 from sibyl.lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
 
 from sibyl.lib.decorators import botconf
@@ -250,10 +250,9 @@ class ClientThread(Thread):
 
 class Client(User):
 
-  def parse(self,info,typ):
+  def parse(self,info):
     self.address = info
     self.user = '%s:%s@socket' % info
-    self.real = self
 
   def get_name(self):
     return self.user
@@ -271,6 +270,23 @@ class Client(User):
 
   def __str__(self):
     return self.user
+
+################################################################################
+# Room sub-class
+################################################################################
+
+class FakeRoom(Room):
+
+  def parse(self,name):
+    self.name = name
+
+  def get_name(self):
+    return self.name
+
+  def __eq__(self,other):
+    if not isinstance(other,FakeRoom):
+      return False
+    return self.name==other.name
 
 ################################################################################
 # Protocol sub-class                                                           #
@@ -348,7 +364,7 @@ class SocketServer(Protocol):
       return
 
     (address,text) = self.queue.get()
-    usr = Client(address,Message.PRIVATE)
+    usr = Client(self,address,Message.PRIVATE)
 
     if self.special_cmds(text):
       return
@@ -389,8 +405,14 @@ class SocketServer(Protocol):
   def get_real(self,room,nick):
     return nick
 
-  def get_username(self):
-    return Client((0,'sibyl@socket'),Message.PRIVATE)
+  def get_user(self):
+    return Client(self,(0,'sibyl@socket'),Message.PRIVATE)
+
+  def new_user(self,user,typ,real=None):
+    return Client(self,user,typ,real)
+
+  def new_room(self,name,nick=None,pword=None):
+    return FakeRoom(self,name,nick,pword)
 
 ################################################################################
 

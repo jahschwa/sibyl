@@ -111,7 +111,7 @@ def join(bot,mess,args):
 
   (pname,proto,room,args) = parse_args(bot,mess,args)
 
-  if not bot.opt('room.cross_proto') and pname!=mess.get_protocol():
+  if not bot.opt('room.cross_proto') and pname!=mess.get_protocol().get_name():
     return MSG_CROSS
 
   if not args:
@@ -125,7 +125,7 @@ def join(bot,mess,args):
   if len(args)>2:
     pword = args[2]
 
-  room = Room(name,nick,pword,pname)
+  room = proto.new_room(name,nick,pword)
 
   # add the room to pending_room so we can respond with a message later
   bot.pending_room[room] = mess
@@ -135,16 +135,16 @@ def join(bot,mess,args):
 def rejoin(bot,mess,args):
   """attempt to rejoin all rooms from the config file"""
 
-  pnames = [mess.get_protocol()]
+  pnames = [mess.get_protocol().get_name()]
   if bot.opt('room.cross_proto'):
     pnames = bot.protocols.keys()
 
   # rejoin every room from the config file if we're not in them
   rejoined = []
   for pname in pnames:
+    proto = bot.get_protocol(pname)
     for room in bot.opt('rooms').get(pname,[]):
-      room = Room(room['room'],room['nick'],room['pass'],proto=pname)
-      proto = bot.get_protocol(pname)
+      room = proto.new_room(room['room'],room['nick'],room['pass'])
       if not proto.in_room(room):
         rejoined.append(str(room))
         bot.pending_room[room] = mess
@@ -165,7 +165,7 @@ def leave(bot,mess,args):
     rooms = proto.get_rooms(Room.FLAG_ACTIVE)
     if args:
       if args[0] in [r.get_name() for r in rooms]:
-        room = Room(args[0])
+        room = proto.new_room(args[0])
     elif len(rooms)==1:
       room = rooms[0]
 
@@ -191,12 +191,12 @@ def leave(bot,mess,args):
 def real(bot,mess,args):
   """return the real name of the given nick if known"""
 
-  proto = bot.get_protocol(mess)
+  proto = mess.get_protocol()
 
   if not args:
     return 'You must specify a nick'
 
-  room = mess.get_from().get_room()
+  room = mess.get_room()
   if not room:
     return 'This cmd only works in a room'
   nick = args[0]
@@ -211,7 +211,7 @@ def real(bot,mess,args):
 def tell(bot,mess,args):
   """give a user a msg when they rejoin - tell [list|remove|nick msg]"""
 
-  proto = bot.get_protocol(mess)
+  proto = mess.get_protocol()
 
   # default is to list existing tells
   if not args:
@@ -220,7 +220,7 @@ def tell(bot,mess,args):
   # if invoked from a room, only list tells from that room
   if args[0]=='list':
     if mess.get_type()==Message.GROUP:
-      rooms = [mess.get_from().get_room()]
+      rooms = [mess.get_room()]
     else:
       rooms = proto.get_rooms(Room.FLAG_ALL)
     tells = [x for x in bot.pending_tell if x[0] in rooms]
@@ -235,7 +235,7 @@ def tell(bot,mess,args):
 
     # if no nick specified, remove all tells for the invoker's room
     if len(args)==1:
-      room = mess.get_from().get_room()
+      room = mess.get_room()
       bot.pending_tell = [x for x in bot.pending_tell if x[0]!=room]
 
     # if "*" specified remove all tells for that protocol
@@ -246,7 +246,7 @@ def tell(bot,mess,args):
     # if a nick is specified only remove tells for that nick
     else:
       bot.pending_tell = [x for x in bot.pending_tell
-          if x[0]!=mess.get_from.get_room() or x[1]!=args[1]]
+          if x[0]!=mess.get_room() or x[1]!=args[1]]
     return 'Removed %s tells' % (l-len(bot.pending_tell))
 
   if mess.get_type()!=Message.GROUP:
@@ -256,10 +256,10 @@ def tell(bot,mess,args):
     return 'You must specify a nick and a message'
 
   # compose a meaningful response for the specified user
-  frm = mess.get_from()
+  user = mess.get_user()
   room = frm.get_room()
   to = args[0]
-  frm = frm.get_name()
+  frm = user.get_name()
   msg = ' '.join(args[1:])
   t = time.asctime()
 
@@ -365,8 +365,8 @@ def trigger_write(bot):
 def tell_cb(bot,mess):
   """check if we have a pending "tell" for the user"""
 
-  frm = mess.get_from()
-  room = frm.get_room()
+  user = mess.get_user()
+  room = mess.get_room()
 
   # we only care about status messages from rooms
   if not room:
@@ -378,13 +378,13 @@ def tell_cb(bot,mess):
     return
 
   # check for tells matching the room and nick from the status and act on them
-  name = frm.get_name()
+  name = user.get_name()
   new = []
   for x in bot.pending_tell:
     if x[0]!=room or x[1]!=name:
       new.append(x)
     else:
-      bot.send(x[2],frm)
+      bot.send(x[2],room)
   bot.pending_tell = new
 
 @botgroup
@@ -449,7 +449,8 @@ def _send_muc_result(bot,room,msg):
 def parse_args(bot,mess,args):
   """parse protocols and rooms out of args"""
 
-  (pname,proto,room) = (mess.get_protocol(),None,mess.get_from().get_room())
+  pname = mess.get_protocol().get_name()
+  room = mess.get_room()
 
   if args and args[0] in bot.protocols:
     pname = args[0]
@@ -460,7 +461,7 @@ def parse_args(bot,mess,args):
   if proto.get_rooms():
 
     if args:
-      r = Room(args[0],proto=pname)
+      r = proto.new_room(args[0])
       if proto.in_room(r):
         room = r
         del args[0]
@@ -476,7 +477,7 @@ def parse_args(bot,mess,args):
 def check_args(bot,mess,pname,room,args):
   """error checking for !all and !say"""
 
-  if not bot.opt('room.cross_proto') and pname!=mess.get_protocol():
+  if not bot.opt('room.cross_proto') and pname!=mess.get_protocol().get_name():
     return MSG_CROSS
   if not room:
     if bot.get_protocol(pname).get_rooms():
