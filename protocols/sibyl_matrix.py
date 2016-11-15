@@ -132,19 +132,23 @@ class MatrixProtocol(Protocol):
     pw = self.opt('matrix.password')
 
     self.log.debug("Connecting to %s" % homeserver)
-    self.client = MatrixClient(homeserver)
 
     try:
       self.log.debug("Logging in as %s" % user)
-
+      
       # Log in with the existing access token if we already have a token
       if(bot.credentials and bot.credentials[0] == user):
-
-      token = self.client.login_with_password(user,pw)
-      bot.credentials = (user, token)
+        self.client = MatrixClient(homeserver, token=bot.credentials[1])
+      # Otherwise, log in with the configured username and password
+      else:
+        token = self.client.login_with_password(user,pw)
+        bot.credentials = (user, token)
+        
       self.rooms = self.client.get_rooms()
       self.log.debug("Already in rooms: %s" % self.rooms)
-    except
+    except MatrixRequestError:
+      self.log.debug("Failed to connect to homeserver!")
+      raise ConnectFailure
 
   # @return (bool) True if we are connected to the server
   def is_connected(self):
