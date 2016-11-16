@@ -287,6 +287,7 @@ def trigger(bot,mess,args):
     if len(args)<3:
       return 'You must specify a message'
     (name,text) = (args[1],' '.join(args[2:]))
+    name = name.lower()
 
     if name in bot.triggers:
       return 'A trigger already exists by that name'
@@ -304,10 +305,11 @@ def trigger(bot,mess,args):
       bot.triggers = {}
       trigger_write(bot)
       return 'Removed all triggers'
-    if args[1] not in bot.triggers:
+    name = args[1].lower()
+    if name not in bot.triggers:
       return 'Invalid trigger'
-    del bot.triggers[args[1]]
-    return 'Removed trigger "%s"' % args[1]
+    del bot.triggers[name]
+    return 'Removed trigger "%s"' % name
 
   return 'There are %s triggers' % len(bot.triggers)
 

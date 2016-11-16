@@ -74,6 +74,7 @@ def alias(bot,mess,args):
     if len(args)<3:
       return 'You must specify some text'
     (name,text) = (args[1],' '.join(args[2:]))
+    name = name.lower()
 
     if name in bot.aliases:
       return 'An alias already exists by that name'
@@ -93,17 +94,19 @@ def alias(bot,mess,args):
       bot.aliases = {}
       alias_write(bot)
       return 'Removed all aliases'
-    if args[1] not in bot.aliases:
+    name = args[1].lower()
+    if name not in bot.aliases:
       return 'Invalid alias'
-    del bot.aliases[args[1]]
-    return 'Removed alias "%s"' % args[1]
+    del bot.aliases[name]
+    return 'Removed alias "%s"' % name
 
   elif args[0]=='show':
     if len(args)<2:
       return 'You must specify an alias'
-    if args[1] not in bot.aliases:
+    name = args[1].lower()
+    if name not in bot.aliases:
       return 'Invalid alias'
-    return bot.aliases[args[1]]
+    return bot.aliases[name]
 
   return 'There are %s aliases' % len(bot.aliases)
 
