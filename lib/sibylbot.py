@@ -398,12 +398,14 @@ class SibylBot(object):
         # we time idle hooks to make sure they aren't taking too long
         if hook=='idle':
           times = self.__idle_times
-          if time.time()-t>0.1:
+          limit = self.opt('idle_time')
+          if time.time()-t>limit:
             times[name] = times.get(name,0)+1
-            self.log.warning('Idle hook %s exceeded 0.1 sec (count=%s)'
-                % (name,times[name]))
-            if times[name]>=5:
-              self.log.critical('Disabling idle hook %s for taking too long'
+            count = self.opt('idle_count')
+            self.log.warning('Idle hook %s exceeded %s sec (count=%s/%s)'
+                % (name,limit,times[name],count))
+            if times[name]>=count:
+              self.log.critical('Deleting idle hook %s for taking too long'
                   % name)
               del self.hooks['idle'][name]
               del times[name]
@@ -415,7 +417,7 @@ class SibylBot(object):
 
         # disable idle hooks so they don't keep raising exceptions
         if hook=='idle':
-          self.log.critical('Disabling idle hook %s' % name)
+          self.log.critical('Deleting idle hook %s' % name)
           del self.hooks['idle'][name]
 
         errors[name] = e
@@ -900,7 +902,7 @@ class SibylBot(object):
 
     self.__idle_send()
 
-    if time.time()>=self.__last_idle+1:
+    if self.opt('idle_count')>0 and time.time()>=self.__last_idle+1:
       self.__run_hooks('idle')
       self.__last_idle = time.time()
 
@@ -1039,7 +1041,7 @@ class SibylBot(object):
       hooks = self.hooks[dec]
       for name in hooks.keys():
         if hooks[name]==func:
-          self.log.debug('Disabling %s hook %s' % (dec,name))
+          self.log.debug('Deleting %s hook %s' % (dec,name))
           del hooks[name]
 
   # @param plugin (str) [None] name of plugin to check for, or return all

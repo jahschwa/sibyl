@@ -211,3 +211,10 @@ protocols = cli
 
 # Ignore bw_list and allow every command for these protocols (comma-separated)
 #admin_protos = cli
+
+# When to warn about @botidle hooks taking too long (non-negative float)
+#idle_time = 0.1
+
+# Number of consecutive warnings to delete a @botidle hook (non-negative int)
+# Setting this to 0 disables (not deletes) all @botidle hooks
+#idle_count = 5

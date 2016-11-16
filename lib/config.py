@@ -85,7 +85,9 @@ class Config(object):
 ('tell_errors', (True,                False,  self.parse_bool,      None,               None)),
 ('admin_protos',(['cli'],             False,  self.parse_admin,     self.valid_admin,   None)),
 ('persistence', (True,                False,  self.parse_bool,      None,               None)),
-('state_file',  ('data/state.pickle', False,  None,                 self.valid_wfile,   None))
+('state_file',  ('data/state.pickle', False,  None,                 self.valid_wfile,   None)),
+('idle_time',   (0.1,                 False,  self.parse_float,     self.valid_nump,    None)),
+('idle_count',  (5,                   False,  self.parse_int,       self.valid_nump,    None))
 
     ])
 
@@ -472,6 +474,11 @@ class Config(object):
 
     return True
 
+  def valid_nump(self,num):
+    """return True if the number is non-negative"""
+
+    return (num>=0)
+
 ################################################################################
 #                                                                              #
 # Parse functions                                                              #
@@ -626,6 +633,12 @@ class Config(object):
     """return an int"""
 
     return int(val)
+
+  # @return (float)
+  def parse_float(self,opt,val):
+    """return a float"""
+
+    return float(val)
 
 ################################################################################
 # Logging                                                                      #
