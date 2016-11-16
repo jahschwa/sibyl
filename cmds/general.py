@@ -23,8 +23,6 @@
 
 import sys,os,subprocess,json,logging,socket,re,codecs
 
-import inspect
-
 import requests
 
 from sibyl.lib.decorators import *
@@ -406,16 +404,14 @@ def wiki(bot,mess,args):
   title = result[1][0]
   text = result[2]
 
-  # don't send the unicode specifier in the reply message
-  try:
-    text.remove(u'')
-    text = '\n'.join(text)
-  except ValueError:
-    pass
+  if isinstance(text,list):
+    text = text[0]
+  if not text.strip():
+    text = '(Query returned blank body; possibly a redirect page?)'
 
   # send a link and brief back to the user
   url = result[3][0]
-  return unicode(title)+' - '+unicode(url)+'\n'+unicode(text)
+  return title+' - '+url+'\n'+text
 
 @botcmd(ctrl=True)
 def log(bot,mess,args):
