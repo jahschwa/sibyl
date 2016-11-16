@@ -134,6 +134,8 @@ class SibylBot(object):
     self.__recons = {}
     self.__tell_rooms = []
     self.__pending_send = Queue.Queue()
+    self.__last_idle = 0
+    self.__idle_times = {}
     self.last_cmd = {}
 
     # load plug-in hooks from this file
@@ -386,14 +388,32 @@ class SibylBot(object):
     for (name,func) in self.hooks[hook].items():
       if hook!='idle':
         self.log.debug('Running %s hook: %s' % (hook,name))
+      else:
+        t = time.time()
 
       # catch exceptions, log them, and return them
       try:
         func(*args)
+
+        # we time idle hooks to make sure they aren't taking too long
+        if hook=='idle':
+          times = self.__idle_times
+          if time.time()-t>0.1:
+            times[name] = times.get(name,0)+1
+            self.log.warning('Idle hook %s exceeded 0.1 sec (count=%s)'
+                % (name,times[name]))
+            if times[name]>=5:
+              self.log.critical('Disabling idle hook %s for taking too long'
+                  % name)
+              del self.hooks['idle'][name]
+              del times[name]
+          else:
+            times[name] = max(times.get(name,0)-1,0)
+
       except Exception as e:
         self._log_ex(e,'Exception running %s hook %s:' % (hook,name))
 
-        # disable idle hooks so that don't keep raising exceptions
+        # disable idle hooks so they don't keep raising exceptions
         if hook=='idle':
           self.log.critical('Disabling idle hook %s' % name)
           del self.hooks['idle'][name]
@@ -878,8 +898,11 @@ class SibylBot(object):
   def __idle_proc(self):
     """This function will be called in the main loop."""
 
-    self.__run_hooks('idle')
     self.__idle_send()
+
+    if time.time()>=self.__last_idle+1:
+      self.__run_hooks('idle')
+      self.__last_idle = time.time()
 
   def __idle_send(self):
     """send queued messages synchronously"""
