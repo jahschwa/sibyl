@@ -64,6 +64,7 @@ class Config(object):
 ('protocols',   ({},                  True,   self.parse_protocols, None,               None)), 
 ('enable',      ([],                  False,  self.parse_plugins,   None,               None)),
 ('disable',     ([],                  False,  self.parse_plugins,   None,               None)),
+('rename',      ({},                  False,  self.parse_rename,    None,               None)),
 ('cmd_dir',     ('cmds',              False,  None,                 self.valid_dir,     None)),
 ('rooms',       ({},                  False,  self.parse_rooms,     None,               None)),
 ('nick_name',   ('Sibyl',             False,  None,                 None,               None)),
@@ -529,6 +530,19 @@ class Config(object):
     # individiual plugins are separated by commas
     val = val.replace('\n','').replace(' ','')
     return val.split(',')
+
+  # @return (dict) map for renaming chat commands
+  def parse_rename(self,opt,val):
+    """parse the rename commands into a dict"""
+
+    d = {}
+    for pair in util.split_strip(val,','):
+      (old,new) = util.split_strip(pair,':')
+      if old in d.keys() or new in d.values():
+        raise ValueError
+      d[old] = new
+
+    return d
 
   # @return (dict) a room to join with keys [room, nick, pass]
   def parse_rooms(self,opt,val):

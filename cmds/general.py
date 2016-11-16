@@ -248,7 +248,7 @@ def config(bot,mess,args):
         % (opt,bot.conf_diff[opt][0],bot.opt[opt]))
 
   # some options don't make sense to edit in chat
-  if opt in ('protocols','disabled','enabled','cmd_dir','rooms'):
+  if opt in ('protocols','disabled','enabled','rename','cmd_dir','rooms'):
     return 'You may not edit that option via chat'
 
   # revert to original config

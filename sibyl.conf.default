@@ -54,6 +54,11 @@ protocols = cli
 #disable =
 #enable = bookmark,general,library,note,room,xbmc
 
+# Rename chat commands; duplicates are not allowed; format:
+#   hello:goodbye, audio:music, ...
+# Note that if "goodbye" already exists and you don't rename it, it will be lost
+#rename =
+
 # If True, upon joining a room during bot startup, send a message listing errors
 #tell_errors = True
 
@@ -81,14 +86,14 @@ protocols = cli
 ################################################################################
 
 # Login info
-#xmpp.jid = 
-#xmpp.password = 
+#xmpp.jid =
+#xmpp.password =
 
 # XMPP resource; default is the class name of the bot.
 #xmpp.resource = SibylBot
 
 # Server to connect to if different than in the JID given in "username"
-#xmpp.server = 
+#xmpp.server =
 
 # Port to connect to the XMPP server.
 #xmpp.port = 5222
@@ -112,23 +117,23 @@ protocols = cli
 ################################################################################
 
 # username, password, homeserver
-#matrix.username = 
-#matrix.password = 
-#matrix.homeserver = 
+#matrix.username =
+#matrix.password =
+#matrix.homeserver =
 
 ################################################################################
 # plugin options
 ################################################################################
 
 # File in which to store bookmarks; format is tab-delineated text file
-#bookmark.file = data/sibyl_bm.txt
+#bookmark.file = data/bookmarks.txt
 
 # When resuming a playlist, whether to always start with the next item rather
 # than the bookmarked file itself
 #bookmark.resume_next = False
 
 # File in which to store library contents; format is python pickle
-#library.file = data/sibyl_lib.pickle
+#library.file = data/library.pickle
 
 # Maximum number of matches to reply with in chat when searching the library.
 # A value of 0 means no limit. Note that some servers will kick the bot for
@@ -143,7 +148,7 @@ protocols = cli
 #library.video_dirs =
 
 # File in which to store notes; format is tab-delineated text file
-#note.file = data/sibyl_note.txt
+#note.file = data/notes.txt
 
 # Whether to respond to links with the page title
 #room.link_echo = False
@@ -198,7 +203,7 @@ protocols = cli
 #persistence = True
 
 # File in which to save persistent variables
-#state_file = data/sibyl.state
+#state_file = data/state.pickle
 
 # If True, kill stdout to disable libraries from printing to the console
 # NOTE: the cli protocol will work regardless of this setting

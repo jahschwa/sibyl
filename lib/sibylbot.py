@@ -146,6 +146,28 @@ class SibylBot(object):
       self.log.critical('Failed to load plugins; exiting')
       self.__fatal('duplicate @botcmd or @botfunc')
 
+    # rename bot commands
+    cmds = {}
+    ns = {}
+    success = True
+    for (old,new) in self.opt('rename').items():
+      if old in self.hooks['chat']:
+        cmds[new] = self.hooks['chat'][old]
+        ns[new] = self.ns_cmd[old]
+      else:
+        self.log.warning('Cannot rename %s:%s; no such cmd' % (new,old))
+        success = False
+
+    if not success:
+      self.errors.append('Some rename operations failed')
+
+    for (old,new) in self.opt('rename').items():
+      self.hooks['chat'][new] = cmds[new]
+      self.ns_cmd[new] = ns[new]
+      if old not in cmds:
+        del self.hooks['chat'][old]
+        del self.ns_cmd[old]
+
     # load persistent vars
     try:
       if not self.opt('persistence'):
@@ -164,6 +186,7 @@ class SibylBot(object):
   def __fatal(self,msg):
     """exit due to a fatal error"""
 
+    self.log.critical('Fatal error during initialization')
     print '\n   *** Fatal error: %s (see log) ***\n' % msg
     print '   Config file: %s' % os.path.abspath(self.conf_file)
     print '   Cmd dir:     %s' % os.path.abspath(self.opt('cmd_dir'))
@@ -250,7 +273,7 @@ class SibylBot(object):
           self._log_ex(e,msg)
           self.errors.append(msg)
           continue
-        
+
         mods[f] = mod
         success = (self.__load_funcs(mod,f) and success)
       else:
@@ -271,6 +294,7 @@ class SibylBot(object):
                 (dep,name))
 
     self.plugins = sorted(mods.keys())
+
     return success
 
   def __load_funcs(self,mod,fil,silent=False):
@@ -301,7 +325,7 @@ class SibylBot(object):
         if getattr(func,'_sibylbot_dec_'+hook,False):
 
           fname = getattr(func,'_sibylbot_dec_'+hook+'_name',None)
-          
+
           # check for duplicate chat cmds
           if getattr(func,'_sibylbot_dec_chat',False):
             fname = fname.lower()
@@ -317,7 +341,7 @@ class SibylBot(object):
             fname = fil+'.'+name
             s = '  Registered %s hook: %s.%s' % (hook,fil,name)
           dic[fname] = self.__bind(func)
-          
+
           # add chat hooks to ns_cmd
           if getattr(func,'_sibylbot_dec_chat',False):
             self.ns_cmd[fname] = fil
@@ -461,7 +485,7 @@ class SibylBot(object):
       if reply:
         self.__send(reply,frm)
       return
-    
+
     # check against bw_list
     pname = mess.get_protocol().get_name()
     if pname in self.opt('admin_protos'):
@@ -622,7 +646,7 @@ class SibylBot(object):
   @botcmd(name='redo')
   def __redo(self,mess,args):
     """redo last command - redo [args]"""
-  
+
     # this is a dummy function so it gets displayed in the help command
     # the real logic is at the end of callback_message()
     return
@@ -816,13 +840,13 @@ class SibylBot(object):
       try:
         self.__serve()
         time.sleep(0.1)
-        
+
       except (PingTimeout,ConnectFailure,ServerShutdown) as e:
         name = e.protocol
         proto = self.protocols[name]
         proto.disconnected()
         self.__run_hooks('discon',name,e)
-        
+
         if not self.opt('catch_except'):
           raise e
 
@@ -831,16 +855,16 @@ class SibylBot(object):
                   ServerShutdown:'server shutdown'}
         proto.log.error('Connection lost ('+reason[e.__class__]+
             '); retrying in '+str(self.opt('recon_wait'))+' sec')
-        
+
         self.__recons[name] = time.time()+self.opt('recon_wait')
-      
+
       except AuthFailure as e:
         name = e.protocol
         self.log.error('Disabling protocol "%s" due to AuthFailure' % name)
         del self.protocols[name]
         if not self.protocols:
           self.quit('No active protocols; exiting')
-      
+
       except KeyboardInterrupt:
         self.quit('stopped by KeyboardInterrupt')
       except SigTermInterrupt:
@@ -917,7 +941,7 @@ class SibylBot(object):
   # @param msg (str) [None] message to log
   def quit(self,msg=None):
     """Stop serving messages and exit"""
-    
+
     self.__finished = True
     if msg:
       self.log.critical(msg)
