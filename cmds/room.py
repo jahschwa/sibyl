@@ -91,7 +91,7 @@ def all(bot,mess,args):
   if error:
     return error
 
-  proto.broadcast(' '.join(args),room,mess.get_from())
+  proto.broadcast(' '.join(args),room,mess.get_user())
 
 @botcmd
 def say(bot,mess,args):
