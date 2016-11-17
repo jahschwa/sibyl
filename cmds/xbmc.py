@@ -174,9 +174,10 @@ def info(bot,mess,args):
   name = result['result']['item']['label']
 
   # get speed, current time, and total time
-  result = bot.xbmc('Player.GetProperties',{'playerid':pid,'properties':['speed','time','totaltime']})
-  current = result['result']['time']
-  total = result['result']['totaltime']
+  result = bot.xbmc('Player.GetProperties',
+      {'playerid':pid,'properties':['speed','time','totaltime']})
+  current = util.time2str(result['result']['time'])
+  total = util.time2str(result['result']['totaltime'])
 
   # translate speed: 0 = 'paused', 1 = 'playing'
   speed = result['result']['speed']
@@ -184,7 +185,7 @@ def info(bot,mess,args):
   if speed==0:
     status = 'paused'
 
-  return typ.title()+' '+status+' at '+util.time2str(current)+'/'+util.time2str(total)+' - "'+name+'"'
+  return '%s %s at %s/%s - "%s"' % (typ.title(),status,current,total,name)
 
 @botcmd
 def play(bot,mess,args):
@@ -237,7 +238,7 @@ def prev(bot,mess,args):
   # the "previous" option for GoTo seems to not work consistently in XBMC
   params = {'playlistid':pid,'properties':['size']}
   siz = bot.xbmc('Playlist.GetProperties',params)['result']['size']
-  
+
   params = {'playerid':pid,'properties':['position']}
   pos = bot.xbmc('Player.GetProperties',params)['result']['position']
 
@@ -314,7 +315,7 @@ def hop(bot,mess,args):
   """move forward or back - hop [small|big] [back|forward]"""
 
   args = ' '.join(args)
-  
+
   # abort if nothing is playing
   active = bot.xbmc_active_player()
   if active is None:
@@ -343,7 +344,8 @@ def stream(bot,mess,args):
   if not args:
     return 'You must specify a URL'
 
-  agent = {'User-agent':'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:46.0) Gecko/20100101 Firefox/46.0'}
+  agent = {'User-agent':'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:46.0) '
+      +'Gecko/20100101 Firefox/46.0'}
   msg = args[0]
 
   # remove http:// https:// www. from start
@@ -415,7 +417,8 @@ def stream(bot,mess,args):
     channel = html[start:stop]
 
     # send xbmc request and seek if given custom start time
-    bot.xbmc('Player.Open',{'item':{'file':'plugin://plugin.video.youtube/play/?video_id='+vid}})
+    bot.xbmc('Player.Open',{'item':{'file':
+        'plugin://plugin.video.youtube/play/?video_id='+vid}})
     if tim:
       bot.run_cmd('seek',[tim])
 
@@ -446,7 +449,8 @@ def stream(bot,mess,args):
     start = html.rfind("'",0,stop)+1
     title = html[start:stop]
 
-    response = bot.xbmc('Player.Open',{'item':{'file':'plugin://plugin.video.twitch/playLive/'+vid}})
+    response = bot.xbmc('Player.Open',{'item':{'file':
+        'plugin://plugin.video.twitch/playLive/'+vid}})
     return 'Streaming "'+title+'" by "'+stream+'" from Twitch Live'
 
   else:
@@ -454,7 +458,7 @@ def stream(bot,mess,args):
 
 @botcmd
 def videos(bot,mess,args):
-  """open a folder as a playlist - videos [include -exclude] [#track] [@match]"""
+  """open folder as a playlist - videos [include -exclude] [#track] [@match]"""
 
   if not bot.has_plugin('library'):
     return 'This command not available because plugin "library" not loaded'
@@ -472,7 +476,7 @@ def video(bot,mess,args):
 
 @botcmd
 def audios(bot,mess,args):
-  """open a folder as a playlist - audios [include -exclude] [#track] [@match]"""
+  """open folder as a playlist - audios [include -exclude] [#track] [@match]"""
 
   if not bot.has_plugin('library'):
     return 'This command not available because plugin "library" not loaded'
@@ -602,7 +606,8 @@ def playpause(bot,target):
   (pid,typ) = active
 
   # check player status before sending PlayPause command
-  speed = bot.xbmc('Player.GetProperties',{'playerid':pid,'properties':["speed"]})
+  speed = bot.xbmc('Player.GetProperties',
+      {'playerid':pid,'properties':["speed"]})
   speed = speed['result']['speed']
   if speed==target:
     bot.xbmc('Player.PlayPause',{"playerid":pid})
@@ -653,21 +658,22 @@ def _files(bot,args,dirs,pid):
   # also check for an error opening the directory
   bot.xbmc('Playlist.Clear',{'playlistid':pid})
 
-  result = bot.xbmc('Playlist.Add',{'playlistid':pid,'item':{'directory':matches[0]}})
+  result = bot.xbmc('Playlist.Add',{'playlistid':pid,'item':
+      {'directory':matches[0]}})
   if 'error' in result.keys():
     s = 'Unable to open: '+matches[0]
     bot.log.error(s)
     return s
 
   msg = ''
-  
+
   # find first item matching @search
   if search:
     params = {'playlistid':pid,'properties':['file']}
     items = bot.xbmc('Playlist.GetItems',params)['result']['items']
     items = [x['file'] for x in items]
     item_matches = util.matches(items,search,False)
-    
+
     if len(item_matches):
       num = items.index(item_matches[0])
       msg += 'Found matching item "%s" --- ' % os.path.basename(item_matches[0])

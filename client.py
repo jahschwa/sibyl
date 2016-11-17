@@ -37,13 +37,28 @@ SIBYL = 'sibyl@socket'
 def main():
 
   parser = argparse.ArgumentParser()
-  parser.add_argument('-n','--host',default='localhost:8767',help='host:port to connect to',metavar='HOST')
-  parser.add_argument('-t','--timestamp',action='store_true',help='include time stamps')
-  parser.add_argument('-p','--password',action='store_true',help='prompt for password')
-  parser.add_argument('-v','--noverify',action='store_true',help="don't verify remote certificate")
-  parser.add_argument('-s','--ssl',action='store_true',help='use ssl')
-  parser.add_argument('-r','--noreadline',action='store_true',help="don't use GNU readline")
-  parser.add_argument('-g','--gui',action='store_true',help='start the GUI instead of CLI')
+  parser.add_argument('-n','--host',
+      default='localhost:8767',
+      help='host:port to connect to',
+      metavar='HOST')
+  parser.add_argument('-t','--timestamp',
+      action='store_true',
+      help='include time stamps')
+  parser.add_argument('-p','--password',
+      action='store_true',
+      help='prompt for password')
+  parser.add_argument('-v','--noverify',
+      action='store_true',
+      help="don't verify remote certificate")
+  parser.add_argument('-s','--ssl',
+      action='store_true',
+      help='use ssl')
+  parser.add_argument('-r','--noreadline',
+      action='store_true',
+      help="don't use GNU readline")
+  parser.add_argument('-g','--gui',
+      action='store_true',
+      help='start the GUI instead of CLI')
   args = parser.parse_args()
 
   if (not args.gui) and (not args.noreadline):
@@ -183,7 +198,8 @@ class SocketThread(Thread):
         self.chat.error('SSL handshake failed; does the server support it?')
       except ssl.SSLError as e:
         if e.reason=='CERTIFICATE_VERIFY_FAILED':
-          self.chat.log('If the server certificate is self-signed, try again with -v')
+          self.chat.log('If the server certificate is self-signed, '
+              + 'try again with -v')
         self.chat.error('SSL failed because: %s' % e.reason)
       except socket.error as e:
         self.chat.error('Socket error: %s' % e.strerror)
@@ -321,7 +337,8 @@ class BufferThread(Thread):
     """read from stdin, add to the queue, set the event_data Event"""
 
     while not self.chat.event_close.is_set():
-      sys.stdout.write(((time.asctime()+' | ') if self.chat.args.timestamp else '')+USER+': ')
+      s = ((time.asctime()+' | ') if self.chat.args.timestamp else '')+USER+': '
+      sys.stdout.write(s)
       s = raw_input()
       self.chat.send_queue.put(s)
 
@@ -443,9 +460,9 @@ class ChatBox(QtGui.QMainWindow):
 
     t = self.sender().text()
     if t=='Connect':
-      dialog = ConnectDialog(self)
-      if dialog.exec_():
-        (self.args.host,self.pword,self.args.ssl,self.args.noverify) = dialog.get()
+      cd = ConnectDialog(self)
+      if cd.exec_():
+        (self.args.host,self.pword,self.args.ssl,self.args.noverify) = cd.get()
         self.start_thread()
     elif t=='Reconnect':
       self.start_thread()
@@ -534,7 +551,7 @@ class ChatBox(QtGui.QMainWindow):
 class ConnectDialog(QtGui.QDialog):
 
   def __init__(self,parent):
-    
+
     super(ConnectDialog,self).__init__(parent)
     self.initUI()
 
@@ -587,7 +604,7 @@ class ConnectDialog(QtGui.QDialog):
         self.sslbox.isChecked(),not self.verifybox.isChecked())
 
 ################################################################################
-# Main                                                                         #
+# Main
 ################################################################################
 
 if __name__ == '__main__':

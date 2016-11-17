@@ -413,7 +413,7 @@ class Library(object):
         if e not in errors:
           self.bot.log.error(e[1])
           errors.append(e)
-    
+
     self.bot.lib_last_elapsed = int(time.time()-start)
     result = self.save()
 

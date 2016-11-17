@@ -22,7 +22,8 @@
 ################################################################################
 
 from sibyl.lib.protocol import User,Room,Message,Protocol
-from sibyl.lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
+from sibyl.lib.protocol import (PingTimeout,ConnectFailure,AuthFailure,
+    ServerShutdown)
 
 from sibyl.lib.decorators import botconf
 
@@ -66,7 +67,7 @@ class MYUSER(User):
     raise NotImplementedError
 
 ################################################################################
-# Room class                                                                   #
+# Room class
 ################################################################################
 
 class MYROOM(Room):

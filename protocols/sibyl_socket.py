@@ -26,12 +26,13 @@ from threading import Thread,Event
 from Queue import Queue
 
 from sibyl.lib.protocol import User,Room,Message,Protocol
-from sibyl.lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
+from sibyl.lib.protocol import (PingTimeout,ConnectFailure,AuthFailure,
+    ServerShutdown)
 
 from sibyl.lib.decorators import botconf
 
 ################################################################################
-# Config options                                                               #
+# Config options
 ################################################################################
 
 @botconf
@@ -46,7 +47,7 @@ def conf(bot):
   ]
 
 ################################################################################
-# ServerThread class                                                           #
+# ServerThread class
 ################################################################################
 
 class ServerThread(Thread):
@@ -123,7 +124,7 @@ class ServerThread(Thread):
       self.log.warning('Attempted to send a message to a disconnected client')
 
 ################################################################################
-# ClientThread class                                                           #
+# ClientThread class
 ################################################################################
 
 class ClientThread(Thread):
@@ -245,7 +246,7 @@ class ClientThread(Thread):
       sent += self.socket.send(msg[sent:])
 
 ################################################################################
-# User sub-class                                                               #
+# User sub-class
 ################################################################################
 
 class Client(User):
@@ -289,7 +290,7 @@ class FakeRoom(Room):
     return self.name==other.name
 
 ################################################################################
-# Protocol sub-class                                                           #
+# Protocol sub-class
 ################################################################################
 
 class SocketServer(Protocol):
@@ -315,6 +316,7 @@ class SocketServer(Protocol):
     if self.opt('socket.internet'):
       hostname = socket.gethostname()
     port = self.opt('socket.port')
+    pword = self.opt('socket.key_password')
 
     context = None
     (key,crt) = (self.opt('socket.privkey'),self.opt('socket.pubkey'))
@@ -327,7 +329,7 @@ class SocketServer(Protocol):
         context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         context.verify_mode = ssl.CERT_NONE
         try:
-          context.load_cert_chain(certfile=crt,keyfile=key,password=self.get_pass)
+          context.load_cert_chain(certfile=crt,keyfile=key,password=pword)
         except Exception as e:
           self.log.debug('Error loading cert chain (%s)' % e.__class__.__name__)
           self.log.error('Invalid privkey password; not using SSL')
@@ -423,7 +425,7 @@ class SocketServer(Protocol):
 
   def special_cmds(self,text):
     """process special admin commands"""
-    
+
     if not text.startswith('/'):
       return
     args = text[1:].split(' ')

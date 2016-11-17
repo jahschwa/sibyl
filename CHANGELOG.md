@@ -48,6 +48,7 @@ This change log follows guidelines at [this site](http://keepachangelog.com/).
 - Added example configuation file `example/sibyl.conf`
 - Added example of python threading `example/thread.py`
 - Some `room.py` commands (`all`, `join`, `leave`, `say`) now accept a protocol name
+- Sibyl now calls part_room() for all rooms at bot shutdown
 
 ### Changed
 - License changed from GPLv2 to GPLv3

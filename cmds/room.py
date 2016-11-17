@@ -57,10 +57,10 @@ def conf(bot):
 
 def valid(conf,echo):
   """check for lxml"""
-  
+
   if (not echo) or util.has_module('lxml'):
     return True
-  
+
   conf.log('error',"Can't find module lxml; link_echo will be disabled")
   return False
 
@@ -445,7 +445,7 @@ def _send_muc_result(bot,room,msg):
     return
   mess = bot.pending_room[room]
   del bot.pending_room[room]
-  
+
   bot.send(msg,mess.get_from())
 
 def parse_args(bot,mess,args):

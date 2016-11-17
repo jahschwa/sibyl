@@ -22,7 +22,8 @@
 ################################################################################
 
 from sibyl.lib.protocol import User,Room,Message,Protocol
-from sibyl.lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
+from sibyl.lib.protocol import (PingTimeout,ConnectFailure,AuthFailure,
+    ServerShutdown)
 
 from sibyl.lib.decorators import botconf
 
@@ -135,7 +136,7 @@ class MatrixProtocol(Protocol):
 
     try:
       self.log.debug("Logging in as %s" % user)
-      
+
       # Log in with the existing access token if we already have a token
       if(bot.credentials and bot.credentials[0] == user):
         self.client = MatrixClient(homeserver, token=bot.credentials[1])
@@ -143,7 +144,7 @@ class MatrixProtocol(Protocol):
       else:
         token = self.client.login_with_password(user,pw)
         bot.credentials = (user, token)
-        
+
       self.rooms = self.client.get_rooms()
       self.log.debug("Already in rooms: %s" % self.rooms)
     except MatrixRequestError:

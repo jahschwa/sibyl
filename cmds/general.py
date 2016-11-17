@@ -57,7 +57,7 @@ def init(bot):
 
 @botcmd
 def alias(bot,mess,args):
-  """add aliases for cmds (and args) - alias (info|list|add|remove|show) [name] [cmd]"""
+  """add aliases for cmds - alias (info|list|add|remove|show) [name] [cmd]"""
 
   if not args:
     args = ['info']

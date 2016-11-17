@@ -42,7 +42,8 @@ import sys,logging,re,os,imp,inspect,traceback,time,pickle,Queue
 
 from sibyl.lib.config import Config
 from sibyl.lib.protocol import Message
-from sibyl.lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
+from sibyl.lib.protocol import (PingTimeout,ConnectFailure,AuthFailure,
+    ServerShutdown)
 from sibyl.lib.decorators import botcmd,botrooms
 import sibyl.lib.util as util
 from sibyl.lib.log import Log
@@ -60,7 +61,7 @@ class SigTermInterrupt(Exception):
   pass
 
 ################################################################################
-# AAA - SibylBot                                                               #
+# AAA - SibylBot
 ################################################################################
 
 class SibylBot(object):
@@ -196,7 +197,7 @@ class SibylBot(object):
     sys.exit(1)
 
 ################################################################################
-# BBB - Plug-in framework                                                      #
+# BBB - Plug-in framework
 ################################################################################
 
   def __init_config(self):
@@ -287,13 +288,13 @@ class SibylBot(object):
         for dep in mod.__depends__:
           if dep not in mods:
             success = False
-            self.log.critical('Missing dependency "%s" from plugin "%s"' %
-                (dep,name))
+            self.log.critical('Missing dependency "%s" from plugin "%s"'
+                % (dep,name))
       if hasattr(mod,'__wants__'):
         for dep in mod.__wants__:
           if dep not in mods:
-            self.log.warning('Missing plugin "%s" limits funcionality of "%s"' %
-                (dep,name))
+            self.log.warning('Missing plugin "%s" limits funcionality of "%s"'
+                % (dep,name))
 
     self.plugins = sorted(mods.keys())
 
@@ -311,8 +312,8 @@ class SibylBot(object):
 
         # check for duplicates
         if hasattr(self,name):
-          self.log.critical('Duplicate @botfunc "%s" from "%s" and "%s"' %
-              (name,self.ns_func[name],fil))
+          self.log.critical('Duplicate @botfunc "%s" from "%s" and "%s"'
+              % (name,self.ns_func[name],fil))
           success = False
           continue
 
@@ -332,8 +333,8 @@ class SibylBot(object):
           if getattr(func,'_sibylbot_dec_chat',False):
             fname = fname.lower()
             if fname in dic:
-              self.log.critical('Duplicate @botcmd "%s" from "%s" and "%s"' %
-                  (fname,self.ns_cmd[fname],fil))
+              self.log.critical('Duplicate @botcmd "%s" from "%s" and "%s"'
+                  % (fname,self.ns_cmd[fname],fil))
               success = False
               continue
 
@@ -425,7 +426,7 @@ class SibylBot(object):
     return errors
 
 ################################################################################
-# CCC - Callbacks for Protocols                                                #
+# CCC - Callbacks for Protocols
 ################################################################################
 
   # @param mess (Message) the received Message
@@ -575,7 +576,7 @@ class SibylBot(object):
     result = self.__run_hooks('roomf',room,error)
 
 ################################################################################
-# DDD - Helper functions                                                       #
+# DDD - Helper functions
 ################################################################################
 
   def __get_cmd(self,mess):
@@ -662,7 +663,7 @@ class SibylBot(object):
     to.get_protocol().send(text,to)
 
 ################################################################################
-# EEE - Chat commands                                                          #
+# EEE - Chat commands
 ################################################################################
 
   @botcmd(name='redo')
@@ -693,8 +694,8 @@ class SibylBot(object):
     funcs = self.hooks['chat'].values()
     plugins = sorted(self.plugins+['sibylbot'])
     protos = ','.join(sorted(self.opt('protocols').keys()))
-    return ('SibylBot %s (%s) --- %s commands from %s plugins: %s' %
-        (__version__,protos,cmds,len(plugins),plugins))
+    return ('SibylBot %s (%s) --- %s commands from %s plugins: %s'
+        % (__version__,protos,cmds,len(plugins),plugins))
 
   @botcmd(name='hello')
   def __hello(self,mess,args):
@@ -746,7 +747,7 @@ class SibylBot(object):
     return 'No errors'
 
 ################################################################################
-# FFF - UI Functions                                                           #
+# FFF - UI Functions
 ################################################################################
 
   def __unknown_command(self, mess, cmd, args):
@@ -779,7 +780,7 @@ class SibylBot(object):
     return ""
 
 ################################################################################
-# GGG - Run and Stop Functions                                                 #
+# GGG - Run and Stop Functions
 ################################################################################
 
   def __log_startup_msg(self):
@@ -913,7 +914,7 @@ class SibylBot(object):
       self.__send(*self.__pending_send.get())
 
 ################################################################################
-# HHH - User-facing functions                                                  #
+# HHH - User-facing functions
 ################################################################################
 
   def run_forever(self):
@@ -1001,8 +1002,8 @@ class SibylBot(object):
     caller = util.get_caller()
     if hasattr(self,name):
       space = self.ns_opt.get(name,'sibylbot')
-      self.log.critical('plugin "%s" tried to overwrite var "%s" from "%s"' %
-          (caller,name,space))
+      self.log.critical('plugin "%s" tried to overwrite var "%s" from "%s"'
+          % (caller,name,space))
       raise DuplicateVarError
 
     if self.opt('persistence') and persist:

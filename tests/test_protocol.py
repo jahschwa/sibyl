@@ -100,10 +100,14 @@ class ProtocolTestCase(unittest.TestCase):
       p = self.init_protocol(p)
       caught = self.catch(p.connect,Exception)
       conn = self.silent(p.is_connected)
-      self.assertFalse(conn,msg='['+p.__class__.__name__+'] Reports connected before calling connect()')
+      self.assertFalse(conn,
+          msg=('[%s] Reports connected before calling connect()'
+          % p.__class__.__name__))
 
   def test_get_rooms(self):
     for p in self.protocols:
       p = self.init_protocol(p)
       rooms = len(self.silent(p.get_rooms))
-      self.assertTrue(rooms==0,msg='['+p.__class__.__name__+'] Reports being in rooms before calling join()')
+      self.assertTrue(rooms==0,
+          msg=('[%s] Reports being in rooms before calling join()'
+          % p.__class__.__name__))
