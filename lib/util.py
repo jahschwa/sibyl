@@ -399,3 +399,18 @@ def get_caller(lvl=2):
   """can be called from inside foo() to return the file that called foo()"""
 
   return os.path.basename(inspect.stack()[lvl][1]).split('.')[0]
+
+# @param s (str,unicode) the string to convert
+# @param esc (bool) if True, escape to html char codes; else unescape
+# @return (str,unicode) the input but safe for html
+def html(s,esc=True):
+  """escape characters that break html parsing"""
+
+  chars = { '&':'&amp;', '"':'&quot;', "'":'&#039;', '<':'&lt;', '>':'&gt;'}
+  if not esc:
+    chars = {v:k for (k,v) in chars.items()}
+
+  for (k,v) in chars.items():
+    s = s.replace(k,v)
+
+  return s

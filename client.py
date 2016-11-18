@@ -536,13 +536,21 @@ class ChatBox(QtGui.QMainWindow):
   def chat(self,txt,color=None,ts=True,strong=False):
 
     color = (color or 'black')
-    txt = txt.replace('<','&lt;').replace('>','&gt;').replace('\n','<br/>')
+    txt = self.html(txt).replace('\n','<br/>')
     if ts:
       txt = time.asctime()+' | '+txt
     txt = '<font color="%s">%s</font>' % (color,txt)
     if strong:
       txt = '<strong>%s</strong>' % txt
     self.chatpane.append(txt)
+
+  def html(self,s):
+    """escape characters that break html parsing"""
+
+    chars = { '&':'&amp;', '"':'&quot;', "'":'&#039;', '<':'&lt;', '>':'&gt;'}
+    for (k,v) in chars.items():
+      s = s.replace(k,v)
+    return s
 
 ################################################################################
 # Qt Connect Dialog class
