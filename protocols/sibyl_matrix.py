@@ -243,7 +243,7 @@ class MatrixProtocol(Protocol):
 
   # @return (User) our username
   def get_user(self):
-    raise NotImplementedError
+    return MatrixUser(self.client.get_user(self.client.user_id))
 
   # @param user (str) a user id to parse
   # @param typ (int) either Message.GROUP or Message.PRIVATE
