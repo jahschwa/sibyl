@@ -59,20 +59,23 @@ NEXT RELEASE:
         ( # ) xbmc.py
 
   (jah) [docs] add extended help text to all commands accessible via "help" cmd
+        ( ! ) review existing help text
+        ( ! ) add more detailed descriptions
 
-  (   ) [main] review logging
+  (jah) [main] review logging
         (   ) audit existing levels
         (   ) add lots of debug info to all commands
         ( # ) remove/control "requests" library logging
 
-  (   ) [main] figure out if unicode is broken anywhere
+  ( . ) [main] figure out if unicode is broken anywhere
 
-  ( ! ) [main] review and add comments to everything
+  (jah) [main] review and add comments to everything
 
   ( # ) [main] support multiple protocols
 
-  ( # ) [plug] add chat_ctrl option to plugin framework
-        ( # ) additional parameter to @botcmd decorator
+  (jah) [plug] add decorator options
+        ( # ) add chat_ctrl parameter to @botcmd decorator
+        ( ! ) add interval parameter to @botidle decorator
 
   ( # ) [cmds] add tell command (send msg when specified user joins room)
 
@@ -92,8 +95,15 @@ FUTURE:
   (   ) [cmds] add stalk command (send msg when user changes to avilable)
   ( . ) [cmds] add trigger command (add triggers to say things)
 
+  ( ! ) [docs] move to sphinx and/or readthedocs
+
+  (   ) [sock] proc hooks over socket protocol (full API?)
+
+  (   ) [xmpp] review and refactor (specifically JabberBot leftovers)
+
 MAYBE:
 
   (   ) [libr] read and search media tags (e.g. title, album, artist)
   (   ) [libr] allow searching xbmc library
   (   ) [main] daemonize inside python
+  (   ) [main] move to python3
