@@ -103,12 +103,15 @@ class MatrixRoom(Room):
   # the return value must be the same for equal Rooms and unique for different
   # @return (str) the name of this Room
   def get_name(self):
-    raise NotImplementedError
+    return self.room.room_id
 
   # @param other (object) you must check for class equivalence
   # @return (bool) true if other is the same room (ignore nick/pword if present)
   def __eq__(self,other):
-    raise NotImplementedError
+    if(instanceof(other,MatrixRoom)):
+      return self.get_name() == other.get_name()
+    else:
+      return False
 
 ################################################################################
 # Protocol sub-class
@@ -122,7 +125,7 @@ class MatrixProtocol(Protocol):
   def setup(self):
     self.connected = False
     self.rooms = {}
-    bot.add_var("credentials",persist=True)
+    self.bot.add_var("credentials",persist=True)
 
   # @raise (ConnectFailure) if can't connect to server
   # @raise (AuthFailure) if failed to authenticate to server
@@ -146,9 +149,17 @@ class MatrixProtocol(Protocol):
         
       self.rooms = self.client.get_rooms()
       self.log.debug("Already in rooms: %s" % self.rooms)
-    except MatrixRequestError:
-      self.log.debug("Failed to connect to homeserver!")
-      raise ConnectFailure
+
+      # Connect to Sibyl's message callback
+      self.client.add_listener(self._cb_message)
+       
+    except MatrixRequestError as e:
+      if(e.code == 403):
+        self.log.debug("Credentials incorrect! Maybe your access token is outdated?")
+        raise AuthFailure
+      else:
+        self.log.debug("Failed to connect to homeserver!")
+        raise ConnectFailure
 
   # @return (bool) True if we are connected to the server
   def is_connected(self):
@@ -166,7 +177,10 @@ class MatrixProtocol(Protocol):
   # @raise (ConnectFailure) if disconnected
   # @raise (ServerShutdown) if server shutdown
   def process(self,wait=0):
-    raise NotImplementedError
+    self.client.start_listener_thread()
+
+  #def messageHandler(self):
+  #  raise NotImplementedError
 
   # called when the bot is exiting for whatever reason
   # NOTE: sibylbot will already call part_room() on every room in get_rooms()
@@ -177,7 +191,7 @@ class MatrixProtocol(Protocol):
   # @param text (str,unicode) text to send
   # @param to (User,Room) recipient
   def send(self,text,to):
-    raise NotImplementedError
+    room.room.send_text(text)
 
   # send a message with text to every user in a room
   # optionally note that the broadcast was requested by a specific User
@@ -192,7 +206,11 @@ class MatrixProtocol(Protocol):
   # @call bot._cb_join_room_success(room) on successful join
   # @call bot._cb_join_room_failure(room,error) on failed join
   def join_room(self,room):
-    raise NotImplementedError
+    try:
+      res = self.client.join_room(room.room_id)
+      bot._cb_join_room_success(MatrixRoom(res))
+    except MatrixRequestError as e:
+      bot._cb_join_room_failure(room, e.message)
 
   # part the specified room
   # @param room (Room) the room to leave
