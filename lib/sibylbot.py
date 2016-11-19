@@ -125,10 +125,6 @@ class SibylBot(object):
     self.log.info('Success parsing config file')
     self.log.info('')
 
-    # create protocol objects
-    self.protocols = {name:proto(self,logging.getLogger(name))
-        for (name,proto) in self.opt('protocols').items()}
-
     # initialise variables
     self.__finished = False
     self.__reboot = False
@@ -138,6 +134,20 @@ class SibylBot(object):
     self.__last_idle = 0
     self.__idle_times = {}
     self.last_cmd = {}
+
+    # load persistent vars
+    try:
+      if not self.opt('persistence'):
+        raise RuntimeError
+      with open(self.opt('state_file'),'rb') as f:
+        self.__state = pickle.load(f)
+    except:
+      self.__state = {}
+    self.__persist = []
+
+    # create protocol objects
+    self.protocols = {name:proto(self,logging.getLogger(name))
+        for (name,proto) in self.opt('protocols').items()}
 
     # load plug-in hooks from this file
     self.hooks = {x:{} for x in ['chat','init','down','con','discon','recon',
@@ -170,16 +180,6 @@ class SibylBot(object):
       if old not in cmds:
         del self.hooks['chat'][old]
         del self.ns_cmd[old]
-
-    # load persistent vars
-    try:
-      if not self.opt('persistence'):
-        raise RuntimeError
-      with open(self.opt('state_file'),'rb') as f:
-        self.__state = pickle.load(f)
-    except:
-      self.__state = {}
-    self.__persist = []
 
     # run plug-in init hooks and exit if there were errors
     if self.__run_hooks('init'):
