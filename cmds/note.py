@@ -39,7 +39,7 @@ def conf(bot):
 @botinit
 def init(bot):
   """initialize note list"""
-  
+
   if os.path.isfile(bot.opt('note.file')):
     notes = note_parse(bot)
   else:

@@ -58,7 +58,7 @@ test -x $DAEMON || exit 5
 case $1 in
 
   start)
-    
+
     mkdir -p `dirname $PIDFILE`
     chown sibyl:sibyl `dirname $PIDFILE`
     if [ -e $PIDFILE ]; then
@@ -67,7 +67,7 @@ case $1 in
         exit
       fi
     fi
-    
+
     log_daemon_msg "Starting service" "$NAME"
     if start-stop-daemon --start --quiet -c sibyl --oknodo --pidfile $PIDFILE --exec $DAEMON ; then
       log_end_msg 0
@@ -77,7 +77,7 @@ case $1 in
     ;;
 
   stop)
-    
+
     if [ -e $PIDFILE ]; then
       status_of_proc -p $PIDFILE $DAEMON "Service $NAME" && status="0" || status="$?"
       if [ "$status" = 0 ]; then
@@ -93,12 +93,12 @@ case $1 in
     ;;
 
   restart)
-    
+
     $0 stop && sleep 2 && $0 start
     ;;
-  
+
   status)
-    
+
     if [ -e $PIDFILE ]; then
       status_of_proc -p $PIDFILE $DAEMON "Service $NAME" && exit 0 || exit $?
     else
@@ -108,7 +108,7 @@ case $1 in
     ;;
 
   *)
-    
+
     echo "Usage: $0 {start|stop|restart|status}"
     exit 2
     ;;

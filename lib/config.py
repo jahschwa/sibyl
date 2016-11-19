@@ -35,7 +35,7 @@ class DuplicateOptError(Exception):
   pass
 
 ################################################################################
-# Config class                                                                 #
+# Config class
 ################################################################################
 
 class Config(object):
@@ -61,9 +61,10 @@ class Config(object):
 
 #option         default               requir  parse_func            validate_func       post_func
 #------------------------------------------------------------------------------------------------
-('protocols',   ({},                  True,   self.parse_protocols, None,               None)), 
+('protocols',   ({},                  True,   self.parse_protocols, None,               None)),
 ('enable',      ([],                  False,  self.parse_plugins,   None,               None)),
 ('disable',     ([],                  False,  self.parse_plugins,   None,               None)),
+('rename',      ({},                  False,  self.parse_rename,    None,               None)),
 ('cmd_dir',     ('cmds',              False,  None,                 self.valid_dir,     None)),
 ('rooms',       ({},                  False,  self.parse_rooms,     None,               None)),
 ('nick_name',   ('Sibyl',             False,  None,                 None,               None)),
@@ -84,7 +85,9 @@ class Config(object):
 ('tell_errors', (True,                False,  self.parse_bool,      None,               None)),
 ('admin_protos',(['cli'],             False,  self.parse_admin,     self.valid_admin,   None)),
 ('persistence', (True,                False,  self.parse_bool,      None,               None)),
-('state_file',  ('data/state.pickle', False,  None,                 self.valid_wfile,   None))
+('state_file',  ('data/state.pickle', False,  None,                 self.valid_wfile,   None)),
+('idle_time',   (0.1,                 False,  self.parse_float,     self.valid_nump,    None)),
+('idle_count',  (5,                   False,  self.parse_int,       self.valid_nump,    None))
 
     ])
 
@@ -398,12 +401,12 @@ class Config(object):
       f.write(s)
 
 ################################################################################
-#                                                                              #
-# Validate functions                                                           #
-#                                                                              #
-# @param foo (object) the object to validate                                   #
-# @return (bool) True if the object is acceptable                              #
-#                                                                              #
+#
+# Validate functions
+#
+# @param foo (object) the object to validate
+# @return (bool) True if the object is acceptable
+#
 ################################################################################
 
   def valid_ip(self,s):
@@ -471,13 +474,18 @@ class Config(object):
 
     return True
 
+  def valid_nump(self,num):
+    """return True if the number is non-negative"""
+
+    return (num>=0)
+
 ################################################################################
-#                                                                              #
-# Parse functions                                                              #
-#                                                                              #
-# @param opt (str) the name of the option being parsed                         #
-# @param val (str) the string to parse into a Python object                    #
-#                                                                              #
+#
+# Parse functions
+#
+# @param opt (str) the name of the option being parsed
+# @param val (str) the string to parse into a Python object
+#
 ################################################################################
 
   # @return (dict of str:class) protocol names and classes to use
@@ -503,12 +511,14 @@ class Config(object):
             protocols[proto] = clas
         if protocols[proto] is None:
           self.log('critical',
-              'Protocol "%s" does not contain a lib.protocol.Protocol subclass' % proto)
+              'Protocol "%s" does not contain a lib.protocol.Protocol subclass'
+              % proto)
 
       except Exception as e:
         full = traceback.format_exc(e)
         short = full.split('\n')[-2]
-        self.log('critical','Exception importing protocols/%s:' % ('sibyl_'+proto))
+        self.log('critical','Exception importing protocols/%s:'
+            % ('sibyl_'+proto))
         self.log('critical','  %s' % short)
         self.log('debug',full)
 
@@ -530,6 +540,19 @@ class Config(object):
     val = val.replace('\n','').replace(' ','')
     return val.split(',')
 
+  # @return (dict) map for renaming chat commands
+  def parse_rename(self,opt,val):
+    """parse the rename commands into a dict"""
+
+    d = {}
+    for pair in util.split_strip(val,','):
+      (old,new) = util.split_strip(pair,':')
+      if old in d.keys() or new in d.values():
+        raise ValueError
+      d[old] = new
+
+    return d
+
   # @return (dict) a room to join with keys [room, nick, pass]
   def parse_rooms(self,opt,val):
     """parse the rooms into a list"""
@@ -550,7 +573,7 @@ class Config(object):
         room['nick'] = params[2]
       if len(params)>3 and params[3]:
         room['pass'] = Password(params[3])
-      
+
       # add room to dict
       if params[0] in rooms:
         rooms[params[0]].append(room)
@@ -567,7 +590,7 @@ class Config(object):
               'warning'  : logging.WARNING,
               'info'     : logging.INFO,
               'debug'    : logging.DEBUG}
-    
+
     return levels[val]
 
   # @return (list of tuple) the black/white list
@@ -613,8 +636,14 @@ class Config(object):
 
     return int(val)
 
+  # @return (float)
+  def parse_float(self,opt,val):
+    """return a float"""
+
+    return float(val)
+
 ################################################################################
-# Logging                                                                      #
+# Logging
 ################################################################################
 
   # @param lvl (int) a human-readable log level (e.g. 'debug')
@@ -636,11 +665,11 @@ class Config(object):
 
   def clear_log(self):
     """clear the log"""
-    
+
     self.log_msgs = []
 
 ################################################################################
-# FakeSecHead class                                                            #
+# FakeSecHead class
 ################################################################################
 
 # insert a dummy section header so SafeConfigParser is happy
@@ -650,9 +679,9 @@ class FakeSecHead(object):
         self.sechead = '[%s]\n' % DUMMY
     def readline(self):
         if self.sechead:
-            try: 
+            try:
                 return self.sechead
-            finally: 
+            finally:
                 self.sechead = None
-        else: 
+        else:
             return self.fp.readline()

@@ -35,8 +35,13 @@ def main():
 
   # parse command line arguments
   parser = argparse.ArgumentParser()
-  parser.add_argument('-c',default='sibyl.conf',help='path to config file',metavar='file')
-  parser.add_argument('-d',action='store_true',help='run as daemon')
+  parser.add_argument('-c',
+      default='sibyl.conf',
+      help='path to config file',
+      metavar='file')
+  parser.add_argument('-d',
+      action='store_true',
+      help='run as daemon')
   args = parser.parse_args()
 
   # initialise bot (plug-in and config errors will occur here)

@@ -147,7 +147,7 @@ class User(object):
     return hash(self.__str__())
 
 ################################################################################
-# Room class                                                                   #
+# Room class
 ################################################################################
 
 class Room(object):
@@ -229,7 +229,7 @@ class Room(object):
     return hash(str(self))
 
 ################################################################################
-# Message class                                                                #
+# Message class
 ################################################################################
 
 class Message(object):
@@ -269,8 +269,8 @@ class Message(object):
     self.typ = typ
 
     if (status is not None) and (status not in range(-1,5)):
-      raise ValueError('Valid status: Message.UNKNOWN, OFFLINE, EXT_AWAY, '+
-          'AWAY, DND, AVAILABLE')
+      raise ValueError('Valid status: Message.UNKNOWN, OFFLINE, EXT_AWAY, '
+          + 'AWAY, DND, AVAILABLE')
     self.status = status
 
     self.user = user
@@ -328,7 +328,7 @@ class Message(object):
     return Message.TYPES[typ]
 
 ################################################################################
-# Protocol abstract class                                                      #
+# Protocol abstract class
 ################################################################################
 
 class Protocol(object):

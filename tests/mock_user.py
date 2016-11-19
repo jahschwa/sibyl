@@ -54,4 +54,4 @@ class MockUser(User):
     if self.get_room():
       user += ':ROOM'
     return user
-    
+

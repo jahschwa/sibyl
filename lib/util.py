@@ -38,7 +38,7 @@ def can_write_file(fil,delete=False):
   """check if we have write permission to the specified file"""
 
   do_delete = (delete and not os.path.isfile(fil))
-  
+
   f = open(fil,'a')
   f.close()
 
@@ -65,7 +65,8 @@ def xbmc(ip,method,params=None,user=None,pword=None):
   headers = {'content-type':'application/json'}
   payload = p
   params = {'request':json.dumps(payload)}
-  r = requests.get(url,params=params,headers=headers,auth=(user,pword),timeout=60)
+  auth = (user,pword)
+  r = requests.get(url,params=params,headers=headers,auth=auth,timeout=60)
 
   # return the response from xbmc as a dict
   return json.loads(r.text)
@@ -86,7 +87,7 @@ def xbmc_active_player(ip,user=None,pword=None):
   typ = result[0]['type']
   if typ not in ('audio','video'):
     return None
-  
+
   return (pid,typ)
 
 # @param lib (list) a list of file names to search through
@@ -234,7 +235,7 @@ def rlistdir(path,symlinks=True):
 
 # @param l (list of str) list of search terms
 # @param s (str) the string to test against each search term
-# @return (bool) True if every string in l matches s 
+# @return (bool) True if every string in l matches s
 def checkall(l,s):
   """make sure all strings in l are in s unless they start with '-' """
 
@@ -282,7 +283,7 @@ def reducetree(paths):
   # if all paths are sub-dirs, the shortest is guaranteed to contain it
   shortest = sorted(paths,key=len)[0]
   parent = None
-  
+
   # also check for the parent directory of the shortest path
   if ((shortest.startswith('smb://') and len(shortest.split('/'))>5)
       or (not shortest.startswith('smb://') and shortest!='/')):
@@ -306,14 +307,14 @@ def reducetree(paths):
 # @return (str) the input with common html characters decoded
 def cleanhtml(text):
    """replace common html codes with actual characters"""
-   
+
    codes = {'&#39;'  : "'",
             '&amp;'  : '&',
             '&quot;' : '"'}
-   
+
    for code in codes:
      text = text.replace(code,codes[code])
-   
+
    return text
 
 # @param name (str) the name of the file to load as a module (don't include .py)
@@ -354,7 +355,7 @@ def is_int(s):
 # @return (list) the input sorted as XBMC default sort
 def xbmc_sorted(files):
   """sort a list of files as xbmc does (i think) so episodes are correct"""
-  
+
   return sorted(files,cmp=xbmc_cmp)
 
 # @param a (str) a string to compare
@@ -398,3 +399,18 @@ def get_caller(lvl=2):
   """can be called from inside foo() to return the file that called foo()"""
 
   return os.path.basename(inspect.stack()[lvl][1]).split('.')[0]
+
+# @param s (str,unicode) the string to convert
+# @param esc (bool) if True, escape to html char codes; else unescape
+# @return (str,unicode) the input but safe for html
+def html(s,esc=True):
+  """escape characters that break html parsing"""
+
+  chars = { '&':'&amp;', '"':'&quot;', "'":'&#039;', '<':'&lt;', '>':'&gt;'}
+  if not esc:
+    chars = {v:k for (k,v) in chars.items()}
+
+  for (k,v) in chars.items():
+    s = s.replace(k,v)
+
+  return s

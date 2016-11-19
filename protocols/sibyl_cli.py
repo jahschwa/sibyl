@@ -26,7 +26,8 @@ from threading import Thread,Event
 from Queue import Queue
 
 from sibyl.lib.protocol import User,Room,Message,Protocol
-from sibyl.lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
+from sibyl.lib.protocol import (PingTimeout,ConnectFailure,AuthFailure,
+    ServerShutdown)
 
 from sibyl.lib.decorators import botconf
 
@@ -213,7 +214,7 @@ class CLI(Protocol):
 
   def special_cmds(self,text):
     """process special admin commands"""
-    
+
     if not text.startswith('/'):
       return
     args = text[1:].split(' ')

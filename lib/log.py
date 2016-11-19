@@ -39,7 +39,7 @@ class Log(object):
     self.__get_logger().log(lvl,msg)
 
 ################################################################################
-# the rest of the functions in this class emulate functionality from logging   #
+# the rest of the functions in this class emulate functionality from logging
 ################################################################################
 
   def log(self,lvl,msg):

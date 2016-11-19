@@ -57,10 +57,10 @@ def conf(bot):
 
 def valid(conf,echo):
   """check for lxml"""
-  
+
   if (not echo) or util.has_module('lxml'):
     return True
-  
+
   conf.log('error',"Can't find module lxml; link_echo will be disabled")
   return False
 
@@ -91,7 +91,7 @@ def all(bot,mess,args):
   if error:
     return error
 
-  proto.broadcast(' '.join(args),room,mess.get_from())
+  proto.broadcast(' '.join(args),room,mess.get_user())
 
 @botcmd
 def say(bot,mess,args):
@@ -287,6 +287,7 @@ def trigger(bot,mess,args):
     if len(args)<3:
       return 'You must specify a message'
     (name,text) = (args[1],' '.join(args[2:]))
+    name = name.lower()
 
     if name in bot.triggers:
       return 'A trigger already exists by that name'
@@ -304,10 +305,11 @@ def trigger(bot,mess,args):
       bot.triggers = {}
       trigger_write(bot)
       return 'Removed all triggers'
-    if args[1] not in bot.triggers:
+    name = args[1].lower()
+    if name not in bot.triggers:
       return 'Invalid trigger'
-    del bot.triggers[args[1]]
-    return 'Removed trigger "%s"' % args[1]
+    del bot.triggers[name]
+    return 'Removed trigger "%s"' % name
 
   return 'There are %s triggers' % len(bot.triggers)
 
@@ -443,7 +445,7 @@ def _send_muc_result(bot,room,msg):
     return
   mess = bot.pending_room[room]
   del bot.pending_room[room]
-  
+
   bot.send(msg,mess.get_from())
 
 def parse_args(bot,mess,args):

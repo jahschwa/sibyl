@@ -42,7 +42,8 @@ import sys,logging,re,os,imp,inspect,traceback,time,pickle,Queue
 
 from sibyl.lib.config import Config
 from sibyl.lib.protocol import Message
-from sibyl.lib.protocol import PingTimeout,ConnectFailure,AuthFailure,ServerShutdown
+from sibyl.lib.protocol import (PingTimeout,ConnectFailure,AuthFailure,
+    ServerShutdown)
 from sibyl.lib.decorators import botcmd,botrooms
 import sibyl.lib.util as util
 from sibyl.lib.log import Log
@@ -60,7 +61,7 @@ class SigTermInterrupt(Exception):
   pass
 
 ################################################################################
-# AAA - SibylBot                                                               #
+# AAA - SibylBot
 ################################################################################
 
 class SibylBot(object):
@@ -124,27 +125,15 @@ class SibylBot(object):
     self.log.info('Success parsing config file')
     self.log.info('')
 
-    # create protocol objects
-    self.protocols = {name:proto(self,logging.getLogger(name))
-        for (name,proto) in self.opt('protocols').items()}
-
     # initialise variables
     self.__finished = False
     self.__reboot = False
     self.__recons = {}
     self.__tell_rooms = []
     self.__pending_send = Queue.Queue()
+    self.__last_idle = 0
+    self.__idle_times = {}
     self.last_cmd = {}
-
-    # load plug-in hooks from this file
-    self.hooks = {x:{} for x in ['chat','init','down','con','discon','recon',
-        'rooms','roomf','msg','priv','group','status','err','idle']}
-    self.__load_funcs(self,'sibylbot',silent=True)
-
-    # exit if we failed to load plugin hooks from self.cmd_dir
-    if not self.__load_plugins(self.opt('cmd_dir')):
-      self.log.critical('Failed to load plugins; exiting')
-      self.__fatal('duplicate @botcmd or @botfunc')
 
     # load persistent vars
     try:
@@ -156,6 +145,42 @@ class SibylBot(object):
       self.__state = {}
     self.__persist = []
 
+    # create protocol objects
+    self.protocols = {name:proto(self,logging.getLogger(name))
+        for (name,proto) in self.opt('protocols').items()}
+
+    # load plug-in hooks from this file
+    self.hooks = {x:{} for x in ['chat','init','down','con','discon','recon',
+        'rooms','roomf','msg','priv','group','status','err','idle']}
+    self.__load_funcs(self,'sibylbot',silent=True)
+
+    # exit if we failed to load plugin hooks from self.cmd_dir
+    if not self.__load_plugins(self.opt('cmd_dir')):
+      self.log.critical('Failed to load plugins; exiting')
+      self.__fatal('duplicate @botcmd or @botfunc')
+
+    # rename bot commands
+    cmds = {}
+    ns = {}
+    success = True
+    for (old,new) in self.opt('rename').items():
+      if old in self.hooks['chat']:
+        cmds[new] = self.hooks['chat'][old]
+        ns[new] = self.ns_cmd[old]
+      else:
+        self.log.warning('Cannot rename %s:%s; no such cmd' % (new,old))
+        success = False
+
+    if not success:
+      self.errors.append('Some rename operations failed')
+
+    for (old,new) in self.opt('rename').items():
+      self.hooks['chat'][new] = cmds[new]
+      self.ns_cmd[new] = ns[new]
+      if old not in cmds:
+        del self.hooks['chat'][old]
+        del self.ns_cmd[old]
+
     # run plug-in init hooks and exit if there were errors
     if self.__run_hooks('init'):
       self.log.critical('Exception executing @botinit hooks; exiting')
@@ -164,6 +189,7 @@ class SibylBot(object):
   def __fatal(self,msg):
     """exit due to a fatal error"""
 
+    self.log.critical('Fatal error during initialization')
     print '\n   *** Fatal error: %s (see log) ***\n' % msg
     print '   Config file: %s' % os.path.abspath(self.conf_file)
     print '   Cmd dir:     %s' % os.path.abspath(self.opt('cmd_dir'))
@@ -171,7 +197,7 @@ class SibylBot(object):
     sys.exit(1)
 
 ################################################################################
-# BBB - Plug-in framework                                                      #
+# BBB - Plug-in framework
 ################################################################################
 
   def __init_config(self):
@@ -250,7 +276,7 @@ class SibylBot(object):
           self._log_ex(e,msg)
           self.errors.append(msg)
           continue
-        
+
         mods[f] = mod
         success = (self.__load_funcs(mod,f) and success)
       else:
@@ -262,15 +288,16 @@ class SibylBot(object):
         for dep in mod.__depends__:
           if dep not in mods:
             success = False
-            self.log.critical('Missing dependency "%s" from plugin "%s"' %
-                (dep,name))
+            self.log.critical('Missing dependency "%s" from plugin "%s"'
+                % (dep,name))
       if hasattr(mod,'__wants__'):
         for dep in mod.__wants__:
           if dep not in mods:
-            self.log.warning('Missing plugin "%s" limits funcionality of "%s"' %
-                (dep,name))
+            self.log.warning('Missing plugin "%s" limits funcionality of "%s"'
+                % (dep,name))
 
     self.plugins = sorted(mods.keys())
+
     return success
 
   def __load_funcs(self,mod,fil,silent=False):
@@ -285,8 +312,8 @@ class SibylBot(object):
 
         # check for duplicates
         if hasattr(self,name):
-          self.log.critical('Duplicate @botfunc "%s" from "%s" and "%s"' %
-              (name,self.ns_func[name],fil))
+          self.log.critical('Duplicate @botfunc "%s" from "%s" and "%s"'
+              % (name,self.ns_func[name],fil))
           success = False
           continue
 
@@ -301,13 +328,13 @@ class SibylBot(object):
         if getattr(func,'_sibylbot_dec_'+hook,False):
 
           fname = getattr(func,'_sibylbot_dec_'+hook+'_name',None)
-          
+
           # check for duplicate chat cmds
           if getattr(func,'_sibylbot_dec_chat',False):
             fname = fname.lower()
             if fname in dic:
-              self.log.critical('Duplicate @botcmd "%s" from "%s" and "%s"' %
-                  (fname,self.ns_cmd[fname],fil))
+              self.log.critical('Duplicate @botcmd "%s" from "%s" and "%s"'
+                  % (fname,self.ns_cmd[fname],fil))
               success = False
               continue
 
@@ -317,7 +344,7 @@ class SibylBot(object):
             fname = fil+'.'+name
             s = '  Registered %s hook: %s.%s' % (hook,fil,name)
           dic[fname] = self.__bind(func)
-          
+
           # add chat hooks to ns_cmd
           if getattr(func,'_sibylbot_dec_chat',False):
             self.ns_cmd[fname] = fil
@@ -362,16 +389,36 @@ class SibylBot(object):
     for (name,func) in self.hooks[hook].items():
       if hook!='idle':
         self.log.debug('Running %s hook: %s' % (hook,name))
+      else:
+        t = time.time()
 
       # catch exceptions, log them, and return them
       try:
         func(*args)
+
+        # we time idle hooks to make sure they aren't taking too long
+        if hook=='idle':
+          times = self.__idle_times
+          limit = self.opt('idle_time')
+          if time.time()-t>limit:
+            times[name] = times.get(name,0)+1
+            count = self.opt('idle_count')
+            self.log.warning('Idle hook %s exceeded %s sec (count=%s/%s)'
+                % (name,limit,times[name],count))
+            if times[name]>=count:
+              self.log.critical('Deleting idle hook %s for taking too long'
+                  % name)
+              del self.hooks['idle'][name]
+              del times[name]
+          else:
+            times[name] = max(times.get(name,0)-1,0)
+
       except Exception as e:
         self._log_ex(e,'Exception running %s hook %s:' % (hook,name))
 
-        # disable idle hooks so that don't keep raising exceptions
+        # disable idle hooks so they don't keep raising exceptions
         if hook=='idle':
-          self.log.critical('Disabling idle hook %s' % name)
+          self.log.critical('Deleting idle hook %s' % name)
           del self.hooks['idle'][name]
 
         errors[name] = e
@@ -379,7 +426,7 @@ class SibylBot(object):
     return errors
 
 ################################################################################
-# CCC - Callbacks for Protocols                                                #
+# CCC - Callbacks for Protocols
 ################################################################################
 
   # @param mess (Message) the received Message
@@ -461,7 +508,7 @@ class SibylBot(object):
       if reply:
         self.__send(reply,frm)
       return
-    
+
     # check against bw_list
     pname = mess.get_protocol().get_name()
     if pname in self.opt('admin_protos'):
@@ -529,7 +576,7 @@ class SibylBot(object):
     result = self.__run_hooks('roomf',room,error)
 
 ################################################################################
-# DDD - Helper functions                                                       #
+# DDD - Helper functions
 ################################################################################
 
   def __get_cmd(self,mess):
@@ -616,13 +663,13 @@ class SibylBot(object):
     to.get_protocol().send(text,to)
 
 ################################################################################
-# EEE - Chat commands                                                          #
+# EEE - Chat commands
 ################################################################################
 
   @botcmd(name='redo')
   def __redo(self,mess,args):
     """redo last command - redo [args]"""
-  
+
     # this is a dummy function so it gets displayed in the help command
     # the real logic is at the end of callback_message()
     return
@@ -647,8 +694,8 @@ class SibylBot(object):
     funcs = self.hooks['chat'].values()
     plugins = sorted(self.plugins+['sibylbot'])
     protos = ','.join(sorted(self.opt('protocols').keys()))
-    return ('SibylBot %s (%s) --- %s commands from %s plugins: %s' %
-        (__version__,protos,cmds,len(plugins),plugins))
+    return ('SibylBot %s (%s) --- %s commands from %s plugins: %s'
+        % (__version__,protos,cmds,len(plugins),plugins))
 
   @botcmd(name='hello')
   def __hello(self,mess,args):
@@ -700,7 +747,7 @@ class SibylBot(object):
     return 'No errors'
 
 ################################################################################
-# FFF - UI Functions                                                           #
+# FFF - UI Functions
 ################################################################################
 
   def __unknown_command(self, mess, cmd, args):
@@ -733,7 +780,7 @@ class SibylBot(object):
     return ""
 
 ################################################################################
-# GGG - Run and Stop Functions                                                 #
+# GGG - Run and Stop Functions
 ################################################################################
 
   def __log_startup_msg(self):
@@ -816,13 +863,13 @@ class SibylBot(object):
       try:
         self.__serve()
         time.sleep(0.1)
-        
+
       except (PingTimeout,ConnectFailure,ServerShutdown) as e:
         name = e.protocol
         proto = self.protocols[name]
         proto.disconnected()
         self.__run_hooks('discon',name,e)
-        
+
         if not self.opt('catch_except'):
           raise e
 
@@ -831,16 +878,16 @@ class SibylBot(object):
                   ServerShutdown:'server shutdown'}
         proto.log.error('Connection lost ('+reason[e.__class__]+
             '); retrying in '+str(self.opt('recon_wait'))+' sec')
-        
+
         self.__recons[name] = time.time()+self.opt('recon_wait')
-      
+
       except AuthFailure as e:
         name = e.protocol
         self.log.error('Disabling protocol "%s" due to AuthFailure' % name)
         del self.protocols[name]
         if not self.protocols:
           self.quit('No active protocols; exiting')
-      
+
       except KeyboardInterrupt:
         self.quit('stopped by KeyboardInterrupt')
       except SigTermInterrupt:
@@ -854,8 +901,11 @@ class SibylBot(object):
   def __idle_proc(self):
     """This function will be called in the main loop."""
 
-    self.__run_hooks('idle')
     self.__idle_send()
+
+    if self.opt('idle_count')>0 and time.time()>=self.__last_idle+1:
+      self.__run_hooks('idle')
+      self.__last_idle = time.time()
 
   def __idle_send(self):
     """send queued messages synchronously"""
@@ -864,7 +914,7 @@ class SibylBot(object):
       self.__send(*self.__pending_send.get())
 
 ################################################################################
-# HHH - User-facing functions                                                  #
+# HHH - User-facing functions
 ################################################################################
 
   def run_forever(self):
@@ -905,7 +955,7 @@ class SibylBot(object):
   def send(self,text,to):
     """send a message (this function is thread-safe)"""
 
-    self.__pending_send.put((text,to))
+    self.__pending_send.put((unicode(text),to))
 
   # @param (str) the name of a protocol
   # @return (Protocol) the Protocol associated with the given object
@@ -917,7 +967,7 @@ class SibylBot(object):
   # @param msg (str) [None] message to log
   def quit(self,msg=None):
     """Stop serving messages and exit"""
-    
+
     self.__finished = True
     if msg:
       self.log.critical(msg)
@@ -952,8 +1002,8 @@ class SibylBot(object):
     caller = util.get_caller()
     if hasattr(self,name):
       space = self.ns_opt.get(name,'sibylbot')
-      self.log.critical('plugin "%s" tried to overwrite var "%s" from "%s"' %
-          (caller,name,space))
+      self.log.critical('plugin "%s" tried to overwrite var "%s" from "%s"'
+          % (caller,name,space))
       raise DuplicateVarError
 
     if self.opt('persistence') and persist:
@@ -992,7 +1042,7 @@ class SibylBot(object):
       hooks = self.hooks[dec]
       for name in hooks.keys():
         if hooks[name]==func:
-          self.log.debug('Disabling %s hook %s' % (dec,name))
+          self.log.debug('Deleting %s hook %s' % (dec,name))
           del hooks[name]
 
   # @param plugin (str) [None] name of plugin to check for, or return all

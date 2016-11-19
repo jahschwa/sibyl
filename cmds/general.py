@@ -23,8 +23,6 @@
 
 import sys,os,subprocess,json,logging,socket,re,codecs
 
-import inspect
-
 import requests
 
 from sibyl.lib.decorators import *
@@ -59,7 +57,7 @@ def init(bot):
 
 @botcmd
 def alias(bot,mess,args):
-  """add aliases for cmds (and args) - alias (info|list|add|remove|show) [name] [cmd]"""
+  """add aliases for cmds - alias (info|list|add|remove|show) [name] [cmd]"""
 
   if not args:
     args = ['info']
@@ -76,6 +74,7 @@ def alias(bot,mess,args):
     if len(args)<3:
       return 'You must specify some text'
     (name,text) = (args[1],' '.join(args[2:]))
+    name = name.lower()
 
     if name in bot.aliases:
       return 'An alias already exists by that name'
@@ -95,17 +94,19 @@ def alias(bot,mess,args):
       bot.aliases = {}
       alias_write(bot)
       return 'Removed all aliases'
-    if args[1] not in bot.aliases:
+    name = args[1].lower()
+    if name not in bot.aliases:
       return 'Invalid alias'
-    del bot.aliases[args[1]]
-    return 'Removed alias "%s"' % args[1]
+    del bot.aliases[name]
+    return 'Removed alias "%s"' % name
 
   elif args[0]=='show':
     if len(args)<2:
       return 'You must specify an alias'
-    if args[1] not in bot.aliases:
+    name = args[1].lower()
+    if name not in bot.aliases:
       return 'Invalid alias'
-    return bot.aliases[args[1]]
+    return bot.aliases[name]
 
   return 'There are %s aliases' % len(bot.aliases)
 
@@ -248,7 +249,7 @@ def config(bot,mess,args):
         % (opt,bot.conf_diff[opt][0],bot.opt[opt]))
 
   # some options don't make sense to edit in chat
-  if opt in ('protocols','disabled','enabled','cmd_dir','rooms'):
+  if opt in ('protocols','disabled','enabled','rename','cmd_dir','rooms'):
     return 'You may not edit that option via chat'
 
   # revert to original config
@@ -406,16 +407,14 @@ def wiki(bot,mess,args):
   title = result[1][0]
   text = result[2]
 
-  # don't send the unicode specifier in the reply message
-  try:
-    text.remove(u'')
-    text = '\n'.join(text)
-  except ValueError:
-    pass
+  if isinstance(text,list):
+    text = text[0]
+  if not text.strip():
+    text = '(Query returned blank body; possibly a redirect page?)'
 
   # send a link and brief back to the user
   url = result[3][0]
-  return unicode(title)+' - '+unicode(url)+'\n'+unicode(text)
+  return title+' - '+url+'\n'+text
 
 @botcmd(ctrl=True)
 def log(bot,mess,args):

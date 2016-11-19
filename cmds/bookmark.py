@@ -42,7 +42,7 @@ def conf(bot):
 @botinit
 def init(bot):
   """initialize bookmark dict and last played str for bookmarking"""
-  
+
   if os.path.isfile(bot.opt('bookmark.file')):
     bm_store = bm_parse(bot)
   else:
@@ -141,7 +141,7 @@ def resume(bot,mess,args):
   # check for "next" as last arg
   start_next = (args[-1]=='next')
   start_current = (args[-1]=='current')
-  
+
   if start_next or start_current:
     args = args[:-1]
 

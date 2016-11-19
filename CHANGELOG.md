@@ -33,6 +33,7 @@ This change log follows guidelines at [this site](http://keepachangelog.com/).
 - New config options `log_time` and `log_lines` for the `general.log` cmd
 - New config option `room.trigger_file` for storing triggers
 - New config option `general.alias_file` for storing aliases
+- New config option `rename` for renaming chat commands
 - Disabled `stdout`; all plugins should use logging instead
 - Plugins can specify dependencies as a list via the `__depends__` variable
 - Plugins can specify "wants" as a list via the `__wants__` variable
@@ -47,6 +48,7 @@ This change log follows guidelines at [this site](http://keepachangelog.com/).
 - Added example configuation file `example/sibyl.conf`
 - Added example of python threading `example/thread.py`
 - Some `room.py` commands (`all`, `join`, `leave`, `say`) now accept a protocol name
+- Sibyl now calls part_room() for all rooms at bot shutdown
 
 ### Changed
 - License changed from GPLv2 to GPLv3

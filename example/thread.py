@@ -44,7 +44,7 @@ class Bot(object):
 
   def __init__(self):
     """initialise protocol, logging, and alarm"""
-    
+
     self.protocol = ThreadProtocol(self)
     logging.basicConfig(filename='thread.log',filemode='w',level=logging.DEBUG,
         format='%(asctime).19s | %(name)-8.8s | %(levelname).3s | %(message)s')
@@ -53,20 +53,20 @@ class Bot(object):
 
   def _cb_message(self,msg):
     """log messages and run a 5-second hook"""
-    
+
     self.log.info('got mess: "%s"' % msg)
     self.log.info('Running hook takes_forever')
     self.takes_forever()
 
   def takes_forever(self):
     """take 5 seconds doing nothing to demonstrate threadiness"""
-    
+
     time.sleep(5)
     self.log.info('Done running takes_forever')
 
   def run_forever(self):
     """connect, run idle_proc, process messages, catch exceptions"""
-    
+
     self.log.info('bot starting')
     # outer try loop catches all exceptions, and this while loop runs forever
     try:
@@ -144,7 +144,8 @@ class ThreadProtocol(object):
 
     # create a new thread and start it
     self.num += 1
-    self.thread = BufferThread(self.queue,self.event_data,self.event_close,self.num)
+    self.thread = BufferThread(self.queue,
+        self.event_data,self.event_close,self.num)
     self.thread.start()
     self.connected = True
     self.log.info('connected with thread-%s' % self.num)

@@ -531,7 +531,8 @@ class XMPP(Protocol):
 
     # Catch kicked from the room
     room = jid.getStripped()
-    if room in self.__get_current_mucs() and jid.getResource()==self.mucs[room]['nick']:
+    if (room in self.__get_current_mucs()
+        and jid.getResource()==self.mucs[room]['nick']):
       code = pres.getStatusCode()
       if code:
         code = int(code)
@@ -540,7 +541,8 @@ class XMPP(Protocol):
           self.last_join = time.time()
           (text,func) = self.MUC_CODES[code]
           func('Forced from room "%s" (%s)' % (room,text))
-          self.log.debug('Rejoining room "%s" in %i sec' % (room,self.opt('recon_wait')))
+          self.log.debug('Rejoining room "%s" in %i sec'
+              % (room,self.opt('recon_wait')))
           return
 
     # If subscription is private,
@@ -692,7 +694,8 @@ class XMPP(Protocol):
 
       # raise PingTimeout if pinging fails
       try:
-        res = self.conn.SendAndWaitForResponse(ping,self.opt('xmpp.ping_timeout'))
+        res = self.conn.SendAndWaitForResponse(ping,
+            self.opt('xmpp.ping_timeout'))
       except IOError:
         raise PingTimeout
       if res is None:
@@ -751,7 +754,8 @@ class XMPP(Protocol):
       except MUCJoinFailure as e:
         self.__muc_join_failure(room,e.message)
         if self.mucs[room]['status'] > self.MUC_OK:
-          self.log.debug('Rejoining room "%s" in %i sec' % (room,self.opt('recon_wait')))
+          self.log.debug('Rejoining room "%s" in %i sec'
+              % (room,self.opt('recon_wait')))
         else:
           self.mucs[room]['status'] = self.MUC_PARTED
 
@@ -769,7 +773,8 @@ class XMPP(Protocol):
 
     # request no history and add password if we need one
     pres = xmpp.Presence(to=room_jid)
-    pres.setTag('x',namespace=NS_MUC).setTagData('history','',attrs={'maxchars':'0'})
+    pres.setTag('x',namespace=NS_MUC).setTagData('history','',
+        attrs={'maxchars':'0'})
     if pword is not None:
       pres.setTag('x',namespace=NS_MUC).setTagData('password',pword)
 
@@ -789,7 +794,8 @@ class XMPP(Protocol):
     # check for error
     error = result.getError()
     if error:
-      self.log.error('Error joining room "%s" (%s)' % (room,self.MUC_JOIN_ERROR[error]))
+      self.log.error('Error joining room "%s" (%s)'
+          % (room,self.MUC_JOIN_ERROR[error]))
       raise MUCJoinFailure(error)
 
     # we joined successfully
@@ -827,17 +833,17 @@ class XMPP(Protocol):
   def __get_current_mucs(self):
     """return all mucs that we are currently in"""
 
-    return [room for room in self.mucs if self.mucs[room]['status']==self.MUC_OK]
+    return [r for r in self.mucs if self.mucs[r]['status']==self.MUC_OK]
 
   def __get_active_mucs(self):
     """return all mucs we are in or are trying to reconnect"""
 
-    return [room for room in self.mucs if self.mucs[room]['status']>=self.MUC_OK]
+    return [r for r in self.mucs if self.mucs[r]['status']>=self.MUC_OK]
 
   def __get_inactive_mucs(self):
     """return all mucs that we are currently not in"""
 
-    return [room for room in self.mucs if self.mucs[room]['status']!=self.MUC_OK]
+    return [r for r in self.mucs if self.mucs[r]['status']!=self.MUC_OK]
 
   def __get_sender_username(self, mess):
     """Extract the sender's user name from a message"""
