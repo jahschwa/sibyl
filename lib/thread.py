@@ -40,7 +40,7 @@ class SmartThread(threading.Thread):
 
     reply = None
     try:
-      reply = self.func(self.mess,self.args)
+      reply = self.func(self.bot,self.mess,self.args)
     except Exception as e:
       fname = self.func._sibylbot_dec_chat_name
       self.bot._log_ex(e,

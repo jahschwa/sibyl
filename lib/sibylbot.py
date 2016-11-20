@@ -318,7 +318,7 @@ class SibylBot(object):
           continue
 
         # set the function and ns_func
-        setattr(self,name,self.__bind(func))
+        setattr(self,name,func.__get__(self,SibylBot))
         self.ns_func[name] = fil
         if not silent:
           self.log.debug('  Registered function: %s.%s' % (fil,name))
@@ -343,7 +343,7 @@ class SibylBot(object):
           if fname is None:
             fname = fil+'.'+name
             s = '  Registered %s hook: %s.%s' % (hook,fil,name)
-          dic[fname] = self.__bind(func)
+          dic[fname] = func
 
           # add chat hooks to ns_cmd
           if getattr(func,'_sibylbot_dec_chat',False):
@@ -375,11 +375,6 @@ class SibylBot(object):
 
     return success
 
-  def __bind(self,func):
-    """bind the given function to self"""
-
-    return func.__get__(self,SibylBot)
-
   def __run_hooks(self,hook,*args):
     """run and log the specified hooks passing args"""
 
@@ -394,7 +389,7 @@ class SibylBot(object):
 
       # catch exceptions, log them, and return them
       try:
-        func(*args)
+        func(self,*args)
 
         # we time idle hooks to make sure they aren't taking too long
         if hook=='idle':
@@ -550,7 +545,7 @@ class SibylBot(object):
         self.log.debug('Spawning new thread for cmd "%s"' % cmd_name)
         SmartThread(self,func,mess,args).start()
       else:
-        reply = func(mess,args)
+        reply = func(self,mess,args)
     except Exception as e:
       self._log_ex(e,
           'Error while executing cmd "%s":' % cmd_name,
@@ -664,8 +659,15 @@ class SibylBot(object):
 
 ################################################################################
 # EEE - Chat commands
+#
+# When we call functions from plugins, we must pass "self" explicitly. However,
+# the below functions are bound, and so pass "self" implicitly as well. If we
+# called func(self,s) for one of the below functions, the function would
+# actually receive func(self,self,s). The @staticmethod decorator fixes this.
+#
 ################################################################################
 
+  @staticmethod
   @botcmd(name='redo')
   def __redo(self,mess,args):
     """redo last command - redo [args]"""
@@ -674,18 +676,21 @@ class SibylBot(object):
     # the real logic is at the end of callback_message()
     return
 
+  @staticmethod
   @botcmd(name='last')
   def __last(self,mess,args):
     """display last command (from any chat)"""
 
     return self.last_cmd.get(mess.get_from().get_base(),'No past commands')
 
+  @staticmethod
   @botcmd(name='git')
   def __git(self,mess,args):
     """return a link to the github page"""
 
     return 'https://github.com/TheSchwa/sibyl'
 
+  @staticmethod
   @botcmd(name='about')
   def __about(self,mess,args):
     """print version and some plug-in info"""
@@ -697,12 +702,14 @@ class SibylBot(object):
     return ('SibylBot %s (%s) --- %s commands from %s plugins: %s'
         % (__version__,protos,cmds,len(plugins),plugins))
 
+  @staticmethod
   @botcmd(name='hello')
   def __hello(self,mess,args):
     """reply if someone says hello"""
 
     return 'Hello world!'
 
+  @staticmethod
   @botcmd(name='help')
   def __help(self,mess,args):
     """return help info about cmds - help [cmd]"""
@@ -738,6 +745,7 @@ class SibylBot(object):
     bottom = self.__bottom_of_help_message()
     return ''.join(filter(None, [top, description, usage, bottom]))
 
+  @staticmethod
   @botcmd(name='errors')
   def __errors(self,mess,args):
     """list any errors that occurred during startup"""
@@ -819,6 +827,8 @@ class SibylBot(object):
     self.log.info('-'*50)
     self.log.info('')
 
+  # see note in section EEE comment header regarding @staticmethod
+  @staticmethod
   @botrooms
   def __tell_errors(self,room):
     """mention startup errors in rooms we join on init"""
@@ -1026,7 +1036,7 @@ class SibylBot(object):
 
     if args is None:
       args = []
-    return self.hooks['chat'][cmd](mess,args)
+    return self.hooks['chat'][cmd](self,mess,args)
 
   # @param func (function) the function to remove from our hooks
   # @param dec (str) the hook type to remove e.g. 'chat', 'mess', 'rooms'

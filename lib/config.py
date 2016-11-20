@@ -107,13 +107,6 @@ class Config(object):
     if not os.path.isfile(self.conf_file):
       self.write_default_conf()
 
-  # @param func (function) static function to bind to this object
-  # @return (function) the parameter as a bound method
-  def __bind(self,func):
-    """bing the given function to self"""
-
-    return func.__get__(self,Config)
-
   # @return (OrderedDict) defaults {option:value}
   def get_default(self):
     """return a dict of defaults in the form {opt:value}"""
@@ -159,7 +152,7 @@ class Config(object):
     for hook in ('parse','valid','post'):
       opt[hook] = opt.get(hook,None)
       if opt[hook]:
-        opt[hook] = self.__bind(opt[hook])
+        opt[hook] = opt[hook]
 
     self.OPTS[name] = (
       opt['default'],opt['req'],opt['parse'],opt['valid'],opt['post'])
@@ -175,21 +168,21 @@ class Config(object):
     try:
       func = self.OPTS[opt][self.PARSE]
       if func:
-        val = func(opt,val)
+        val = func(self,opt,val)
     except:
       return False
 
     # validate if necessary
     func = self.OPTS[opt][self.VALID]
     if func:
-      if not func(val):
+      if not func(self,val):
         return False
 
     # try to post if necessary
     try:
       func = self.OPTS[opt][self.POST]
       if func:
-        val = func(self.opts,opt,val)
+        val = func(self,self.opts,opt,val)
     except:
       return False
 
@@ -359,8 +352,9 @@ class Config(object):
         func = self.OPTS[opt][self.PARSE]
         if func:
           try:
-            opts[opt] = func(opt,opts[opt])
+            opts[opt] = func(self,opt,opts[opt])
           except Exception as e:
+            print traceback.format_exc(e)
             self.log('error','Error parsing "%s"; using default=%s' %
                 (opt,self.opts[opt]))
             del opts[opt]
@@ -372,7 +366,7 @@ class Config(object):
     # delete invalid options
     for opt in opts.keys():
       func = self.OPTS[opt][self.VALID]
-      if func and not func(opts[opt]):
+      if func and not func(self,opts[opt]):
         self.log('error','Invalid value for "%s"; using default=%s' %
             (opt,self.opts[opt]))
         del opts[opt]
@@ -385,7 +379,7 @@ class Config(object):
       func = self.OPTS[opt][self.POST]
       if func:
         try:
-          opts[opt] = func(opts,opt,opts[opt])
+          opts[opt] = func(self,opts,opt,opts[opt])
         except Exception as e:
           self.log('error','Error running post for "%s"; using default=%s' %
               (opt,self.opts[opt]))
@@ -407,8 +401,14 @@ class Config(object):
 # @param foo (object) the object to validate
 # @return (bool) True if the object is acceptable
 #
+# When we call functions from plugins, we must pass "self" explicitly. However,
+# the below functions are bound, and so pass "self" implicitly as well. If we
+# called func(self,s) for one of the below functions, the function would
+# actually receive func(self,self,s). The @staticmethod decorator fixes this.
+#
 ################################################################################
 
+  @staticmethod
   def valid_ip(self,s):
     """return True if s is a valid ip"""
 
@@ -428,6 +428,7 @@ class Config(object):
     except:
       return False
 
+  @staticmethod
   def valid_rfile(self,s):
     """return True if we can read the file"""
 
@@ -437,6 +438,7 @@ class Config(object):
     except:
       return False
 
+  @staticmethod
   def valid_wfile(self,s):
     """return True if we can write to the file"""
 
@@ -446,6 +448,7 @@ class Config(object):
     except:
       return False
 
+  @staticmethod
   def valid_bw(self,bw):
     """return True if the bw list is valid"""
 
@@ -455,6 +458,7 @@ class Config(object):
         return False
     return True
 
+  @staticmethod
   def valid_dir(self,cmd):
     """return True if the directory exists"""
 
@@ -464,6 +468,7 @@ class Config(object):
     except:
       return False
 
+  @staticmethod
   def valid_admin(self,protos):
     """return True if every protocol in the list exists"""
 
@@ -474,6 +479,7 @@ class Config(object):
 
     return True
 
+  @staticmethod
   def valid_nump(self,num):
     """return True if the number is non-negative"""
 
@@ -486,9 +492,15 @@ class Config(object):
 # @param opt (str) the name of the option being parsed
 # @param val (str) the string to parse into a Python object
 #
+# When we call functions from plugins, we must pass "self" explicitly. However,
+# the below functions are bound, and so pass "self" implicitly as well. If we
+# called func(self,s) for one of the below functions, the function would
+# actually receive func(self,self,s). The @staticmethod decorator fixes this.
+#
 ################################################################################
 
   # @return (dict of str:class) protocol names and classes to use
+  @staticmethod
   def parse_protocols(self,opt,val):
     """parse the protocols and return the subclasses"""
 
@@ -527,12 +539,14 @@ class Config(object):
     return protocols
 
   # @return (list) list of plugins to treat as admin
+  @staticmethod
   def parse_admin(self,opt,val):
     """parse the list of protocols"""
 
     return util.split_strip(val,',')
 
   # @return (list) a list of plugins to disable
+  @staticmethod
   def parse_plugins(self,opt,val):
     """parse the list of disabled or enables plugins"""
 
@@ -541,6 +555,7 @@ class Config(object):
     return val.split(',')
 
   # @return (dict) map for renaming chat commands
+  @staticmethod
   def parse_rename(self,opt,val):
     """parse the rename commands into a dict"""
 
@@ -554,6 +569,7 @@ class Config(object):
     return d
 
   # @return (dict) a room to join with keys [room, nick, pass]
+  @staticmethod
   def parse_rooms(self,opt,val):
     """parse the rooms into a list"""
 
@@ -582,6 +598,7 @@ class Config(object):
     return rooms
 
   # @return (int) a log level from the logging module
+  @staticmethod
   def parse_log(self,opt,val):
     """parse the specified log level"""
 
@@ -595,6 +612,7 @@ class Config(object):
 
   # @return (list of tuple) the black/white list
   #   where each tuple contains 3 (str): (color,user,cmd)
+  @staticmethod
   def parse_bw(self,opt,val):
     """parse and fully expand the bw_list"""
 
@@ -621,6 +639,7 @@ class Config(object):
     return bw
 
   # @return (bool)
+  @staticmethod
   def parse_bool(self,opt,val):
     """return a bool"""
 
@@ -631,12 +650,14 @@ class Config(object):
     raise ValueError
 
   # @return (int)
+  @staticmethod
   def parse_int(self,opt,val):
     """return an int"""
 
     return int(val)
 
   # @return (float)
+  @staticmethod
   def parse_float(self,opt,val):
     """return a float"""
 
@@ -659,7 +680,7 @@ class Config(object):
 
     log = logging.getLogger('config')
     for (lvl,msg) in self.log_msgs:
-      lvl = self.parse_log(None,lvl)
+      lvl = self.parse_log(self,None,lvl)
       log.log(lvl,msg)
     self.clear_log()
 
