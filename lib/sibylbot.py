@@ -131,8 +131,10 @@ class SibylBot(object):
     self.__recons = {}
     self.__tell_rooms = []
     self.__pending_send = Queue.Queue()
+    self.__pending_del = Queue.Queue()
     self.__last_idle = 0
-    self.__idle_times = {}
+    self.__idle_count = {}
+    self.__idle_last = {}
     self.last_cmd = {}
 
     # load persistent vars
@@ -397,26 +399,33 @@ class SibylBot(object):
     """run all idle hooks"""
 
     for (name,func) in self.hooks['idle'].items():
+
       t = time.time()
+      if t<self.__idle_last.get(name,0)+getattr(func,'_sibylbot_dec_idle_freq'):
+        continue
+      self.__idle_last[name] = t
 
       try:
-        func(self)
+        if getattr(func,'_sibylbot_dec_idle_thread'):
+          SmartThread(self,func,name=name).start()
+        else:
+          func(self)
 
         # we time idle hooks to make sure they aren't taking too long
-        times = self.__idle_times
+        counts = self.__idle_count
         limit = self.opt('idle_time')
         if time.time()-t>limit:
-          times[name] = times.get(name,0)+1
+          counts[name] = counts.get(name,0)+1
           count = self.opt('idle_count')
           self.log.warning('Idle hook %s exceeded %s sec (count=%s/%s)'
-              % (name,limit,times[name],count))
-          if times[name]>=count:
+              % (name,limit,counts[name],count))
+          if counts[name]>=count:
             self.log.critical('Deleting idle hook %s for taking too long'
                 % name)
             del self.hooks['idle'][name]
-            del times[name]
+
         else:
-          times[name] = max(times.get(name,0)-1,0)
+          counts[name] = max(counts.get(name,0)-1,0)
 
       except Exception as e:
         self._log_ex(e,'Exception running %s hook %s:' % (hook,name))
@@ -914,12 +923,31 @@ class SibylBot(object):
   def __idle_proc(self):
     """This function will be called in the main loop."""
 
+    self.__idle_del()
     self.__idle_send()
 
     if (self.opt('idle_count')>0
         and time.time()>=self.__last_idle+self.opt('idle_freq')):
       self.__run_idle()
       self.__last_idle = time.time()
+
+  def __idle_del(self):
+    """deleted queued hooks"""
+
+    while not self.__pending_del.empty():
+      (func,dec) = self.__pending_del.get()
+
+      if not dec:
+        decs = self.hooks.keys()
+      else:
+        decs = [dec]
+
+      for dec in decs:
+        hooks = self.hooks[dec]
+        for name in hooks.keys():
+          if hooks[name]==func:
+            self.log.debug('Deleting %s hook %s' % (dec,name))
+            del hooks[name]
 
   def __idle_send(self):
     """send queued messages synchronously"""
@@ -1042,22 +1070,13 @@ class SibylBot(object):
       args = []
     return self.hooks['chat'][cmd](self,mess,args)
 
+  # this function is thread-safe
   # @param func (function) the function to remove from our hooks
   # @param dec (str) the hook type to remove e.g. 'chat', 'mess', 'rooms'
   def del_hook(self,func,dec=None):
-    """delete a hook (i.e. decorated function)"""
+    """delete a hook (this function is thread-safe)"""
 
-    if not dec:
-      decs = self.hooks.keys()
-    else:
-      decs = [dec]
-
-    for dec in decs:
-      hooks = self.hooks[dec]
-      for name in hooks.keys():
-        if hooks[name]==func:
-          self.log.debug('Deleting %s hook %s' % (dec,name))
-          del hooks[name]
+    self.__pending_del.put((func,dec))
 
   # @param plugin (str) [None] name of plugin to check for, or return all
   # @return (bool,list) True if the plugin was loaded, or list all

@@ -16,7 +16,8 @@ This change log follows guidelines at [this site](http://keepachangelog.com/).
 - Decorators: botcon, botdiscon, botrecon, botdown, boterr, botpriv, botgroup
 - Ability to specify "chat_ctrl" cmds with `@botcmd(ctrl=True)`
 - Ability to execute chat commands in a separate thread with `@botcmd(thread=True)`
-- Made `bot.send()` threadsafe
+- Added `freq` and `thread` args to `@botidle`
+- Made `bot.send()` and `bot.del_hook()` threadsafe
 - New chat cmd "tell" in `room.py` to give messages once a user joins the room
 - New chat cmd "about" in `sibylbot.py`to give info about the bot
 - New chat cmd "trigger" in `room.py` to add chat "cmds" that just echo text

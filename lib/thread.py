@@ -26,7 +26,7 @@ import threading,traceback
 class SmartThread(threading.Thread):
   """smart threads log exceptions"""
 
-  def __init__(self,bot,func,mess,args):
+  def __init__(self,bot,func,mess=None,args=None,name=None):
 
     super(SmartThread,self).__init__()
     self.daemon = True
@@ -35,16 +35,23 @@ class SmartThread(threading.Thread):
     self.func = func
     self.mess = mess
     self.args = args
+    self.name = (name or self.func._sibylbot_dec_chat_name)
 
   def run(self):
+
+    if self.mess:
+      self.run_cmd()
+    else:
+      self.run_idle()
+
+  def run_cmd(self):
 
     reply = None
     try:
       reply = self.func(self.bot,self.mess,self.args)
     except Exception as e:
-      fname = self.func._sibylbot_dec_chat_name
       self.bot._log_ex(e,
-          'Error while executing threaded cmd "%s":' % fname,
+          'Error while executing threaded cmd "%s":' % self.name,
           '  Message text: "%s"' % self.mess.get_text())
       reply = self.bot.MSG_ERROR_OCCURRED
       if self.bot.opt('except_reply'):
@@ -52,3 +59,12 @@ class SmartThread(threading.Thread):
 
     if reply:
       self.bot.send(reply,self.mess.get_from())
+
+  def run_idle(self):
+
+    try:
+      self.func(self.bot)
+    except Exception as e:
+      self.bot._log_ex(e,
+          'Error while executing threaded idle hook "%s":' % self.name)
+      self.bot.del_hook(self.func,'idle')

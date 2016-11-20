@@ -73,7 +73,7 @@ def botcmd(*args,**kwargs):
 # decorated function: no required signature
 def botfunc(func):
   """Decorator for bot helper functions"""
-  
+
   setattr(func, '_sibylbot_dec_func', True)
   return func
 
@@ -187,11 +187,21 @@ def botgroup(func):
 
 # decorated function: func(bot)
 # @param bot (SibylBot)
-def botidle(func):
+def botidle(*args,**kwargs):
   """Decorator for idle hooks (executed once per second)"""
 
-  setattr(func, '_sibylbot_dec_idle', True)
-  return func
+  # @param freq (int) [1] number of seconds to wait between executions
+  # @param thread (bool) [False] whether to thread the command
+  def decorate(func,freq=1,thread=False):
+    setattr(func, '_sibylbot_dec_idle', True)
+    setattr(func, '_sibylbot_dec_idle_freq', freq)
+    setattr(func, '_sibylbot_dec_idle_thread', thread)
+    return func
+
+  if len(args):
+    return decorate(args[0],**kwargs)
+  else:
+    return lambda func: decorate(func,**kwargs)
 
 # decorated function: func(bot)
 # @param bot (SibylBot)
@@ -201,6 +211,7 @@ def botidle(func):
 #   required (bool) [opt]: quit execution if option is missing (default: False)
 #   parse    (func) [opt]: parse the given string into a Python object
 #   valid    (func) [opt]: validate the given Python object
+#   post     (func) [opt]: perform checks after all config opts have been parsed
 #
 # for more details: https://github.com/TheSchwa/sibyl/wiki/Plug-Ins
 #
