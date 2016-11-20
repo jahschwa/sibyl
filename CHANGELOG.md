@@ -36,6 +36,7 @@ This change log follows guidelines at [this site](http://keepachangelog.com/).
 - New config option `general.alias_file` for storing aliases
 - New config option `rename` for renaming chat commands
 - New config options `idle_freq`, `idle_time`, `idle_count`
+- New config option `xbmc.timeout`
 - Disabled `stdout`; all plugins should use logging instead
 - Plugins can specify dependencies as a list via the `__depends__` variable
 - Plugins can specify "wants" as a list via the `__wants__` variable

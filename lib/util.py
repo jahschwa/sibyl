@@ -52,7 +52,7 @@ def can_write_file(fil,delete=False):
 # @param user (str) [None] the username to login to XBMC's web server
 # @param pword (str) [None] the password to login to XBMC's web server
 # @return (dict) the response from XBMC
-def xbmc(ip,method,params=None,user=None,pword=None):
+def xbmc(ip,method,params=None,user=None,pword=None,timeout=5):
   """make a JSON-RPC request to xbmc and return the resulti as a dict
   or None if ConnectionError or Timeout"""
 
@@ -66,7 +66,7 @@ def xbmc(ip,method,params=None,user=None,pword=None):
   payload = p
   params = {'request':json.dumps(payload)}
   auth = (user,pword)
-  r = requests.get(url,params=params,headers=headers,auth=auth,timeout=60)
+  r = requests.get(url,params=params,headers=headers,auth=auth,timeout=timeout)
 
   # return the response from xbmc as a dict
   return json.loads(r.text)
@@ -75,10 +75,11 @@ def xbmc(ip,method,params=None,user=None,pword=None):
 # @param user (str) [None] the username to login to XBMC's web server
 # @param pword (str) [None] the password to login to XBMC's web server
 # @return (None,tuple of (int,str)) the (playerid,filetype) of the active player
-def xbmc_active_player(ip,user=None,pword=None):
+def xbmc_active_player(ip,user=None,pword=None,timeout=5):
   """return the id of the currently active player or None"""
 
-  result = xbmc(ip,'Player.GetActivePlayers',user=user,pword=pword)['result']
+  result = xbmc(ip,'Player.GetActivePlayers',user=user,pword=pword,
+      timeout=timeout)['result']
   if len(result)==0:
     return None
 

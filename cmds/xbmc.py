@@ -36,8 +36,16 @@ def conf(bot):
             'default' : '127.0.0.1:8080',
             'required' : True,
             'valid' : bot.conf.valid_ip},
+
           {'name' : 'username'},
-          {'name' : 'password'}]
+
+          {'name' : 'password'},
+
+          {'name' : 'timeout',
+            'default' : 5,
+            'parse' : bot.conf.parse_int,
+            'valid' : bot.conf.valid_nump}
+  ]
 
 @botinit
 def init(bot):
@@ -583,18 +591,20 @@ def shuffle(bot,mess,args):
   return 'Shuffle is disabled'
 
 @botfunc
-def xbmc(bot,method,params=None):
+def xbmc(bot,method,params=None,timeout=None):
   """wrapper method to always provide IP to static method"""
 
+  timeout = (timeout or bot.opt('xbmc.timeout'))
   return util.xbmc(bot.opt('xbmc.ip'),method,params,
-      bot.opt('xbmc.username'),bot.opt('xbmc.password'))
+      bot.opt('xbmc.username'),bot.opt('xbmc.password'),timeout)
 
 @botfunc
-def xbmc_active_player(bot):
+def xbmc_active_player(bot,timeout=None):
   """wrapper method to always provide IP to static method"""
 
+  timeout = (timeout or bot.opt('xbmc.timeout'))
   return util.xbmc_active_player(bot.opt('xbmc.ip'),
-      bot.opt('xbmc.username'),bot.opt('xbmc.password'))
+      bot.opt('xbmc.username'),bot.opt('xbmc.password'),timeout)
 
 def playpause(bot,target):
   """helper function for play() and pause()"""
@@ -659,7 +669,7 @@ def _files(bot,args,dirs,pid):
   bot.xbmc('Playlist.Clear',{'playlistid':pid})
 
   result = bot.xbmc('Playlist.Add',{'playlistid':pid,'item':
-      {'directory':matches[0]}})
+      {'directory':matches[0]}},timeout=60)
   if 'error' in result.keys():
     s = 'Unable to open: '+matches[0]
     bot.log.error(s)
