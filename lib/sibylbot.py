@@ -376,49 +376,52 @@ class SibylBot(object):
     return success
 
   def __run_hooks(self,hook,*args):
-    """run and log the specified hooks passing args"""
+    """run and log the specified hooks passing args; don't use for idle hooks"""
 
     errors = {}
 
     # run all hooks of the given type
     for (name,func) in self.hooks[hook].items():
-      if hook!='idle':
-        self.log.debug('Running %s hook: %s' % (hook,name))
-      else:
-        t = time.time()
+      self.log.debug('Running %s hook: %s' % (hook,name))
 
       # catch exceptions, log them, and return them
       try:
         func(self,*args)
-
-        # we time idle hooks to make sure they aren't taking too long
-        if hook=='idle':
-          times = self.__idle_times
-          limit = self.opt('idle_time')
-          if time.time()-t>limit:
-            times[name] = times.get(name,0)+1
-            count = self.opt('idle_count')
-            self.log.warning('Idle hook %s exceeded %s sec (count=%s/%s)'
-                % (name,limit,times[name],count))
-            if times[name]>=count:
-              self.log.critical('Deleting idle hook %s for taking too long'
-                  % name)
-              del self.hooks['idle'][name]
-              del times[name]
-          else:
-            times[name] = max(times.get(name,0)-1,0)
-
       except Exception as e:
         self._log_ex(e,'Exception running %s hook %s:' % (hook,name))
-
-        # disable idle hooks so they don't keep raising exceptions
-        if hook=='idle':
-          self.log.critical('Deleting idle hook %s' % name)
-          del self.hooks['idle'][name]
-
         errors[name] = e
 
     return errors
+
+  def __run_idle(self):
+    """run all idle hooks"""
+
+    for (name,func) in self.hooks['idle'].items():
+      t = time.time()
+
+      try:
+        func(self)
+
+        # we time idle hooks to make sure they aren't taking too long
+        times = self.__idle_times
+        limit = self.opt('idle_time')
+        if time.time()-t>limit:
+          times[name] = times.get(name,0)+1
+          count = self.opt('idle_count')
+          self.log.warning('Idle hook %s exceeded %s sec (count=%s/%s)'
+              % (name,limit,times[name],count))
+          if times[name]>=count:
+            self.log.critical('Deleting idle hook %s for taking too long'
+                % name)
+            del self.hooks['idle'][name]
+            del times[name]
+        else:
+          times[name] = max(times.get(name,0)-1,0)
+
+      except Exception as e:
+        self._log_ex(e,'Exception running %s hook %s:' % (hook,name))
+        self.log.critical('Deleting idle hook %s' % name)
+        del self.hooks['idle'][name]
 
 ################################################################################
 # CCC - Callbacks for Protocols
@@ -568,7 +571,7 @@ class SibylBot(object):
   def _cb_join_room_failure(self,room,error):
     """execute callbacks on successfull MUC join"""
 
-    result = self.__run_hooks('roomf',room,error)
+    self.__run_hooks('roomf',room,error)
 
 ################################################################################
 # DDD - Helper functions
@@ -913,8 +916,9 @@ class SibylBot(object):
 
     self.__idle_send()
 
-    if self.opt('idle_count')>0 and time.time()>=self.__last_idle+1:
-      self.__run_hooks('idle')
+    if (self.opt('idle_count')>0
+        and time.time()>=self.__last_idle+self.opt('idle_freq')):
+      self.__run_idle()
       self.__last_idle = time.time()
 
   def __idle_send(self):

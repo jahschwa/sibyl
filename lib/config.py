@@ -87,7 +87,8 @@ class Config(object):
 ('persistence', (True,                False,  self.parse_bool,      None,               None)),
 ('state_file',  ('data/state.pickle', False,  None,                 self.valid_wfile,   None)),
 ('idle_time',   (0.1,                 False,  self.parse_float,     self.valid_nump,    None)),
-('idle_count',  (5,                   False,  self.parse_int,       self.valid_nump,    None))
+('idle_count',  (5,                   False,  self.parse_int,       self.valid_nump,    None)),
+('idle_freq',   (1,                   False,  self.parse_int,       self.valid_nump,    None))
 
     ])
 

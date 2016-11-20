@@ -212,6 +212,9 @@ protocols = cli
 # Ignore bw_list and allow every command for these protocols (comma-separated)
 #admin_protos = cli
 
+# How often to run @botidle hooks (exact timing not guaranteed)
+#idle_freq = 1
+
 # When to warn about @botidle hooks taking too long (non-negative float)
 #idle_time = 0.1
 
