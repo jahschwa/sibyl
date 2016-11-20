@@ -109,7 +109,7 @@ class MatrixRoom(Room):
   # @param other (object) you must check for class equivalence
   # @return (bool) true if other is the same room (ignore nick/pword if present)
   def __eq__(self,other):
-    if(instanceof(other,MatrixRoom)):
+    if(isinstance(other,MatrixRoom)):
       return self.get_name() == other.get_name()
     else:
       return False
@@ -192,7 +192,7 @@ class MatrixProtocol(Protocol):
   # @param text (str,unicode) text to send
   # @param to (User,Room) recipient
   def send(self,text,to):
-    room.room.send_text(text)
+    to.room.send_text(text)
 
   # send a message with text to every user in a room
   # optionally note that the broadcast was requested by a specific User
@@ -250,7 +250,7 @@ class MatrixProtocol(Protocol):
   # @param real (User) [self] the "real" user behind this user
   # @return (User) a new instance of this protocol's User subclass
   def new_user(self,user,typ,real=None):
-    return MatrixUser(self,user,typ,real,proto='matrix')
+    return MatrixUser(self,'matrix',user,typ,real)
 
   # @param name (object) the identifier for this Room
   # @param nick (str) [None] the nick name to use in this Room
