@@ -70,6 +70,7 @@ def main():
   if args.gui:
     app = QtGui.QApplication(sys.argv)
     chat = ChatBox(args)
+    chat.log('Ready')
     sys.exit(app.exec_())
   else:
     CLI(args).run()
@@ -547,7 +548,8 @@ class ChatBox(QtGui.QMainWindow):
   def html(self,s):
     """escape characters that break html parsing"""
 
-    chars = { '&':'&amp;', '"':'&quot;', "'":'&#039;', '<':'&lt;', '>':'&gt;'}
+    s = s.replace('&','&amp;')
+    chars = { '"':'&quot;', "'":'&#039;', '<':'&lt;', '>':'&gt;'}
     for (k,v) in chars.items():
       s = s.replace(k,v)
     return s
