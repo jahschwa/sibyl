@@ -41,7 +41,14 @@ protocols = cli
 #cmd_prefix =
 
 # Black and white list to allow/forbid users from running certain commands
-# Format is: w * *; b user cmd; w user1,user2 cmd1,cmd2
+# Format is: w * *; b from id; w from1,from2 id1,id2
+# from fields can be protocols, rooms, or usernames
+#   protocols must be p:proto e.g. "p:xmpp"
+#   rooms must be r:protocol:room e.g. "r:xmpp:room@server.com"
+#   users must be u:user e.g. "u:user@foo.bar"
+# id fields can be plugin or chat command names
+#   plugins must end with .py e.g. "xbmc.py"
+#   commands are anything not matching the above e.g. "stream"
 # more details: https://github.com/TheSchwa/sibyl/wiki/BW-List
 #bw_list = w * *
 

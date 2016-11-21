@@ -75,6 +75,7 @@ This change log follows guidelines at [this site](http://keepachangelog.com/).
 - The `log` command now has log viewing functionality with `tail` and `trace`
 - Defaults changed for `bookmark.file`, `library.file`, `note.file`, `state_file`
 - Plugins that read/write files now use UTF-8
+- Users can now specify protocols, rooms, and plugin names in the black/white list
 
 ### Removed
 - Refactored `jabberbot.py` into `protocols/sibyl_xmpp.py` and `lib/sibylbot.py`

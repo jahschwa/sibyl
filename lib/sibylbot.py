@@ -530,12 +530,13 @@ class SibylBot(object):
       applied = ('w','proto:'+pname,'*')
     else:
       for rule in self.opt('bw_list'):
-        if (rule[1]!='*') and (rule[1] not in real):
+        if (rule[1]!='*') and (not self.__match_user(mess,rule[1])):
           continue
-        if (rule[2]!='*') and (rule[2]!=cmd_name):
+        if (rule[2]!='*') and (not self.__match_cmd(cmd_name,rule[2])):
           continue
         applied = rule
     if applied[0]=='b':
+      self.log.info('FORBIDDEN: %s from %s with %s' % (cmd_name,real,applied))
       self.__send("You don't have permission to run that command",frm)
       return
 
@@ -676,6 +677,47 @@ class SibylBot(object):
     """actually send a message"""
 
     to.get_protocol().send(text,to)
+
+  def __match_user(self,mess,rule_str):
+    """check if the black/white text matches protocol, user, room"""
+
+    rule = rule_str.split(':')
+    rule[0] = rule[0].lower()
+    proto = None
+    if len(rule)>1 and rule[0]!='u':
+      proto = self.protocols.get(rule[1],None)
+
+    # Match protocols
+    if rule[0]=='p':
+      if not proto:
+        return False
+      return proto==mess.get_protocol()
+
+    # Match rooms
+    elif rule[0]=='r':
+      if not proto:
+        return False
+      return proto.new_room(rule[2])==mess.get_room()
+
+    # Match users
+    elif rule[0]=='u':
+      return rule[1] in mess.get_user().get_real().get_base()
+
+    # Preserve backwards-compatibility for now (entries missing "u:")
+    return rule_str in mess.get_user().get_real().get_base()
+
+  def __match_cmd(self,name,rule_str):
+    """check if the black/white text matches plugin, cmd"""
+
+    rule = rule_str.split(os.path.extsep)
+
+    # If it ends in '.py' it's a plugin name
+    if (len(rule)>1) and (rule[1]=='py') and (rule[0] in self.plugins):
+      return rule[0]==self.ns_cmd[name]
+
+    # Otherwise it's a command name
+    else:
+      return rule_str==name
 
 ################################################################################
 # EEE - Chat commands
