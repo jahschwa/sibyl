@@ -331,12 +331,20 @@ class SibylBot(object):
 
           fname = getattr(func,'_sibylbot_dec_'+hook+'_name',None)
 
-          # check for duplicate chat cmds
           if getattr(func,'_sibylbot_dec_chat',False):
             fname = fname.lower()
+
+            # check for duplicate chat cmds
             if fname in dic:
               self.log.critical('Duplicate @botcmd "%s" from "%s" and "%s"'
                   % (fname,self.ns_cmd[fname],fil))
+              success = False
+              continue
+
+            # check for invalid command names
+            if not fname.replace('_','').isalnum():
+              self.log.critical('Invalid @botcmd name "%s" for "%s" from "%s"'
+                  % (fname,func.__name__,fil))
               success = False
               continue
 

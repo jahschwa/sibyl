@@ -293,6 +293,8 @@ def trigger(bot,mess,args):
       return 'A trigger already exists by that name'
     if name in [h._sibylbot_dec_chat_name for h in bot.hooks['chat'].values()]:
       return 'The %s plugin has a chat command by that name' % bot.ns_cmd[name]
+    if not name.replace('_','').isalnum():
+      return 'Trigger names must be alphanumeric plus underscore'
 
     bot.triggers[name] = text
     trigger_write(bot)

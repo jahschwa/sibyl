@@ -82,6 +82,8 @@ def alias(bot,mess,args):
       return 'The %s plugin has a chat command by that name' % bot.ns_cmd[name]
     if name==args[2]:
       return 'An alias cannot reference itself'
+    if not name.replace('_','').isalnum():
+      return 'Alias names must be alphanumeric plus underscore'
 
     bot.aliases[name] = text
     alias_write(bot)
