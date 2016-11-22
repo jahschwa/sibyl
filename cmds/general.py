@@ -137,12 +137,11 @@ def alias_cb(bot,mess,cmd):
   bot.log.debug('cmd "%s" is an alias for "%s"' % (name,new))
 
   try:
-    orig = mess.get_text()
     for n in new.split(';'):
       n = n.strip()
       if not n:
         continue
-      text = ' '.join([n]+orig.split(' ')[1:])
+      text = ' '.join([n]+cmd[1:])
       room = mess.get_room()
       if room:
         text = room.get_protocol().get_nick(room)+' '+text
