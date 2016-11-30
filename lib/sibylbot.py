@@ -436,7 +436,7 @@ class SibylBot(object):
           counts[name] = max(counts.get(name,0)-1,0)
 
       except Exception as e:
-        self._log_ex(e,'Exception running %s hook %s:' % (hook,name))
+        self._log_ex(e,'Exception running idle hook %s:' % name)
         self.log.critical('Deleting idle hook %s' % name)
         del self.hooks['idle'][name]
 
