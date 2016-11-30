@@ -270,7 +270,7 @@ def tell(bot,mess,args):
 
 @botcmd
 def trigger(bot,mess,args):
-  """manage triggers - (info|list|add|remove)"""
+  """manage triggers - trigger (info|list|add|remove)"""
 
   if not args:
     args = ['info']
@@ -315,7 +315,7 @@ def trigger(bot,mess,args):
 
   return 'There are %s triggers' % len(bot.triggers)
 
-@botgroup
+@botmsg
 def trigger_cb(bot,mess,cmd):
   """execute triggers"""
 
