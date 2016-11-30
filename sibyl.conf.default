@@ -139,6 +139,21 @@ protocols = cli
 # than the bookmarked file itself
 #bookmark.resume_next = False
 
+# Max stack depth when executing aliases
+#general.alias_depth = 10
+
+# File for storing aliases
+#general.alias_file = data/aliases.txt
+
+# If True, allow the use of the config chat command in rooms
+#general.config_rooms = True
+
+# Default number of lines to report in the log command
+#general.log_lines = 10
+
+# If True, include timestamps in log command responses
+#general.log_time = True
+
 # File in which to store library contents; format is python pickle
 #library.file = data/library.pickle
 
