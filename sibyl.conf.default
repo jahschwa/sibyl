@@ -186,7 +186,7 @@ protocols = cli
 
 # Default timeout for JSON requests (non-negative int)
 # NOTE: audios & videos commands always use 60 to accomadte huge playlists
-#xbmc.timeout = 5
+#xbmc.timeout = 15
 
 ################################################################################
 # Advanced options
