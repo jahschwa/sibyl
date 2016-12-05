@@ -42,7 +42,7 @@ def conf(bot):
           {'name' : 'password'},
 
           {'name' : 'timeout',
-            'default' : 5,
+            'default' : 15,
             'parse' : bot.conf.parse_int,
             'valid' : bot.conf.valid_nump}
   ]
