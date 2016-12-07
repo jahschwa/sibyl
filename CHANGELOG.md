@@ -13,6 +13,7 @@ This change log follows guidelines at [this site](http://keepachangelog.com/).
 - Matrix plug-in at `protocols/sibyl_matrix.py`
 - Command line client plug-in at `protocols/sibyl_cli.py`
 - Socket plug-in at `protocols/sibyl_socket.py`
+- E-mail protocol at `protocols/sibyl_email.py`
 - Decorators: botcon, botdiscon, botrecon, botdown, boterr, botpriv, botgroup
 - Ability to specify "chat_ctrl" cmds with `@botcmd(ctrl=True)`
 - Ability to execute chat commands in a separate thread with `@botcmd(thread=True)`

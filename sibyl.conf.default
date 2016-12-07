@@ -70,6 +70,25 @@ protocols = cli
 #tell_errors = True
 
 ################################################################################
+# Email options
+################################################################################
+
+# Account login
+#email.address =
+#email.password =
+
+# If set, only e-mails containing this string will be executed
+#email.key =
+
+# Delete messages after receiving them
+#email.delete = True
+
+# By default, imap and smtp servers use the part after "@" in email.address
+# as ther server and prepend either "imap" or "smtp"
+#email.imap =
+#email.smtp =
+
+################################################################################
 # Socket options
 ################################################################################
 
