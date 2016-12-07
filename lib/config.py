@@ -664,6 +664,13 @@ class Config(object):
 
     return float(val)
 
+  # @return (Password)
+  @staticmethod
+  def parse_pass(self,opt,val):
+    """return a Password-object-encapsulated string"""
+
+    return Password(val)
+
 ################################################################################
 # Logging
 ################################################################################
