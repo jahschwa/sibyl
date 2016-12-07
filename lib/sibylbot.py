@@ -536,7 +536,8 @@ class SibylBot(object):
           continue
         applied = rule
     if applied[0]=='b':
-      self.log.info('FORBIDDEN: %s from %s with %s' % (cmd_name,real,applied))
+      self.log.info('FORBIDDEN: %s from %s:%s with %s'
+          % (cmd_name,pname,real,applied))
       self.__send("You don't have permission to run that command",frm)
       return
 
@@ -551,7 +552,7 @@ class SibylBot(object):
     elif cmd_name!='last':
       self.last_cmd[usr] = cmd
 
-    self.log.info('CMD: %s from %s with %s' % (cmd_name,real,applied))
+    self.log.info('CMD: %s from %s:%s with %s' % (cmd_name,pname,real,applied))
 
     # check for chat_ctrl
     func = self.hooks['chat'][cmd_name]
@@ -683,28 +684,21 @@ class SibylBot(object):
 
     rule = rule_str.split(':')
     rule[0] = rule[0].lower()
-    proto = None
-    if len(rule)>1 and rule[0]!='u':
-      proto = self.protocols.get(rule[1],None)
+    proto = self.protocols.get(rule[1],None)
+    if not proto:
+      return False
 
     # Match protocols
     if rule[0]=='p':
-      if not proto:
-        return False
       return proto==mess.get_protocol()
 
     # Match rooms
     elif rule[0]=='r':
-      if not proto:
-        return False
       return proto.new_room(rule[2])==mess.get_room()
 
     # Match users
     elif rule[0]=='u':
-      return rule[1] in mess.get_user().get_real().get_base()
-
-    # Preserve backwards-compatibility for now (entries missing "u:")
-    return rule_str in mess.get_user().get_real().get_base()
+      return proto.new_user(rule[2]).base_match(mess.get_user().get_real())
 
   def __match_cmd(self,name,rule_str):
     """check if the black/white text matches plugin, cmd"""

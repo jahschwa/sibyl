@@ -366,12 +366,12 @@ class SocketServer(Protocol):
       return
 
     (address,text) = self.queue.get()
-    usr = Client(self,address,Message.PRIVATE)
+    usr = Client(self,address)
 
     if self.special_cmds(text):
       return
 
-    msg = Message(Message.PRIVATE,usr,text)
+    msg = Message(usr,text)
     self.bot._cb_message(msg)
 
     if self.queue.empty():
@@ -408,10 +408,10 @@ class SocketServer(Protocol):
     return nick
 
   def get_user(self):
-    return Client(self,(0,'sibyl@socket'),Message.PRIVATE)
+    return Client(self,(0,'sibyl@socket'))
 
-  def new_user(self,user,typ,real=None):
-    return Client(self,user,typ,real)
+  def new_user(self,user,typ=None,real=None):
+    return Client(self,(0,user),typ,real)
 
   def new_room(self,name,nick=None,pword=None):
     return FakeRoom(self,name,nick,pword)

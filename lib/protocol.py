@@ -98,11 +98,11 @@ class User(object):
 
   # @param proto (Protocol) the associated protocol
   # @param user (object) a user id to parse
-  # @param typ (int) either Message.GROUP or Message.PRIVATE
+  # @param typ (int) [Message.PRIVATE] either Message.GROUP or Message.PRIVATE
   # @param real (User) [self] the "real" user behind this user
-  def __init__(self,proto,user,typ,real=None):
+  def __init__(self,proto,user,typ=None,real=None):
     self.protocol = proto
-    self.typ = typ
+    self.typ = (Message.PRIVATE if typ is None else typ)
     self.real = (real or self)
     self.parse(user)
 
@@ -253,20 +253,20 @@ class Message(object):
   STATUSES = ['OFFLINE','EXT_AWAY','AWAY','DND','AVAILABLE']
 
   # create a new message object with given info
-  # @param typ (int) a Message type enum
   # @param user (User) the User who sent the Message
   # @param txt (str,unicode) the body of the msg
+  # @param typ (int) [Message.PRIVATE] a Message type enum
   # @param status (str) [None] status enum
   # @param msg (str) [None] custom status msg (e.g. "Doing awesome!")
   # @param room (Room) [None] the room that sent the message
-  def __init__(self,typ,user,txt,status=None,msg=None,room=None):
+  def __init__(self,user,txt,typ=None,status=None,msg=None,room=None):
     """create a new Message"""
 
     self.protocol = user.get_protocol()
 
-    if typ not in range(0,4):
+    self.typ = (Message.PRIVATE if typ is None else typ)
+    if self.typ not in range(0,4):
       raise ValueError('Valid types: Message.STATUS, PRIVATE, GROUP, ERROR')
-    self.typ = typ
 
     if (status is not None) and (status not in range(-1,5)):
       raise ValueError('Valid status: Message.UNKNOWN, OFFLINE, EXT_AWAY, '
@@ -437,11 +437,11 @@ class Protocol(object):
     pass
 
   # @param user (str) a user id to parse
-  # @param typ (int) either Message.GROUP or Message.PRIVATE
+  # @param typ (int) [Message.PRIVATE] either Message.GROUP or Message.PRIVATE
   # @param real (User) [self] the "real" user behind this user
   # @return (User) a new instance of this protocol's User subclass
   @abstractmethod
-  def new_user(self,user,typ,real=None):
+  def new_user(self,user,typ=None,real=None):
     pass
 
   # @param name (object) the identifier for this Room

@@ -154,13 +154,13 @@ class CLI(Protocol):
     if not self.event_data.wait(wait):
       return
 
-    usr = Admin(self,USER,Message.PRIVATE)
+    usr = Admin(self,USER)
     text = self.queue.get()
 
     if self.special_cmds(text):
       return
 
-    msg = Message(Message.PRIVATE,usr,text)
+    msg = Message(usr,text)
     self.bot._cb_message(msg)
 
     if self.queue.empty():
@@ -199,12 +199,12 @@ class CLI(Protocol):
     return ''
 
   def get_real(self,room,nick):
-    return Admin(self,nick,Message.PRIVATE)
+    return nick
 
   def get_user(self):
-    return Admin(self,SIBYL,Message.PRIVATE)
+    return Admin(self,SIBYL)
 
-  def new_user(self,user,typ,real=None):
+  def new_user(self,user,typ=None,real=None):
     return Admin(self,user,typ,real)
 
   def new_room(self,name,nick=None,pword=None):

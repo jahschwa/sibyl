@@ -290,7 +290,7 @@ class XMPP(Protocol):
 
     # XMPP has no built-in broadcast, so we'll just highlight everyone
     s = ''
-    me = JID(self,room.get_name()+'/'+self.get_nick(room),Message.GROUP)
+    me = JID(self,room.get_name()+'/'+self.get_nick(room),typ=Message.GROUP)
     for user in self.get_occupants(room):
       if user!=me and (not frm or user!=frm):
         s += (user.get_name()+': ')
@@ -362,9 +362,9 @@ class XMPP(Protocol):
     for jid in self.seen:
       if ((name==jid.getStripped())
           and (self.mucs[name]['nick']!=jid.getResource())):
-        users.append(JID(self,jid,Message.GROUP))
+        users.append(JID(self,jid,typ=Message.GROUP))
 
-    me = JID(self,name+'/'+self.get_nick(room),Message.GROUP)
+    me = JID(self,name+'/'+self.get_nick(room),typ=Message.GROUP)
     if me not in users:
       users.append(me)
 
@@ -379,21 +379,21 @@ class XMPP(Protocol):
     """return the real username of the given nick"""
 
     if nick==self.get_nick(room):
-      return JID(self,self.jid,Message.PRIVATE)
+      return JID(self,self.jid)
 
     jid = xmpp.JID(room.get_name()+'/'+nick)
     real = self.real_jids.get(jid,nick)
     if real==nick:
-      return JID(self,jid,Message.GROUP)
+      return JID(self,jid,typ=Message.GROUP)
 
-    return JID(self,real,Message.PRIVATE)
+    return JID(self,real)
 
   def get_user(self):
     """return our username"""
 
-    return JID(self,self.jid,Message.PRIVATE)
+    return JID(self,self.jid)
 
-  def new_user(self,user,typ,real=None):
+  def new_user(self,user,typ=None,real=None):
     """return a new JID object"""
 
     return JID(self,user,typ,real)
@@ -455,13 +455,13 @@ class XMPP(Protocol):
     typ = self.TYPES[typ]
     real = None
     if jid in self.real_jids:
-      real = JID(self,self.real_jids[jid],Message.PRIVATE)
-    user = JID(self,jid,typ,real=real)
+      real = JID(self,self.real_jids[jid])
+    user = JID(self,jid,typ=typ,real=real)
 
     if room:
       room = MUC(self,room)
 
-    self.bot._cb_message(Message(typ,user,text,room=room))
+    self.bot._cb_message(Message(user,text,room=room))
 
   def callback_presence(self,conn,pres):
     """run upon receiving a presence stanza to keep track of subscriptions"""
@@ -591,13 +591,13 @@ class XMPP(Protocol):
     if jid.getStripped() in self.__get_current_mucs():
       jid_typ = Message.GROUP
       if jid in self.real_jids:
-        real = JID(self,self.real_jids[jid],Message.PRIVATE)
-    frm = JID(self,jid,jid_typ)
+        real = JID(self,self.real_jids[jid])
+    frm = JID(self,jid,typ=jid_typ)
     if real:
       frm.set_real(real)
 
     # call SibylBot's message callback
-    self.bot._cb_message(Message(typ,frm,None,status,status_msg))
+    self.bot._cb_message(Message(frm,None,typ=typ,status=status,msg=status_msg))
 
 ################################################################################
 # Helper functions

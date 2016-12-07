@@ -184,10 +184,10 @@ class MYPROTOCOL(Protocol):
     raise NotImplementedError
 
   # @param user (str) a user id to parse
-  # @param typ (int) either Message.GROUP or Message.PRIVATE
+  # @param typ (int) [Message.PRIVATE] either Message.GROUP or Message.PRIVATE
   # @param real (User) [self] the "real" user behind this user
   # @return (User) a new instance of this protocol's User subclass
-  def new_user(self,user,typ,real=None):
+  def new_user(self,user,typ=None,real=None):
     raise NotImplementedError
 
   # @param name (object) the identifier for this Room
