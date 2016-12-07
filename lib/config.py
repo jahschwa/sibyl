@@ -73,7 +73,7 @@ class Config(object):
 ('log_append',  (True,                False,  self.parse_bool,      None,               None)),
 ('log_requests',(False,               False,  self.parse_bool,      None,               None)),
 ('log_urllib3', (False,               False,  self.parse_bool,      None,               None)),
-('bw_list',     ([('w','*','*')],     False,  self.parse_bw,        self.valid_bw,      None)),
+('bw_list',     ([('w','*','*')],     False,  self.parse_bw,        None,               None)),
 ('chat_ctrl',   (False,               False,  self.parse_bool,      None,               None)),
 ('cmd_prefix',  (None,                False,  None,                 None,               None)),
 ('except_reply',(False,               False,  self.parse_bool,      None,               None)),
@@ -450,16 +450,6 @@ class Config(object):
       return False
 
   @staticmethod
-  def valid_bw(self,bw):
-    """return True if the bw list is valid"""
-
-    # just check the color; everything else happens in parse_bw()
-    for (color,_,_) in bw:
-      if color not in ('b','w'):
-        return False
-    return True
-
-  @staticmethod
   def valid_dir(self,cmd):
     """return True if the directory exists"""
 
@@ -631,12 +621,32 @@ class Config(object):
       # spaces divide fields
       (color,users,cmds) = util.split_strip(entry)
 
+      # skip invalid colors
+      if color not in ('b','w'):
+        self.log('warning','ignoring bw entry "%s"; invalid color "%s"'
+            % (entry,color))
+        continue
+
       # commas allow for multiple items per field
       users = util.split_strip(users,',')
       cmds = util.split_strip(cmds,',')
       for user in users:
+
+        # skip badly formatted users
+        if (user!='*' and (
+            (not user)
+            or (user[0] not in ('p','r','u'))
+            or (user[1]!=':')
+            or (user[0] in ('r','u') and len(user.split(':'))<3))):
+          self.log('warning','ignoring bw user "%s"; invalid syntax' % user)
+          continue
+
         for cmd in cmds:
-          bw.append((color,user,cmd))
+
+          # only append the rule if the cmd isn't blank
+          if cmd:
+            bw.append((color,user,cmd))
+
     return bw
 
   # @return (bool)

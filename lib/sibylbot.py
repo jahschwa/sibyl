@@ -684,6 +684,7 @@ class SibylBot(object):
 
     rule = rule_str.split(':')
     rule[0] = rule[0].lower()
+    rule[2] = ':'.join(rule[2:])
     proto = self.protocols.get(rule[1],None)
     if not proto:
       return False
