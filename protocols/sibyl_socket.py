@@ -408,7 +408,7 @@ class SocketServer(Protocol):
     return nick
 
   def get_user(self):
-    return Client(self,(0,'sibyl@socket'))
+    return Client(self,(0,'sibyl'))
 
   def new_user(self,user,typ=None,real=None):
     return Client(self,(0,user),typ,real)

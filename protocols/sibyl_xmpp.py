@@ -461,7 +461,7 @@ class XMPP(Protocol):
     if room:
       room = MUC(self,room)
 
-    self.bot._cb_message(Message(user,text,room=room))
+    self.bot._cb_message(Message(user,text,typ=typ,room=room))
 
   def callback_presence(self,conn,pres):
     """run upon receiving a presence stanza to keep track of subscriptions"""

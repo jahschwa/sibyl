@@ -616,7 +616,7 @@ class SibylBot(object):
       if text.lower().startswith(self.opt('nick_name')):
         direct = True
     if direct:
-      text = ' '.join(text.split(' ',1)[1:])
+      text = text[len(self.opt('nick_name')):].strip()
 
     # if text starts with cmd_prefix, remove it
     text = self.__remove_prefix(text)
