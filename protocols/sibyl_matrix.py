@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # Sibyl: A modular Python chat bot framework
-# Copyright (c) 2015-2016 Joshua Haas <jahschwa.com>
+# Copyright (c) 2016 Jonathan Frederickson <jonathan@terracrypt.net>
 #
 # This file is part of Sibyl.
 #
@@ -20,6 +20,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ################################################################################
+
+from Queue import Queue
 
 from sibyl.lib.protocol import User,Room,Message,Protocol
 from sibyl.lib.protocol import (PingTimeout,ConnectFailure,AuthFailure,
@@ -56,7 +58,7 @@ class MatrixUser(User):
   #   self.real = (User) the "real" User behind this user (defaults to self)
   # @param user (object) a full username
   def parse(self,user):
-    if(isinstance(user,mxUser)):
+    if(isinstance(user,mxUser.User)):
       self.user = user
     elif(isinstance(user,basestring)):
       self.user = self.protocol.client.get_user(user)
@@ -94,10 +96,10 @@ class MatrixRoom(Room):
   #   self.pword = the password for this room (defaults to None)
   # @param name (object) a full roomid
   def parse(self,name):
-    if(isinstance(name,mxRoom)):
+    if(isinstance(name,mxRoom.Room)):
       self.room = room
-    elif(isinstance(user,basestring)):
-      self.room = mxRoom(self.protocol.client,name) # [TODO] Assumes a room ID for now
+    elif(isinstance(name,basestring)):
+      self.room = mxRoom.Room(self.protocol.client,name) # [TODO] Assumes a room ID for now
     else:
       raise TypeError("User parameter to parse must be a string")
 
@@ -128,6 +130,16 @@ class MatrixProtocol(Protocol):
     self.rooms = {}
     self.bot.add_var("credentials",persist=True)
 
+    # Incoming message queue - messageHandler puts messages in here and
+    # process() looks here periodically to send them to sibyl
+    self.msg_queue = Queue()
+
+    # Create a client in setup() because we might use self.client before
+    # connect() is called
+    print(self.opt('matrix.server'))
+    homeserver = self.opt('matrix.server')
+    self.client = MatrixClient(homeserver)
+
   # @raise (ConnectFailure) if can't connect to server
   # @raise (AuthFailure) if failed to authenticate to server
   def connect(self):
@@ -141,18 +153,21 @@ class MatrixProtocol(Protocol):
       self.log.debug("Logging in as %s" % user)
 
       # Log in with the existing access token if we already have a token
-      if(bot.credentials and bot.credentials[0] == user):
-        self.client = MatrixClient(homeserver, token=bot.credentials[1])
+      if(self.bot.credentials and self.bot.credentials[0] == user):
+        self.client = MatrixClient(homeserver, user_id=user, token=self.bot.credentials[1])
       # Otherwise, log in with the configured username and password
       else:
         token = self.client.login_with_password(user,pw)
-        bot.credentials = (user, token)
+        self.bot.credentials = (user, token)
 
       self.rooms = self.client.get_rooms()
       self.log.debug("Already in rooms: %s" % self.rooms)
 
       # Connect to Sibyl's message callback
-      self.client.add_listener(self._cb_message)
+      self.client.add_listener(self.messageHandler)
+
+      self.client.start_listener_thread()
+      self.connected = True
        
     except MatrixRequestError as e:
       if(e.code == 403):
@@ -164,7 +179,7 @@ class MatrixProtocol(Protocol):
 
   # @return (bool) True if we are connected to the server
   def is_connected(self):
-    raise NotImplementedError
+    return self.connected
 
   # called whenever the bot detects a disconnect as insurance
   def disconnected(self):
@@ -178,15 +193,27 @@ class MatrixProtocol(Protocol):
   # @raise (ConnectFailure) if disconnected
   # @raise (ServerShutdown) if server shutdown
   def process(self,wait=0):
-    self.client.start_listener_thread()
+    while(not self.msg_queue.empty()):
+      self.bot._cb_message(self.msg_queue.get())
 
-  #def messageHandler(self):
-  #  raise NotImplementedError
+
+  def messageHandler(self, msg):
+    self.log.debug(str(msg))
+
+    try:
+      # Create a new Message to send to Sibyl
+      u = self.new_user(msg['sender'], Message.GROUP)
+      r = self.new_room(msg['room_id'])
+      m = Message(u, msg['content']['body'], room=r, typ=Message.GROUP)
+      self.msg_queue.put(m)
+    except KeyError as e:
+      self.log.debug("Incoming message did not have all required fields: " + e.message)
+
 
   # called when the bot is exiting for whatever reason
   # NOTE: sibylbot will already call part_room() on every room in get_rooms()
   def shutdown(self):
-    raise NotImplementedError
+    pass
 
   # send a message to a user
   # @param text (str,unicode) text to send
@@ -223,7 +250,9 @@ class MatrixProtocol(Protocol):
   # @param flag (int) one of Room.FLAG_* enums
   # @return (list of Room) rooms matching the flag
   def _get_rooms(self,flag):
-    raise NotImplementedError
+    mxrooms = self.client.get_rooms()
+    return [self.new_room(mxroom) for mxroom in mxrooms]
+
 
   # @param room (Room) the room to query
   # @return (list of User) the Users in the specified room
@@ -233,7 +262,7 @@ class MatrixProtocol(Protocol):
   # @param room (Room) the room to query
   # @return (str) the nick name we are using in the specified room
   def get_nick(self,room):
-    raise NotImplementedError
+    return self.opt('nick_name') # TODO: per-room nicknames
 
   # @param room (Room) the room to query
   # @param nick (str) the nick to examine
@@ -243,14 +272,14 @@ class MatrixProtocol(Protocol):
 
   # @return (User) our username
   def get_user(self):
-    return MatrixUser(self.client.get_user(self.client.user_id))
+    return MatrixUser(self,self.opt('matrix.username'),Message.GROUP)
 
   # @param user (str) a user id to parse
   # @param typ (int) either Message.GROUP or Message.PRIVATE
   # @param real (User) [self] the "real" user behind this user
   # @return (User) a new instance of this protocol's User subclass
-  def new_user(self,user,typ,real=None):
-    return MatrixUser(self,'matrix',user,typ,real)
+  def new_user(self,user,typ=None,real=None):
+    return MatrixUser(self,user,typ,real)
 
   # @param name (object) the identifier for this Room
   # @param nick (str) [None] the nick name to use in this Room
