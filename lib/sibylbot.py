@@ -454,6 +454,11 @@ class SibylBot(object):
     user = mess.get_user()
     usr = user.get_base()
     real = user.get_real()
+
+    # Ignore messages from myself
+    if real==mess.get_protocol().get_user():
+      return
+
     if real:
       real = real.get_base()
     else:
