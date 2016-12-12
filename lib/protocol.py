@@ -369,7 +369,6 @@ class Protocol(object):
     pass
 
   # called when the bot is exiting for whatever reason
-  # NOTE: sibylbot will already call part_room() on every room in get_rooms()
   @abstractmethod
   def shutdown(self):
     pass

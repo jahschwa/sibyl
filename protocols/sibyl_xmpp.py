@@ -266,9 +266,10 @@ class XMPP(Protocol):
     self.__idle_proc()
 
   def shutdown(self):
-    """we don't have to do anything special here"""
+    """leave all our rooms cleanly"""
 
-    pass
+    for room in self.get_rooms():
+      self.part_room(room)
 
   def send(self,text,to):
     """send a message to the specified recipient"""

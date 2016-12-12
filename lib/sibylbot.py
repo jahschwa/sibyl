@@ -961,11 +961,6 @@ class SibylBot(object):
       except SigTermInterrupt:
         self.quit('stopped by SIGTERM')
 
-    # leave all rooms gracefully
-    for (name,proto) in self.protocols.items():
-      for room in proto.get_rooms():
-        proto.part_room(room)
-
   def __idle_proc(self):
     """This function will be called in the main loop."""
 

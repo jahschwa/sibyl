@@ -126,7 +126,6 @@ class MYPROTOCOL(Protocol):
     raise NotImplementedError
 
   # called when the bot is exiting for whatever reason
-  # NOTE: sibylbot will already call part_room() on every room in get_rooms()
   def shutdown(self):
     raise NotImplementedError
 
