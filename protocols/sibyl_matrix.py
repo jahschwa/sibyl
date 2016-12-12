@@ -235,10 +235,10 @@ class MatrixProtocol(Protocol):
   # @call bot._cb_join_room_failure(room,error) on failed join
   def join_room(self,room):
     try:
-      res = self.client.join_room(room.room_id)
-      bot._cb_join_room_success(MatrixRoom(res))
+      res = self.client.join_room(room.room.room_id)
+      self.bot._cb_join_room_success(room)
     except MatrixRequestError as e:
-      bot._cb_join_room_failure(room, e.message)
+      self.bot._cb_join_room_failure(room, e.message)
 
   # part the specified room
   # @param room (Room) the room to leave
