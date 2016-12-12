@@ -304,12 +304,10 @@ class Config(object):
     opts = self.__read()
     self.__parse(opts)
     self.__validate(opts)
+    self.__post(opts)
 
     # update self.opts with parsed and valid values
     self.opts.update(opts)
-
-    # execute post hooks
-    self.__post(self.opts)
 
   # @return (dict) the values of all config options read from the file
   def __read(self):
