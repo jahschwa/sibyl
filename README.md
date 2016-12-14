@@ -119,8 +119,8 @@ There is a great deal of information on [the wiki][wiki]. Also see the
 
 If you have a bug report or feature request, use github's issue tracker. For
 other stuff, you can join my Sibyl XMPP room `sibyl@conference.jahschwa.com`,
-the IRC channel `chat.freenode.net#sibyl`, or contact me at
-[haas.josh.a@gmail.com][mail].
+the IRC channel `chat.freenode.net#sibyl`, our matrix room
+`#sibyl:terracrypt.net`, or contact me at [haas.josh.a@gmail.com][mail].
 
  [wiki]: https://github.com/TheSchwa/sibyl/wiki
  [req]: http://docs.python-requests.org/en/latest/
