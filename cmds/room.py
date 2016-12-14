@@ -555,7 +555,7 @@ def bridge_tx(bot,text,to):
 
 def bridge(bot,text,room,user=None):
 
-  if not bot.opt('bridge.bridges'):
+  if not bot.opt('room.bridges'):
     return
 
   proto = room.get_protocol()
@@ -564,14 +564,14 @@ def bridge(bot,text,room,user=None):
 
   if user:
     name = user.get_name()
-    if not bot.opt('bridge.unicode_users'):
+    if not bot.opt('room.unicode_users'):
       name = name.encode('ascii',errors='ignore').strip()
     msg += name
   else:
     msg += proto.get_nick(room)
   msg += ' ] '
 
-  for bridge in bot.opt('bridge.bridges'):
+  for bridge in bot.opt('room.bridges'):
     if (pname,room.get_name()) in bridge:
       for (b_pname,b_name) in bridge:
         if b_pname!=pname or b_name!=room.get_name():
