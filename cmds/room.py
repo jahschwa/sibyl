@@ -52,8 +52,61 @@ def conf(bot):
     {'name':'trigger_file',
      'default':'data/triggers.txt',
      'valid':bot.conf.valid_wfile
+    },
+    {'name':'bridges',
+     'parse':parse,
+     'post':post
+    },
+    {'name':'unicode_users',
+     'default':True,
+     'parse':bot.conf.parse_bool
     }
   ]
+
+def parse(conf,opt,val):
+
+  if val=='all':
+    return val
+
+  bridges = []
+  all_rooms = []
+  for bridge in util.split_strip(val,';'):
+    rooms = []
+    for room in util.split_strip(bridge,','):
+      room = util.split_strip(room,':')
+      room = tuple([room[0],':'.join(room[1:])])
+      if room in all_rooms:
+        conf.log('error','Room "%s:%s" is in more than one bridge' % room)
+        raise ValueError
+      rooms.append(room)
+      all_rooms.append(room)
+    bridges.append(rooms)
+
+  return bridges
+
+def post(conf,opts,opt,val):
+
+  rooms = opts['rooms']
+
+  if val=='all':
+    bridges = []
+    for pname in rooms:
+      for room in rooms[pname]:
+        bridges.append((pname,room['room']))
+    bridges = [bridges]
+    return bridges
+
+  for bridge in val:
+    for (pname,name) in bridge:
+      all_rooms = [room['room'] for room in rooms[pname]]
+      if pname not in rooms:
+        conf.log('error','Unkown protocol "%s"' % pname)
+        raise ValueError
+      if name not in all_rooms:
+        conf.log('error','Unknown room "%s"' % name)
+        raise ValueError
+
+  return val
 
 def valid(conf,echo):
   """check for lxml"""
@@ -490,3 +543,38 @@ def check_args(bot,mess,pname,room,args):
       return MSG_NONE % pname
   if not args:
     return MSG_MESS
+
+@botgroup
+def bridge_rx(bot,mess,cmd):
+  bridge(bot,mess.get_text(),mess.get_room(),user=mess.get_user())
+
+@botsend
+def bridge_tx(bot,text,to):
+  if isinstance(to,Room):
+    bridge(bot,text,to)
+
+def bridge(bot,text,room,user=None):
+
+  if not bot.opt('bridge.bridges'):
+    return
+
+  proto = room.get_protocol()
+  pname = proto.get_name()
+  msg = '[ '
+
+  if user:
+    name = user.get_name()
+    if not bot.opt('bridge.unicode_users'):
+      name = name.encode('ascii',errors='ignore').strip()
+    msg += name
+  else:
+    msg += proto.get_nick(room)
+  msg += ' ] '
+
+  for bridge in bot.opt('bridge.bridges'):
+    if (pname,room.get_name()) in bridge:
+      for (b_pname,b_name) in bridge:
+        if b_pname!=pname or b_name!=room.get_name():
+
+          to = bot.get_protocol(b_pname).new_room(b_name)
+          bot.send(msg+text,to,flag=True)
