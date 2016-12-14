@@ -153,7 +153,7 @@ class SibylBot(object):
 
     # load plug-in hooks from this file
     self.hooks = {x:{} for x in ['chat','init','down','con','discon','recon',
-        'rooms','roomf','msg','priv','group','status','err','idle']}
+        'rooms','roomf','msg','priv','group','status','err','idle','send']}
     self.__load_funcs(self,'sibylbot',silent=True)
 
     # exit if we failed to load plugin hooks from self.cmd_dir
@@ -679,10 +679,12 @@ class SibylBot(object):
       self.log.debug(long_msg)
     self.log.debug(full)
 
-  def __send(self,text,to):
+  def __send(self,text,to,flag=False):
     """actually send a message"""
 
     to.get_protocol().send(text,to)
+    if not flag:
+      self.__run_hooks('send',text,to)
 
   def __match_user(self,mess,rule_str):
     """check if the black/white text matches protocol, user, room"""
@@ -900,7 +902,7 @@ class SibylBot(object):
       del self.__tell_rooms[self.__tell_rooms.index(room)]
       if self.errors:
         msg = 'Errors during startup: '
-        self.__send(msg+self.run_cmd('errors'),room)
+        self.__send(msg+self.run_cmd('errors'),room,True)
     if not self.__tell_rooms:
       self.del_hook(self.__tell_errors)
 
@@ -1040,10 +1042,11 @@ class SibylBot(object):
   # this function is thread-safe
   # @param text (str,unicode) the text to send
   # @param to (User,Room) the recipient
-  def send(self,text,to):
+  # @param flag (bool) [False] must be set if called by a @botsend hook
+  def send(self,text,to,flag=False):
     """send a message (this function is thread-safe)"""
 
-    self.__pending_send.put((unicode(text),to))
+    self.__pending_send.put((unicode(text),to,flag))
 
   # @param (str) the name of a protocol
   # @return (Protocol) the Protocol associated with the given object

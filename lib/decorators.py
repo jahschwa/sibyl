@@ -41,6 +41,7 @@
 # botgroup  - received a GROUP message
 # botidle   - about once per second
 # botconf   - add options to parse from the config file
+# botsend   - called when a message is sent
 #
 # Full explanations: https://github.com/TheSchwa/sibyl/wiki/Plug-Ins
 #
@@ -208,7 +209,7 @@ def botidle(*args,**kwargs):
 # @return (list of dict) config options to add, dict defined below
 #   name     (str)  [req]: name of the config option to read from the file
 #   default  (obj)  [req]: default value of option (should be Python object)
-#   required (bool) [opt]: quit execution if option is missing (default: False)
+#   req      (bool) [opt]: quit execution if option is missing (default: False)
 #   parse    (func) [opt]: parse the given string into a Python object
 #   valid    (func) [opt]: validate the given Python object
 #   post     (func) [opt]: perform checks after all config opts have been parsed
@@ -219,4 +220,16 @@ def botconf(func):
   """Decorator for bot helper functions"""
 
   setattr(func, '_sibylbot_dec_conf', True)
+  return func
+
+# decorated function: func(bot,text,to)
+# @param bot (SibylBot)
+# @param text (str or unicode) body of the message being sent
+# @param to (User or Room) recipient of the message
+#
+# NOTE: if you use bot.send() inside here, you must have flag=True
+def botsend(func):
+  """Decorator for message sent hooks"""
+  
+  setattr(func, '_sibylbot_dec_send', True)
   return func
