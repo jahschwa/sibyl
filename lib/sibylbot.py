@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # Sibyl: A modular Python chat bot framework
-# Copyright (c) 2015-2016 Joshua Haas <jahschwa.com>
+# Copyright (c) 2015-2017 Joshua Haas <jahschwa.com>
 #
 # JabberBot: A simple jabber/xmpp bot framework
 # Copyright (c) 2007-2012 Thomas Perl <thp.io/about>

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # Sibyl: A modular Python chat bot framework
-# Copyright (c) 2015-2016 Joshua Haas <jahschwa.com>
+# Copyright (c) 2015-2017 Joshua Haas <jahschwa.com>
 # Copyright (c) 2016 Jonathan Frederickson <terracrypt.net>
 #
 # This file is part of Sibyl.
