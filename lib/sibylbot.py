@@ -1135,3 +1135,17 @@ class SibylBot(object):
     if not plugin:
       return self.plugins
     return (plugin in self.plugins)
+
+  # @param func (Function) the idle hook to modify
+  # @param freq (int) the number of seconds to wait between hook executions
+  # @return (bool) if the hook exists and the new freq is valid
+  def set_idle_freq(self,func,freq):
+    """set the frequency of an idle hook"""
+
+    if not isinstance(freq,int):
+      raise TypeError('Idle freq must be an integer')
+    if (freq<bot.opt('idle_freq')) or (func not in bot.hooks['idle']):
+      return False
+
+    bot.hooks['idle'][func]._sibylbot_dec_idle_freq = freq
+    return True
