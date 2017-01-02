@@ -71,6 +71,7 @@ class Config(object):
 ('log_level',   (logging.INFO,        False,  self.parse_log,       None,               None)),
 ('log_file',    ('data/sibyl.log',    False,  None,                 self.valid_wfile,   None)),
 ('log_append',  (True,                False,  self.parse_bool,      None,               None)),
+('log_hooks',   (False,               False,  self.parse_bool,      None,               None)),
 ('log_requests',(False,               False,  self.parse_bool,      None,               None)),
 ('log_urllib3', (False,               False,  self.parse_bool,      None,               None)),
 ('bw_list',     ([('w','*','*')],     False,  self.parse_bw,        None,               None)),

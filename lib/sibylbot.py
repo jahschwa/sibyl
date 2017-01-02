@@ -392,7 +392,8 @@ class SibylBot(object):
 
     # run all hooks of the given type
     for (name,func) in self.hooks[hook].items():
-      self.log.debug('Running %s hook: %s' % (hook,name))
+      if self.opt('log_hooks'):
+        self.log.debug('Running %s hook: %s' % (hook,name))
 
       # catch exceptions, log them, and return them
       try:

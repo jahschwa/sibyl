@@ -12,6 +12,9 @@
 #     cmds = play,pause
 #     bw_list = b %(users)s *; w %(users)s %(cmds)s
 #
+# Because of the above interpolation, percent signs must be escaped; i.e. use
+# "%%" in the config file to mean "%" after parsing.
+#
 # The value for an option can span multiple lines.
 #
 # Unknown options will appear as INFO in the log, and invalid values as WARN. If
@@ -148,7 +151,7 @@ protocols = cli
 #matrix.homeserver =
 
 ################################################################################
-# plugin options
+# Plugin options
 ################################################################################
 
 # File in which to store bookmarks; format is tab-delineated text file
@@ -240,6 +243,9 @@ protocols = cli
 
 # If False overwrite the log file on bot init, if True append to the log file
 #log_append = True
+
+# If True log a debug message every time a hook is run (excluding idle hooks)
+#log_hooks = False
 
 # Directory to search for plugins; note the default uses relative paths
 #cmd_dir = cmds
