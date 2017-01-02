@@ -277,7 +277,7 @@ class Config(object):
     # parse options from the config file and store them in self.opts
     try:
       self.__update()
-    except ConfigParser.InterpolationError as e:
+    except cp.InterpolationError as e:
       self.log('critical','Interpolation error; check for invalid % syntax')
     except Exception as e:
       self.log('critical','Unhandled exception parsing config file')

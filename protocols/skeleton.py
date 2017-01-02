@@ -96,7 +96,7 @@ class MYROOM(Room):
 
 class MYPROTOCOL(Protocol):
 
-  # called on bot init; the following are already created by __init__:
+  # called on bot init; the following are guaranteed to exist:
   #   self.bot = SibylBot instance
   #   self.log = the logger you should use
   def setup(self):
