@@ -272,12 +272,21 @@ class Config(object):
 
     orig = self.logging
     self.logging = log
+    errors = []
 
     # parse options from the config file and store them in self.opts
-    self.__update()
+    try:
+      self.__update()
+    except ConfigParser.InterpolationError as e:
+      self.log('critical','Interpolation error; check for invalid % syntax')
+    except Exception as e:
+      self.log('critical','Unhandled exception parsing config file')
+      full = traceback.format_exc(e)
+      short = full.split('\n')[-2]
+      self.log('error','  %s' % short)
+      self.log('debug',full)
 
     # record missing required options
-    errors = []
     for opt in self.opts:
       if self.OPTS[opt][self.REQ] and not self.opts[opt]:
         self.log('critical','Missing required option "%s"' % opt)
