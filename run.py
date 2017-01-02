@@ -21,7 +21,7 @@
 #
 ################################################################################
 
-import sys,os,argparse,signal
+import sys,os,argparse,signal,time
 
 def main():
 
@@ -42,7 +42,13 @@ def main():
   parser.add_argument('-d',
       action='store_true',
       help='run as daemon')
+  parser.add_argument('-w',
+      action='store_true',
+      help='wait 10 seconds before starting')
   args = parser.parse_args()
+
+  if args.w:
+    time.sleep(10)
 
   # initialise bot (plug-in and config errors will occur here)
   bot = SibylBot(args.c)
@@ -67,7 +73,7 @@ def main():
     python = sys.executable
     this = os.path.abspath(os.path.basename(__file__))
     args = [python,this]
-    args.extend(sys.argv[1:])
+    args.extend([arg for arg in sys.argv[1:] if '-w' not in arg])
     os.execv(python,args)
 
 def sigterm_handler(signal,frame):

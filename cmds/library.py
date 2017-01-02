@@ -51,18 +51,21 @@ def conf(bot):
 def valid_lib(conf,lib):
   """return True if the lib contains valid directories or samba shares"""
 
+  new = []
   for (i,l) in enumerate(lib):
     if isinstance(l,str):
       if not os.path.isdir(l):
         conf.log('warning','path "'+l+'" is not a valid directory')
-        return False
+        continue
     elif isinstance(l,dict):
       if 'server' not in l.keys():
         conf.log('warning','key "server" missing from item '+str(i+1))
-        return False
+        continue
       if 'share' not in l.keys():
         conf.log('warning','key "share" missing from item '+str(i+1))
-        return False
+        continue
+    new.append(l)
+  lib[:] = new
   return True
 
 def parse_lib(conf,opt,val):
