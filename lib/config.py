@@ -66,7 +66,7 @@ class Config(object):
 ('disable',     ([],                  False,  self.parse_plugins,   None,               None)),
 ('rename',      ({},                  False,  self.parse_rename,    None,               None)),
 ('cmd_dir',     ('cmds',              False,  None,                 self.valid_dir,     None)),
-('rooms',       ({},                  False,  self.parse_rooms,     None,               None)),
+('rooms',       ({},                  False,  self.parse_rooms,     None,               self.post_rooms)),
 ('nick_name',   ('Sibyl',             False,  None,                 None,               None)),
 ('log_level',   (logging.INFO,        False,  self.parse_log,       None,               None)),
 ('log_file',    ('data/sibyl.log',    False,  None,                 self.valid_wfile,   None)),
@@ -579,21 +579,24 @@ class Config(object):
       if entry=='':
         continue
       params = util.split_strip(entry,',')
-      if not params[0] or not params[1]:
-        raise ValueError
+      if not params[0] or ':' not in params[0]:
+        self.log('warning','Ignoring room "%s"; invalid syntax' % entry)
+        continue
+      room = util.split_strip(params[0],':')
+      (pname,room) = (room[0],':'.join(room[1:]))
 
       # check for optional arguments
-      room = {'room':params[1],'nick':None,'pass':None}
+      room = {'room':room,'nick':None,'pass':None}
+      if len(params)>1 and params[1]:
+        room['nick'] = params[1]
       if len(params)>2 and params[2]:
-        room['nick'] = params[2]
-      if len(params)>3 and params[3]:
-        room['pass'] = Password(params[3])
+        room['pass'] = Password(params[2])
 
       # add room to dict
-      if params[0] in rooms:
-        rooms[params[0]].append(room)
+      if pname in rooms:
+        rooms[pname].append(room)
       else:
-        rooms[params[0]] = [room]
+        rooms[pname] = [room]
     return rooms
 
   # @return (int) a log level from the logging module
@@ -688,6 +691,33 @@ class Config(object):
     """return a Password-object-encapsulated string"""
 
     return Password(val)
+
+################################################################################
+#
+# Post functions
+#
+# @param opts (dict) the parsed values for all options
+# @param opt (str) the name of the option being parsed
+# @param val (obj) the value of the config option to test
+#
+# When we call functions from plugins, we must pass "self" explicitly. However,
+# the below functions are bound, and so pass "self" implicitly as well. If we
+# called func(self,s) for one of the below functions, the function would
+# actually receive func(self,self,s). The @staticmethod decorator fixes this.
+#
+################################################################################
+
+  @staticmethod
+  def post_rooms(self,opts,opt,val):
+    """make sure all rooms have a valid protocol"""
+
+    for pname in val.keys():
+      if pname not in opts['protocols']:
+        for room in val[pname]:
+          self.log('warning',
+              'Ignoring room "%s:%s"; unknown protocol' % (pname,room['room']))
+        del val[pname]
+    return val
 
 ################################################################################
 # Logging
