@@ -31,9 +31,9 @@
 protocols = cli
 
 # Chat rooms to join on bot startup
-# Format for single entry: proto,room,nick,pass
-# Can also be: proto,room OR proto,room,nick OR proto,room,,pass
-# Multiple rooms separated by ";" e.g.: proto,room,nick,pass; proto,room,nick
+# Format for single entry: proto:room,nick,pass
+# Can also be: proto:room OR proto:room,nick OR proto:room,,pass
+# Multiple rooms separated by ";" e.g.: proto:room,nick,pass; proto:room,nick
 #rooms =
 
 # Default nick to use in rooms
@@ -206,9 +206,10 @@ protocols = cli
 
 # Bridge rooms (i.e. bot echoes all messages between them)
 # Format is: proto1:room1,proto2:room2; proto3:room3,proto4:room4
-# Each bridge is separated by colons
+# Each bridge is separated by a semi-colon
+# Within each bridge, rooms are separated by commas
 # A room can only be in a single bridge
-# Only rooms listed in the config file can be used in bridges
+# Only rooms listed in the config option "rooms" can be used in bridges
 #room.bridges =
 
 # Allow unicode characters in user names when bridging

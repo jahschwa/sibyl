@@ -392,7 +392,7 @@ class SibylBot(object):
 
     # run all hooks of the given type
     for (name,func) in self.hooks[hook].items():
-      if self.opt('log_hooks'):
+      if self.opt('log_hooks') or hook=='init':
         self.log.debug('Running %s hook: %s' % (hook,name))
 
       # catch exceptions, log them, and return them
@@ -765,7 +765,7 @@ class SibylBot(object):
     funcs = self.hooks['chat'].values()
     plugins = sorted(self.plugins+['sibylbot'])
     protos = ','.join(sorted(self.opt('protocols').keys()))
-    return ('SibylBot %s (%s) --- %s commands from %s plugins: %s'
+    return ('Sibyl %s (%s) --- %s commands from %s plugins: %s'
         % (__version__,protos,cmds,len(plugins),plugins))
 
   @staticmethod
