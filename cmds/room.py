@@ -309,10 +309,9 @@ def tell(bot,mess,args):
     return 'You must specify a nick and a message'
 
   # compose a meaningful response for the specified user
-  user = mess.get_user()
-  room = frm.get_room()
+  room = mess.get_room()
   to = args[0]
-  frm = user.get_name()
+  frm = mess.get_user().get_name()
   msg = ' '.join(args[1:])
   t = time.asctime()
 
