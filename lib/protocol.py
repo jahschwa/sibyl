@@ -146,6 +146,12 @@ class User(object):
   def __hash__(self):
     return hash(self.__str__())
 
+  # don't pickle the protocol; sibylbot will fix it in its persistence code
+  def __getstate__(self):
+    odict = self.__dict__.copy()
+    odict['protocol'] = self.protocol.get_name()
+    return odict
+
 ################################################################################
 # Room class
 ################################################################################
@@ -227,6 +233,12 @@ class Room(object):
   # @return (str) a hash of this Room (depends on protocol and name)
   def __hash__(self):
     return hash(str(self))
+
+  # don't pickle the protocol; sibylbot will fix it in its persistence code
+  def __getstate__(self):
+    odict = self.__dict__.copy()
+    odict['protocol'] = self.protocol.get_name()
+    return odict
 
 ################################################################################
 # Message class
@@ -326,6 +338,12 @@ class Message(object):
     if typ not in range(0,len(Message.TYPES)):
       raise ValueError('Invalid Message type')
     return Message.TYPES[typ]
+
+  # don't pickle the protocol; sibylbot will fix it in its persistence code
+  def __getstate__(self):
+    odict = self.__dict__.copy()
+    odict['protocol'] = self.protocol.get_name()
+    return odict
 
 ################################################################################
 # Protocol abstract class

@@ -38,10 +38,10 @@
 #
 ################################################################################
 
-import sys,logging,re,os,imp,inspect,traceback,time,pickle,Queue
+import sys,logging,re,os,imp,inspect,traceback,time,pickle,Queue,collections
 
 from sibyl.lib.config import Config
-from sibyl.lib.protocol import Message
+from sibyl.lib.protocol import Message,Room,User
 from sibyl.lib.protocol import (PingTimeout,ConnectFailure,AuthFailure,
     ServerShutdown)
 from sibyl.lib.decorators import botcmd,botrooms
@@ -138,18 +138,20 @@ class SibylBot(object):
     self.last_cmd = {}
 
     # load persistent vars
+    self.__state = {}
     try:
-      if not self.opt('persistence'):
-        raise RuntimeError
-      with open(self.opt('state_file'),'rb') as f:
-        self.__state = pickle.load(f)
-    except:
-      self.__state = {}
+      if self.opt('persistence') and os.path.isfile(self.opt('state_file')):
+        with open(self.opt('state_file'),'rb') as f:
+          self.__state = pickle.load(f)
+    except Exception as e:
+      self._log_ex(e,'Unable to load persistent variables',
+          'Unpickling of "%s" failed' % self.opt('state_file'))
     self.__persist = []
 
     # create protocol objects
     self.protocols = {name:proto(self,logging.getLogger(name))
         for (name,proto) in self.opt('protocols').items()}
+    self.__fix_state(self.__state,[])
 
     # load plug-in hooks from this file
     self.hooks = {x:{} for x in ['chat','init','down','con','discon','recon',
@@ -384,6 +386,26 @@ class SibylBot(object):
         success = (success and self.conf.add_opts(opts,ns))
 
     return success
+
+  def __fix_state(self,obj,done):
+    """find Message, Room, User objects in the state and fix their protocols"""
+
+    for x in done:
+      if obj is x:
+        return
+    done.append(obj)
+    if isinstance(obj,collections.Iterable) and not isinstance(obj,basestring):
+      for x in obj:
+        self.__fix_state(x,done)
+        if isinstance(obj,dict):
+          self.__fix_state(obj[x],done)
+    else:
+      if isinstance(obj,Message) or isinstance(obj,Room) or isinstance(obj,User):
+        try:
+          obj.protocol = self.protocols[obj.protocol]
+        except KeyError:
+          self.log.error('Error unpickling persistence; unknown protocol "%s"'
+              % obj.protocol)
 
   def __run_hooks(self,hook,*args):
     """run and log the specified hooks passing args; don't use for idle hooks"""
@@ -1047,7 +1069,7 @@ class SibylBot(object):
   def send(self,text,to):
     """send a message (this function is thread-safe)"""
 
-    self.__pending_send.put(text,to,flag))
+    self.__pending_send.put(text,to,flag)
 
   # @param (str) the name of a protocol
   # @return (Protocol) the Protocol associated with the given object
