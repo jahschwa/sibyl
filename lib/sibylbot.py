@@ -1066,7 +1066,8 @@ class SibylBot(object):
   # this function is thread-safe
   # @param text (str,unicode) the text to send
   # @param to (User,Room) the recipient
-  def send(self,text,to):
+  # @param flag (bool) [False] must be set if called by a @botsend hook
+  def send(self,text,to,flag=False):
     """send a message (this function is thread-safe)"""
 
     self.__pending_send.put(text,to,flag)
