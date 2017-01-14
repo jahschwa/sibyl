@@ -1070,7 +1070,7 @@ class SibylBot(object):
   def send(self,text,to,flag=False):
     """send a message (this function is thread-safe)"""
 
-    self.__pending_send.put(text,to,flag)
+    self.__pending_send.put((text,to,flag))
 
   # @param (str) the name of a protocol
   # @return (Protocol) the Protocol associated with the given object
