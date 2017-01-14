@@ -683,6 +683,7 @@ class SibylBot(object):
   def __send(self,text,to,flag=False):
     """actually send a message"""
 
+    text = unicode(text)
     to.get_protocol().send(text,to)
     if not flag:
       self.__run_hooks('send',text,to)
@@ -1043,11 +1044,10 @@ class SibylBot(object):
   # this function is thread-safe
   # @param text (str,unicode) the text to send
   # @param to (User,Room) the recipient
-  # @param flag (bool) [False] must be set if called by a @botsend hook
-  def send(self,text,to,flag=False):
+  def send(self,text,to):
     """send a message (this function is thread-safe)"""
 
-    self.__pending_send.put((unicode(text),to,flag))
+    self.__pending_send.put(text,to,flag))
 
   # @param (str) the name of a protocol
   # @return (Protocol) the Protocol associated with the given object
