@@ -614,8 +614,10 @@ class XMPP(Protocol):
     typ = Message.STATUS
     jid_typ = Message.PRIVATE
     real = None
-    if jid.getStripped() in self.__get_current_mucs():
+    room = None
+    if jid.getStripped() in self.__get_current_mucs()+self.__get_pending_mucs():
       jid_typ = Message.GROUP
+      room = MUC(self,jid.getStripped())
       if jid in self.real_jids:
         real = JID(self,self.real_jids[jid])
     frm = JID(self,jid,typ=jid_typ)
@@ -623,7 +625,8 @@ class XMPP(Protocol):
       frm.set_real(real)
 
     # call SibylBot's message callback
-    self.bot._cb_message(Message(frm,None,typ=typ,status=status,msg=status_msg))
+    msg = Message(frm,None,typ=typ,status=status,msg=status_msg,room=room)
+    self.bot._cb_message(msg)
 
 ################################################################################
 # Helper functions
@@ -870,6 +873,11 @@ class XMPP(Protocol):
     """return all mucs that we are currently not in"""
 
     return [r for r in self.mucs if self.mucs[r]['status']!=self.MUC_OK]
+
+  def __get_pending_mucs(self):
+    """return all mucs whose connection is currently pending"""
+
+    return [r for r in self.mucs if self.mucs[r]['status']==self.MUC_PENDING]
 
   def __get_sender_username(self, mess):
     """Extract the sender's user name from a message"""

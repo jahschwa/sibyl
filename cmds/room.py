@@ -281,7 +281,7 @@ def tell(bot,mess,args):
       rooms = proto.get_rooms(Room.FLAG_ALL)
     tells = [x for x in bot.pending_tell if x[0] in rooms]
     if tells:
-      return str([(t[0].get_name(),t[1],t[2]) for t in tells])
+      return str([(str(t[0]),'to:'+t[1],'from:'+t[2],t[3],t[4]) for t in tells])
     return 'No saved tells'
 
   elif args[0]=='remove':
@@ -319,8 +319,7 @@ def tell(bot,mess,args):
   t = time.asctime()
 
   # add it to pending_tell to act on when status changes
-  msg = '%s: %s said "%s" at %s' % (to,frm,msg,t)
-  bot.pending_tell.append((room,to,msg))
+  bot.pending_tell.append((room,to,frm,msg,t))
   return 'Added tell for "%s"' % to
 
 @botcmd
@@ -441,7 +440,7 @@ def tell_cb(bot,mess):
 
   # we only care about status messages for users entering the room
   (status,msg) = mess.get_status()
-  if status<=Message.OFFLINE:
+  if status!=Message.AVAILABLE:
     return
 
   # check for tells matching the room and nick from the status and act on them
@@ -451,7 +450,9 @@ def tell_cb(bot,mess):
     if x[0]!=room or x[1]!=name:
       new.append(x)
     else:
-      bot.send(x[2],room)
+      bot.send('%s: %s said "%s" at %s' % x[1:],room)
+      log.debug('Executing tell for "%s" in "%s" from "%s"'
+          % (name,room,x[2]))
   bot.pending_tell = new
 
 @botgroup
