@@ -26,6 +26,9 @@ import os,codecs
 from sibyl.lib.decorators import *
 import sibyl.lib.util as util
 
+import logging
+log = logging.getLogger(__name__)
+
 __wants__ = ['xbmc']
 
 @botconf
@@ -147,7 +150,7 @@ def note_parse(bot):
     lines = f.readlines()
 
   notes = [l.strip() for l in lines if l!='\n']
-  bot.log.info('Read '+str(len(notes))+' notes from "'+bot.opt('note.file')+'"')
+  log.info('Read '+str(len(notes))+' notes from "'+bot.opt('note.file')+'"')
   return notes
 
 def note_write(bot):

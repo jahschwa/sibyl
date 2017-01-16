@@ -46,7 +46,6 @@ from sibyl.lib.protocol import (PingTimeout,ConnectFailure,AuthFailure,
     ServerShutdown)
 from sibyl.lib.decorators import botcmd,botrooms
 import sibyl.lib.util as util
-from sibyl.lib.log import Log
 from sibyl.lib.thread import SmartThread
 
 __author__ = 'Joshua Haas <haas.josh.a@gmail.com>'
@@ -97,7 +96,7 @@ class SibylBot(object):
     logging.basicConfig(filename=self.opt('log_file'),filemode=mode,
         format='%(asctime).19s | %(name)-8.8s | %(levelname).3s | %(message)s',
         level=self.opt('log_level'))
-    self.log = Log()
+    self.log = logging.getLogger('sibylbot')
     if not self.opt('log_requests'):
       logging.getLogger("requests").setLevel(logging.CRITICAL+10)
     if not self.opt('log_urllib3'):
@@ -107,7 +106,7 @@ class SibylBot(object):
     # log config errors and check for success
     self.errors.extend([x[1] for x in self.conf.log_msgs])
     self.conf.process_log()
-    self.conf.log = self.log.log
+    self.conf.real_time = True
     if dup_plugins:
       self.log.error(dup_plugins)
       self.log.critical('Duplicate plugin names; exiting')

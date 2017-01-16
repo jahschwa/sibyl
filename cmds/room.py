@@ -30,6 +30,9 @@ from sibyl.lib.decorators import *
 from sibyl.lib.protocol import Message,Room
 import sibyl.lib.util as util
 
+import logging
+log = logging.getLogger(__name__)
+
 MSG_CROSS = 'Cross protocol interaction is disabled'
 MSG_MULTI = 'You must specify a room (I am in more than one)'
 MSG_NONE = 'Protocol %s is not in any rooms'
@@ -128,11 +131,11 @@ def init(bot):
   try:
     bot.triggers = trigger_read(bot)
   except Exception as e:
-    bot.log.error('Failed to parse trigger_file')
-    bot.log.debug(e.message)
+    log.error('Failed to parse trigger_file')
+    log.debug(e.message)
 
   if not util.has_module('lxml'):
-    bot.log.debug("Can't find module lxml; unregistering link_echo hook")
+    log.debug("Can't find module lxml; unregistering link_echo hook")
     del bot.hooks['group']['room.link_echo']
 
 @botcmd
@@ -404,11 +407,11 @@ def trigger_read(bot):
     except ValueError:
       removed = True
       del triggers[name]
-      bot.log.warning('  Ignoring trigger "%s"; invalid name' % name)
+      log.warning('  Ignoring trigger "%s"; invalid name' % name)
     if not result:
       removed = True
       del triggers[name]
-      bot.log.warning('  Ignoring trigger "%s"; conflicts with cmd from plugin %s'
+      log.warning('  Ignoring trigger "%s"; conflicts with cmd from plugin %s'
           % (name,bot.which[name]))
 
   if removed:
@@ -461,7 +464,7 @@ def link_echo(bot,mess,cmd):
   try:
     from lxml.html import fromstring
   except ImportError:
-    bot.log.error("Can't import lxml; disabling link_echo")
+    log.error("Can't import lxml; disabling link_echo")
     bot.conf.opts['room.link_echo'] = False
 
   if cmd is not None:
@@ -484,7 +487,7 @@ def link_echo(bot,mess,cmd):
         reply += "[" + str(linkcount)+ "] " + title + " "
         linkcount += 1
   except Exception as e:
-    bot.log.error('Link echo - '+e.__class__.__name__+' - '+url)
+    log.error('Link echo - '+e.__class__.__name__+' - '+url)
   else:
     bot.send(reply,mess.get_from())
 

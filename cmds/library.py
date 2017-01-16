@@ -29,6 +29,9 @@ from sibyl.lib.decorators import *
 import sibyl.lib.util as util
 from sibyl.lib.password import Password
 
+import logging
+log = logging.getLogger(__name__)
+
 @botconf
 def conf(bot):
   """add config options"""
@@ -135,7 +138,7 @@ def init(bot):
     bot.add_var('smbc_dir',DIR)
 
   else:
-    bot.log.error("Can't find module smbc; network shares will be disabled")
+    log.error("Can't find module smbc; network shares will be disabled")
 
 @botcmd(thread=True)
 def library(bot,mess,args):
@@ -223,7 +226,7 @@ def find(bot,dirs):
       # even though we're just doing blocking I/O, threading isn't enough
       # we need sub-processes via multiprocessing for samba shares
       # because pysmbc doesn't release the GIL so it still blocks in threads
-      bot.log.debug('Starting new process for "%s"' % share)
+      log.debug('Starting new process for "%s"' % share)
       q = multiprocessing.Queue()
       e = multiprocessing.Queue()
       args = (bot.smbc_dir,bot.smbc_file,q,e,smb,share,ignore)
@@ -241,7 +244,7 @@ def find(bot,dirs):
         time.sleep(0.1)
 
       # the child process also reports errors using a Queue
-      bot.log.debug('Process done with%s errors' % ('out' if e.empty() else ''))
+      log.debug('Process done with%s errors' % ('out' if e.empty() else ''))
       if e.empty():
         dirs.extend(temp_dirs)
         files.extend(temp_files)
@@ -325,7 +328,7 @@ class Library(object):
             % (util.sec2str(self.bot.lib_last_elapsed),t))
         return
       else:
-        self.bot.log.debug('Waiting for other thread to release library lock')
+        log.debug('Waiting for other thread to release library lock')
         self.lock.acquire(True)
 
     try:
@@ -343,12 +346,12 @@ class Library(object):
 
     except Exception as ex:
 
-      self.bot.log.error('Error in thread while executing "%s"' % self.args[0])
+      log.error('Error in thread while executing "%s"' % self.args[0])
       full = traceback.format_exc(ex)
       short = full.split('\n')[-2]
 
-      self.bot.log.error('  %s' % short)
-      self.bot.log.debug(full)
+      log.error('  %s' % short)
+      log.debug(full)
 
     finally:
 
@@ -377,7 +380,7 @@ class Library(object):
     n = len(self.bot.lib_audio_file)+len(self.bot.lib_video_file)
     s = ('Library loaded from "%s" with %s files in %f sec' %
         (self.bot.opt('library.file'),n,stop-start))
-    self.bot.log.info(s)
+    log.info(s)
 
     return s
 
@@ -392,7 +395,7 @@ class Library(object):
       pickle.dump(d,f,-1)
 
     s = 'Library saved to "%s"' % self.bot.opt('library.file')
-    self.bot.log.info(s)
+    log.info(s)
 
     return s
 
@@ -414,14 +417,14 @@ class Library(object):
       setattr(self.bot,'lib_%s_file' % lib,files)
       for e in errs:
         if e not in errors:
-          self.bot.log.error(e[1])
+          log.error(e[1])
           errors.append(e)
 
     self.bot.lib_last_elapsed = int(time.time()-start)
     result = self.save()
 
     s = self.info()
-    self.bot.log.info(s)
+    log.info(s)
     if errors:
       s += ' with errors (see log): '+str([x[0] for x in errors])
 

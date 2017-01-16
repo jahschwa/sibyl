@@ -26,6 +26,9 @@ import os,time,codecs
 from sibyl.lib.decorators import *
 import sibyl.lib.util as util
 
+import logging
+log = logging.getLogger(__name__)
+
 __depends__ = ['xbmc','library']
 
 @botconf
@@ -194,7 +197,7 @@ def bm_parse(bot):
     d[name] = props
 
   fname = bot.opt('bookmark.file')
-  bot.log.info('Parsed %s bookmarks from "%s"' % (len(d),fname))
+  log.info('Parsed %s bookmarks from "%s"' % (len(d),fname))
   return d
 
 def bm_update(bot,name,props):

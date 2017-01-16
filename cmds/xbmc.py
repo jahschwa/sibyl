@@ -26,6 +26,9 @@ import random,requests,json,os
 from sibyl.lib.decorators import *
 import sibyl.lib.util as util
 
+import logging
+log = logging.getLogger(__name__)
+
 __wants__ = ['library']
 
 @botconf
@@ -210,7 +213,7 @@ def play(bot,mess,args):
     result = bot.xbmc('Player.Open',{'item':{'file':args[0]}})
     if 'error' in result:
       s = 'Unable to open: '+args
-      bot.log.info(s)
+      log.info(s)
       return s
     return bot.run_cmd('info')
   return 'Invalid file'
@@ -534,7 +537,7 @@ def random_chat(bot,mess,args):
   result = bot.xbmc('Player.Open',{'item':{'file':matches[rand]}})
   if 'error' in result.keys():
     s = 'Unable to open: '+matches[rand]
-    bot.log.error(s)
+    log.error(s)
     return s
 
   bot.run_cmd('fullscreen',['on'])
@@ -672,7 +675,7 @@ def _files(bot,args,dirs,pid):
       {'directory':matches[0]}},timeout=60)
   if 'error' in result.keys():
     s = 'Unable to open: '+matches[0]
-    bot.log.error(s)
+    log.error(s)
     return s
 
   msg = ''
@@ -722,7 +725,7 @@ def _file(bot,args,dirs):
   result = bot.xbmc('Player.Open',{'item':{'file':matches[0]}})
   if 'error' in result.keys():
     s = 'Unable to open: '+matches[0]
-    bot.log.error(s)
+    log.error(s)
     return s
 
   bot.run_cmd('fullscreen',['on'])

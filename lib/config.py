@@ -100,7 +100,9 @@ class Config(object):
     self.opts = None
     self.conf_file = conf_file
     self.log_msgs = []
-    self.logging = logging
+    self.logging = True
+    self.real_time = False
+    self.__log = logging.getLogger('config')
 
     # raise an exception if we can't write to conf_file
     util.can_write_file(self.conf_file,delete=True)
@@ -728,16 +730,19 @@ class Config(object):
   def log(self,lvl,msg):
     """add the message to the queue"""
 
-    if self.logging:
+    if not self.logging:
+      return
+
+    if self.real_time:
+      self.__log.log(self.parse_log(self,None,lvl),msg)
+    else:
       self.log_msgs.append((lvl,msg))
 
   def process_log(self):
     """should only be called after logging has been initialised in the bot"""
 
-    log = logging.getLogger('config')
     for (lvl,msg) in self.log_msgs:
-      lvl = self.parse_log(self,None,lvl)
-      log.log(lvl,msg)
+      self.__log.log(self.parse_log(self,None,lvl),msg)
     self.clear_log()
 
   def clear_log(self):

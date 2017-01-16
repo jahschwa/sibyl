@@ -21,13 +21,16 @@
 #
 ################################################################################
 
-import sys,os,subprocess,json,logging,socket,re,codecs
+import sys,os,subprocess,json,socket,re,codecs
 
 import requests
 
 from sibyl.lib.decorators import *
 from sibyl.lib.util import getcell,is_int
 from sibyl.lib.protocol import Message
+
+import logging
+log = logging.getLogger(__name__)
 
 @botconf
 def conf(bot):
@@ -52,8 +55,8 @@ def init(bot):
   try:
     bot.aliases = alias_read(bot)
   except Exception as e:
-    bot.log.error('Failed to parse alias_file')
-    bot.log.debug(e.message)
+    log.error('Failed to parse alias_file')
+    log.debug(e.message)
 
 @botcmd
 def alias(bot,mess,args):
@@ -129,13 +132,13 @@ def alias_cb(bot,mess,args,name):
       bot.alias_exceeded = True
       msg = ('Command terminated for exceeding alias_depth with stack: %s'
           % bot.alias_stack)
-      bot.log.error(msg)
+      log.error(msg)
       bot.send(msg,mess.get_from())
     return
 
   bot.alias_stack.append(name)
   new = bot.aliases[name]
-  bot.log.debug('  cmd "%s" is an alias for "%s"' % (name,new))
+  log.debug('  cmd "%s" is an alias for "%s"' % (name,new))
 
   try:
     for n in new.split(';'):
@@ -190,11 +193,11 @@ def alias_read(bot):
     except ValueError:
       removed = True
       del aliases[name]
-      bot.log.warning('  Ignoring alias "%s"; invalid name' % name)
+      log.warning('  Ignoring alias "%s"; invalid name' % name)
     if not result:
       removed = True
       del aliases[name]
-      bot.log.warning('  Ignoring alias "%s"; conflicts with cmd from plugin %s'
+      log.warning('  Ignoring alias "%s"; conflicts with cmd from plugin %s'
           % (name,bot.which(name)))
 
   if removed:
@@ -432,8 +435,8 @@ def wiki(bot,mess,args):
   url = result[3][0]
   return title+' - '+url+'\n'+text
 
-@botcmd(ctrl=True)
-def log(bot,mess,args):
+@botcmd(name='log',ctrl=True)
+def _log(bot,mess,args):
   """set the log level - log (info|level|clear|tail|trace)"""
 
   # default print some info
