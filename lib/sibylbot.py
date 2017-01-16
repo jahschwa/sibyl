@@ -699,7 +699,10 @@ class SibylBot(object):
   def __send(self,text,to,flag=False):
     """actually send a message"""
 
-    text = unicode(text)
+    if isinstance(text,str):
+      text = text.decode('utf8')
+    elif not isinstance(text,unicode):
+      text = unicode(text)
     to.get_protocol().send(text,to)
     if not flag:
       self.__run_hooks('send',text,to)
