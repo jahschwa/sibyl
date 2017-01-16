@@ -553,20 +553,13 @@ class SibylBot(object):
       return
 
     # check against bw_list
+    applied = self.match_bw(mess,cmd_name)
+    ns = self.ns_cmd[cmd_name]
     pname = mess.get_protocol().get_name()
-    if pname in self.opt('admin_protos'):
-      applied = ('w','proto:'+pname,'*')
-    else:
-      for rule in self.opt('bw_list'):
-        if (rule[1]!='*') and (not self.__match_user(mess,rule[1])):
-          continue
-        if (rule[2]!='*') and (not self.__match_cmd(cmd_name,rule[2])):
-          continue
-        applied = rule
     if applied[0]=='b':
-      self.log.info('FORBIDDEN: %s from %s:%s with %s'
-          % (cmd_name,pname,real,applied))
-      self.__send("You don't have permission to run that command",frm)
+      self.log.info('FORBIDDEN: %s.%s from %s:%s with %s'
+          % (ns,cmd_name,pname,real,applied))
+      self.__send("You don't have permission to run \"%s\"" % cmd_name,frm)
       return
 
     # if the command was redo, retrieve the last command from that user
@@ -580,7 +573,8 @@ class SibylBot(object):
     elif cmd_name!='last':
       self.last_cmd[usr] = cmd
 
-    self.log.info('CMD: %s from %s:%s with %s' % (cmd_name,pname,real,applied))
+    self.log.info('CMD: %s.%s from %s:%s with %s' %
+        (ns,cmd_name,pname,real,applied))
 
     # check for chat_ctrl
     func = self.hooks['chat'][cmd_name]
@@ -1020,6 +1014,8 @@ class SibylBot(object):
           if hooks[name]==func:
             self.log.debug('Deleting %s hook %s' % (dec,name))
             del hooks[name]
+            if dec=='chat':
+              del self.ns_cmd[name]
 
   def __idle_send(self):
     """send queued messages synchronously"""
@@ -1131,9 +1127,12 @@ class SibylBot(object):
   # @param cmd (str) name of chat cmd to run
   # @param args (list) [None] arguments to pass to the command
   # @param mess (Message) [None] message to pass to the command
+  # @param check_bw (bool) [True] enforce bw_list rules (if mess also supplied)
   # @return (str,None) the result of the command
-  def run_cmd(self,cmd,args=None,mess=None):
+  def run_cmd(self,cmd,args=None,mess=None,check_bw=True):
     """run a chat command manually"""
+
+    check_bw = (check_bw and mess)
 
     # catch invalid arguments to help developers
     if (args is not None) and (not isinstance(args,list)):
@@ -1141,10 +1140,20 @@ class SibylBot(object):
 
     if args is None:
       args = []
+
+    applied = self.match_bw(mess,cmd) if check_bw else '(check_bw=False)'
+    ns = self.ns_cmd[cmd]
+    if applied[0]=='b':
+      self.log.debug('  FORBIDDEN: %s.%s via run_cmd() with %s'
+          % (ns,cmd,applied))
+      return 'You do not have permission to run "%s"' % cmd
+
+    self.log.debug('  CMD: %s.%s via run_cmd() with %s' %
+        (ns,cmd,applied))
     return self.hooks['chat'][cmd](self,mess,args)
 
   # this function is thread-safe
-  # @param func (function) the function to remove from our hooks
+  # @param func (Function) the function to remove from our hooks
   # @param dec (str) the hook type to remove e.g. 'chat', 'mess', 'rooms'
   def del_hook(self,func,dec=None):
     """delete a hook (this function is thread-safe)"""
@@ -1159,6 +1168,70 @@ class SibylBot(object):
     if not plugin:
       return self.plugins
     return (plugin in self.plugins)
+
+  # @param mess (Message) the originating message
+  # @param cmd_name (str) the command name being run
+  # @return (tuple(str,str,str)) a 3-tuple with fields in order:
+  #     str: either 'w' or 'b' for white/black-listed
+  #     str: either '*' for all, or the name of a protocol/room/user
+  #     str: either '*' for all, or the name of a command/plugin
+  def match_bw(self,mess,cmd_name):
+    """find the matching bw_list entry for the message"""
+
+    pname = mess.get_protocol().get_name()
+    if pname in self.opt('admin_protos'):
+      applied = ('w','proto:'+pname,'*')
+    else:
+      for rule in self.opt('bw_list'):
+        if (rule[1]!='*') and (not self.__match_user(mess,rule[1])):
+          continue
+        if (rule[2]!='*') and (not self.__match_cmd(cmd_name,rule[2])):
+          continue
+        applied = rule
+    return applied
+
+  # @param name (str) name of the command to check
+  # @return (None,str) the namespace of the command, or None if it doesn't exist
+  def which(self,name):
+    """get the function for a given command"""
+
+    return self.ns_cmd.get(name,None)
+
+  # @param func (Function) the function to run when the command is received
+  # @param ns (str) the namespace of the command (e.g. plugin name, or w/e)
+  # @param name (str) [func.__name__] the name of the command to register
+  # @param ctrl (bool) [False] if this function requires chat_ctrl be set
+  # @param hidden (bool) [False] whether to hide this function from the help cmd
+  # @param thread (bool) [False] if True execute the command in its own thread
+  # @return (bool) False if the command already exists, True if successful
+  # @raise (ValueError) if the namd given is invalid
+  def register_cmd(self,func,ns,name=None,ctrl=False,hidden=False,thread=False):
+    """register a new chat command"""
+
+    name = (name or func.__name__).lower()
+    func._sibylbot_dec_chat_ctrl = ctrl
+    func._sibylbot_dec_chat_hidden = hidden
+    func._sibylbot_dec_chat_thread = thread
+
+    if not name.replace('_','').isalnum():
+      raise ValueError('Chat commands must be alphanumeric+underscore')
+    func._sibylbot_dec_chat_name = name
+
+    if name in self.hooks['chat']:
+      return False
+
+    self.hooks['chat'][name] = func
+    self.ns_cmd[name] = ns
+    self.log.debug('  Registered chat command: %s.%s = %s'
+        % (ns,func.__name__,name))
+    return True
+
+  # @param name (str) name of the chat command to unregister
+  def del_cmd(self,name):
+    """unregisters a chat command"""
+
+    func = self.hooks['chat'].get(name.lower(),None)
+    self.del_hook(func,'chat')
 
   # @param func (Function) the idle hook to modify
   # @param freq (int) the number of seconds to wait between hook executions

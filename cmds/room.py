@@ -343,19 +343,23 @@ def trigger(bot,mess,args):
 
     if name in bot.triggers:
       return 'A trigger already exists by that name'
-    if name in [h._sibylbot_dec_chat_name for h in bot.hooks['chat'].values()]:
+    if bot.which(name):
       return 'The %s plugin has a chat command by that name' % bot.ns_cmd[name]
     if not name.replace('_','').isalnum():
       return 'Trigger names must be alphanumeric plus underscore'
 
     bot.triggers[name] = text
     trigger_write(bot)
+    func = (lambda name: lambda bot,mess,args: bot.triggers[name])(name)
+    bot.register_cmd(func,'room.trigger',name=name,hidden=True)
     return 'Added trigger "%s"' % name
 
   elif args[0]=='remove':
     if len(args)<2:
       return 'You must specify a trigger to remove'
     if args[1]=='*':
+      for t in bot.triggers:
+        bot.del_cmd(t)
       bot.triggers = {}
       trigger_write(bot)
       return 'Removed all triggers'
@@ -363,16 +367,10 @@ def trigger(bot,mess,args):
     if name not in bot.triggers:
       return 'Invalid trigger'
     del bot.triggers[name]
+    bot.del_cmd(name)
     return 'Removed trigger "%s"' % name
 
   return 'There are %s triggers' % len(bot.triggers)
-
-@botmsg
-def trigger_cb(bot,mess,cmd):
-  """execute triggers"""
-
-  if cmd and cmd[0] in bot.triggers:
-    bot.send(bot.triggers[cmd[0]],mess.get_from())
 
 def trigger_read(bot):
   """read triggers from file into dict"""
@@ -397,14 +395,23 @@ def trigger_read(bot):
 
   removed = False
   for name in triggers.keys():
-    if name in [h._sibylbot_dec_chat_name for h in bot.hooks['chat'].values()]:
+
+    # without the outer lambda, "name" would all bind to the same literal
+    func = (lambda name: lambda bot,mess,args: bot.triggers[name])(name)
+    try:
+      result = bot.register_cmd(func,'room.trigger',name=name,hidden=True)
+    except ValueError:
+      removed = True
+      del triggers[name]
+      bot.log.warning('Ignoring trigger "%s"; invalid name')
+    if not result:
       removed = True
       del triggers[name]
       bot.log.warning('Ignoring trigger "%s"; conflicts with cmd from plugin %s'
-          % (name,bot.ns_cmd[name]))
+          % (name,bot.which[name]))
 
   if removed:
-    bot.errors.append('Some triggers ignored due to name conflicts')
+    bot.errors.append('Some triggers failed to load')
 
   return triggers
 

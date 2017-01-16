@@ -78,8 +78,8 @@ def alias(bot,mess,args):
 
     if name in bot.aliases:
       return 'An alias already exists by that name'
-    if name in [h._sibylbot_dec_chat_name for h in bot.hooks['chat'].values()]:
-      return 'The %s plugin has a chat command by that name' % bot.ns_cmd[name]
+    if bot.which(name):
+      return 'The %s plugin has a chat command by that name' % bot.which(name)
     if name==args[2]:
       return 'An alias cannot reference itself'
     if not name.replace('_','').isalnum():
@@ -87,6 +87,8 @@ def alias(bot,mess,args):
 
     bot.aliases[name] = text
     alias_write(bot)
+    func = (lambda name: lambda b,m,a: alias_cb(b,m,a,name))(name)
+    bot.register_cmd(func,'general.alias',name=name,hidden=True)
     return 'Added alias "%s"' % name
 
   elif args[0]=='remove':
@@ -112,15 +114,10 @@ def alias(bot,mess,args):
 
   return 'There are %s aliases' % len(bot.aliases)
 
-@botmsg
-def alias_cb(bot,mess,cmd):
+def alias_cb(bot,mess,args,name):
   """execute aliases"""
 
-  if not cmd:
-    return
-
-  name = cmd[0]
-  if name not in bot.aliases:
+  if bot.alias_exceeded:
     return
 
   if len(bot.alias_stack)>=bot.opt('general.alias_depth'):
@@ -134,19 +131,24 @@ def alias_cb(bot,mess,cmd):
 
   bot.alias_stack.append(name)
   new = bot.aliases[name]
-  bot.log.debug('cmd "%s" is an alias for "%s"' % (name,new))
+  bot.log.debug('  cmd "%s" is an alias for "%s"' % (name,new))
 
   try:
     for n in new.split(';'):
       n = n.strip()
       if not n:
         continue
-      text = ' '.join([n]+cmd[1:])
-      room = mess.get_room()
-      if room:
-        text = room.get_protocol().get_nick(room)+' '+text
-      mess.set_text(text)
-      bot._cb_message(mess)
+      n = n.split(' ')
+      name = n[0].lower()
+      args = n[1:]+args
+      if name in bot.aliases:
+        msg = alias_cb(bot,mess,args,name)
+      elif bot.which(name):
+        msg = bot.run_cmd(name,args=args,mess=mess)
+      else:
+        msg = 'Unknown command "%s"' % name
+      if msg:
+        bot.send(msg,mess.get_from())
 
   finally:
     del bot.alias_stack[-1]
@@ -176,14 +178,23 @@ def alias_read(bot):
 
   removed = False
   for name in aliases.keys():
-    if name in [h._sibylbot_dec_chat_name for h in bot.hooks['chat'].values()]:
+
+    # without the outer lambda, "name" would all bind to the same literal
+    func = (lambda name: lambda b,m,a: alias_cb(b,m,a,name))(name)
+    try:
+      result = bot.register_cmd(func,'general.alias',name=name,hidden=True)
+    except ValueError:
+      removed = True
+      del aliases[name]
+      bot.log.warning('Ignoring alias "%s"; invalid name')
+    if not result:
       removed = True
       del aliases[name]
       bot.log.warning('Ignoring alias "%s"; conflicts with cmd from plugin %s'
-          % (name,bot.ns_cmd[name]))
+          % (name,bot.which(name)))
 
   if removed:
-    bot.errors.append('Some aliases ignored due to name conflicts')
+    bot.errors.append('Some aliases failed to load')
 
   return aliases
 
