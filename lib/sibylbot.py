@@ -971,7 +971,11 @@ class SibylBot(object):
         reason = {PingTimeout:'ping timeout',
                   ConnectFailure:'unable to connect',
                   ServerShutdown:'server shutdown'}
-        proto.log.error('Connection lost ('+reason[e.__class__]+
+        for r in reason:
+          if isinstance(e,r):
+            reason = reason[r]
+            break
+        proto.log.error('Connection lost ('+reason+
             '); retrying in '+str(self.opt('recon_wait'))+' sec')
 
         self.__recons[name] = time.time()+self.opt('recon_wait')

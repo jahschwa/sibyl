@@ -40,9 +40,7 @@ import os,sys,inspect
 ################################################################################
 
 class ProtocolError(Exception):
-  def __init__(self):
-    filename = os.path.basename(inspect.stack()[1][1])
-    self.protocol = filename.split(os.path.extsep)[0].split('_')[1]
+  pass
 
 class PingTimeout(ProtocolError):
   pass

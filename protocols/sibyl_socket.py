@@ -26,10 +26,33 @@ from threading import Thread,Event
 from Queue import Queue
 
 from sibyl.lib.protocol import User,Room,Message,Protocol
-from sibyl.lib.protocol import (PingTimeout,ConnectFailure,AuthFailure,
-    ServerShutdown)
+from sibyl.lib.protocol import ProtocolError as SuperProtocolError
+from sibyl.lib.protocol import PingTimeout as SuperPingTimeout
+from sibyl.lib.protocol import ConnectFailure as SuperConnectFailure
+from sibyl.lib.protocol import AuthFailure as SuperAuthFailure
+from sibyl.lib.protocol import ServerShutdown as SuperServerShutdown
 
 from sibyl.lib.decorators import botconf
+
+################################################################################
+# Custom exceptions
+################################################################################
+
+class ProtocolError(SuperProtocolError):
+  def __init__(self):
+    self.protocol = __name__.split('_')[-1]
+
+class PingTimeout(SuperPingTimeout,ProtocolError):
+  pass
+
+class ConnectFailure(SuperConnectFailure,ProtocolError):
+  pass
+
+class AuthFailure(SuperAuthFailure,ProtocolError):
+  pass
+
+class ServerShutdown(SuperServerShutdown,ProtocolError):
+  pass
 
 ################################################################################
 # Config options
