@@ -102,6 +102,7 @@ def alias(bot,mess,args):
     if name not in bot.aliases:
       return 'Invalid alias'
     del bot.aliases[name]
+    alias_write(bot)
     return 'Removed alias "%s"' % name
 
   elif args[0]=='show':
@@ -186,11 +187,11 @@ def alias_read(bot):
     except ValueError:
       removed = True
       del aliases[name]
-      bot.log.warning('Ignoring alias "%s"; invalid name' % name)
+      bot.log.warning('  Ignoring alias "%s"; invalid name' % name)
     if not result:
       removed = True
       del aliases[name]
-      bot.log.warning('Ignoring alias "%s"; conflicts with cmd from plugin %s'
+      bot.log.warning('  Ignoring alias "%s"; conflicts with cmd from plugin %s'
           % (name,bot.which(name)))
 
   if removed:

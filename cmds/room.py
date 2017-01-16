@@ -367,6 +367,7 @@ def trigger(bot,mess,args):
     if name not in bot.triggers:
       return 'Invalid trigger'
     del bot.triggers[name]
+    trigger_write(bot)
     bot.del_cmd(name)
     return 'Removed trigger "%s"' % name
 
@@ -403,11 +404,11 @@ def trigger_read(bot):
     except ValueError:
       removed = True
       del triggers[name]
-      bot.log.warning('Ignoring trigger "%s"; invalid name' % name)
+      bot.log.warning('  Ignoring trigger "%s"; invalid name' % name)
     if not result:
       removed = True
       del triggers[name]
-      bot.log.warning('Ignoring trigger "%s"; conflicts with cmd from plugin %s'
+      bot.log.warning('  Ignoring trigger "%s"; conflicts with cmd from plugin %s'
           % (name,bot.which[name]))
 
   if removed:
