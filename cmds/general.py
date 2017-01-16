@@ -95,6 +95,8 @@ def alias(bot,mess,args):
     if len(args)<2:
       return 'You must specify an alias to remove'
     if args[1]=='*':
+      for a in bot.aliases:
+        bot.del_cmd(a)
       bot.aliases = {}
       alias_write(bot)
       return 'Removed all aliases'
@@ -103,6 +105,7 @@ def alias(bot,mess,args):
       return 'Invalid alias'
     del bot.aliases[name]
     alias_write(bot)
+    bot.del_cmd(name)
     return 'Removed alias "%s"' % name
 
   elif args[0]=='show':
