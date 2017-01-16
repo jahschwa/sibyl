@@ -403,7 +403,7 @@ def trigger_read(bot):
     except ValueError:
       removed = True
       del triggers[name]
-      bot.log.warning('Ignoring trigger "%s"; invalid name')
+      bot.log.warning('Ignoring trigger "%s"; invalid name' % name)
     if not result:
       removed = True
       del triggers[name]

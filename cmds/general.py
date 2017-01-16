@@ -186,7 +186,7 @@ def alias_read(bot):
     except ValueError:
       removed = True
       del aliases[name]
-      bot.log.warning('Ignoring alias "%s"; invalid name')
+      bot.log.warning('Ignoring alias "%s"; invalid name' % name)
     if not result:
       removed = True
       del aliases[name]
