@@ -147,11 +147,10 @@ def alias_cb(bot,mess,args,name):
         continue
       n = n.split(' ')
       name = n[0].lower()
-      args = n[1:]+args
       if name in bot.aliases:
         msg = alias_cb(bot,mess,args,name)
       elif bot.which(name):
-        msg = bot.run_cmd(name,args=args,mess=mess)
+        msg = bot.run_cmd(name,args=(n[1:]+args),mess=mess)
       else:
         msg = 'Unknown command "%s"' % name
       if msg:
