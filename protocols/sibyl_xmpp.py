@@ -315,14 +315,18 @@ class XMPP(Protocol):
     """send a message to every user in a room"""
 
     # XMPP has no built-in broadcast, so we'll just highlight everyone
-    s = ''
+    s = 'All: %s --- ' % text
+    if frm:
+      s += frm.get_name()+' --- '
+
     me = JID(self,room.get_name()+'/'+self.get_nick(room),typ=Message.GROUP)
     for user in self.get_occupants(room):
       if user!=me and (not frm or user!=frm):
         s += (user.get_name()+' ')
+    s = s[:-1]
 
-    text = 'All: %s --- %s --- %s' % (text,frm.get_name(),s[:-1])
-    self.send(text,room)
+    self.send(s,room)
+    return s
 
   def join_room(self,room):
     """join a room and return True if joined successfully or False otherwise"""

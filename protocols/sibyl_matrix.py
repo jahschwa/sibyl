@@ -249,6 +249,7 @@ class MatrixProtocol(Protocol):
   # @param text (str,unicode) body of the message
   # @param room (Room) room to broadcast in
   # @param frm (User) [None] the User requesting the broadcast
+  # @return (str,unicode) the text that was actually sent
   def broadcast(self,text,room,frm=None):
     raise NotImplementedError
 

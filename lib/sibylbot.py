@@ -695,15 +695,20 @@ class SibylBot(object):
       self.log.debug(long_msg)
     self.log.debug(full)
 
-  def __send(self,text,to,flag=False):
+  def __send(self,text,to,bcast=False,frm=None,hook=True):
     """actually send a message"""
 
     if isinstance(text,str):
       text = text.decode('utf8')
     elif not isinstance(text,unicode):
       text = unicode(text)
-    to.get_protocol().send(text,to)
-    if not flag:
+
+    if bcast:
+      text = to.get_protocol().broadcast(text,to,frm)
+    else:
+      to.get_protocol().send(text,to)
+
+    if hook:
       self.__run_hooks('send',text,to)
 
   def __match_user(self,mess,rule_str):
@@ -922,14 +927,13 @@ class SibylBot(object):
       del self.__tell_rooms[self.__tell_rooms.index(room)]
       if self.errors:
         msg = 'Errors during startup: '
-        self.__send(msg+self.run_cmd('errors'),room,True)
+        self.__send(msg+self.run_cmd('errors'),room,hook=False)
     if not self.__tell_rooms:
       self.del_hook(self.__tell_errors)
 
   def __serve(self):
     """process loop - connect and process messages"""
 
-    self.__idle_proc()
     for (name,proto) in self.protocols.items():
       if proto.is_connected():
         proto.process()
@@ -957,6 +961,7 @@ class SibylBot(object):
     while not self.__finished:
       try:
         self.__serve()
+        self.__idle_proc()
         time.sleep(0.1)
 
       except (PingTimeout,ConnectFailure,ServerShutdown) as e:
@@ -1068,11 +1073,16 @@ class SibylBot(object):
   # this function is thread-safe
   # @param text (str,unicode) the text to send
   # @param to (User,Room) the recipient
-  # @param flag (bool) [False] must be set if called by a @botsend hook
-  def send(self,text,to,flag=False):
+  # @param broadcast (bool) [False] highlight all users (only works for Rooms)
+  # @param frm (User) [None] the sending user (only relevant for broadcast)
+  # @param hook (bool) [True] don't execute @botsend hooks for this message
+  #   NOTE: when @botsend hooks call send(), they MUST set hook=False
+  def send(self,text,to,broadcast=False,frm=None,hook=True):
     """send a message (this function is thread-safe)"""
 
-    self.__pending_send.put((text,to,flag))
+    broadcast = (broadcast and isinstance(to,Room))
+    frm = (frm if broadcast else None)
+    self.__pending_send.put((text,to,broadcast,frm,hook))
 
   # @param (str) the name of a protocol
   # @return (Protocol) the Protocol associated with the given object

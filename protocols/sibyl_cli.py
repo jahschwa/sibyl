@@ -205,6 +205,7 @@ class CLI(Protocol):
 
   def broadcast(self,text,room,frm=None):
     self.send(text,None)
+    return text
 
   def join_room(self,room):
     self.bot._cb_join_room_failure(room,'not supported')

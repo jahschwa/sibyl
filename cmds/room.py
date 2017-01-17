@@ -147,7 +147,7 @@ def all(bot,mess,args):
   if error:
     return error
 
-  proto.broadcast(' '.join(args),room,mess.get_user())
+  bot.send(' '.join(args),room,broadcast=True,frm=mess.get_user())
 
 @botcmd
 def say(bot,mess,args):
@@ -159,7 +159,7 @@ def say(bot,mess,args):
     return error
 
   text = ' '.join(args)
-  proto.send(text,room)
+  bot.send(text,room)
 
 @botcmd(ctrl=True)
 def join(bot,mess,args):
@@ -588,4 +588,4 @@ def bridge(bot,text,room,user=None):
         if b_pname!=pname or b_name!=room.get_name():
 
           to = bot.get_protocol(b_pname).new_room(b_name)
-          bot.send(msg+text,to,flag=True)
+          bot.send(msg+text,to,hook=False)
