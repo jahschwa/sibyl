@@ -319,9 +319,9 @@ class XMPP(Protocol):
     me = JID(self,room.get_name()+'/'+self.get_nick(room),typ=Message.GROUP)
     for user in self.get_occupants(room):
       if user!=me and (not frm or user!=frm):
-        s += (user.get_name()+': ')
+        s += (user.get_name()+' ')
 
-    text = '%s[ %s ] %s' % (s,text,frm.get_name())
+    text = 'All: %s --- %s --- %s' % (text,frm.get_name(),s[:-1])
     self.send(text,room)
 
   def join_room(self,room):
