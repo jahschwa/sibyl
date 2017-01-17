@@ -163,8 +163,9 @@ class MYPROTOCOL(Protocol):
   # @param text (str,unicode) body of the message
   # @param room (Room) room to broadcast in
   # @param frm (User) [None] the User requesting the broadcast
+  # @param users (list of User) [None] extra users to highlight
   # @return (str,unicode) the text that was actually sent
-  def broadcast(self,text,room,frm=None):
+  def broadcast(self,text,room,frm=None,users=None):
     raise NotImplementedError
 
   # join the specified room using the specified nick and password

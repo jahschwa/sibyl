@@ -63,6 +63,10 @@ def conf(bot):
     {'name':'unicode_users',
      'default':True,
      'parse':bot.conf.parse_bool
+    },
+    {'name':'bridge_broadcast',
+     'default':True,
+     'parse':bot.conf.parse_bool
     }
   ]
 
@@ -147,6 +151,7 @@ def all(bot,mess,args):
   if error:
     return error
 
+  
   bot.send(' '.join(args),room,broadcast=True,frm=mess.get_user())
 
 @botcmd
@@ -589,3 +594,19 @@ def bridge(bot,text,room,user=None):
 
           to = bot.get_protocol(b_pname).new_room(b_name)
           bot.send(msg+text,to,hook=False)
+
+# @param room (Room) the room to search for
+# @return (list of Room) the other rooms in the given room's bridge (or [])
+@botfunc
+def get_bridged(bot,room):
+
+  result = []
+  tup = (room.get_protocol().get_name(),room.get_name())
+  for bridge in bot.opt('room.bridges'):
+    if tup in bridge:
+      for (p,r) in bridge:
+        r = bot.get_protocol(p).new_room(r)
+        if r!=room:
+          result.append(r)
+      return result
+  return result

@@ -203,7 +203,7 @@ class CLI(Protocol):
     text = text.encode(sys.__stdout__.encoding,'replace')
     sys.__stdout__.write(SIBYL+': '+text+'\n')
 
-  def broadcast(self,text,room,frm=None):
+  def broadcast(self,text,room,frm=None,users=None):
     self.send(text,None)
     return text
 

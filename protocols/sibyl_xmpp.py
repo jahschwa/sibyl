@@ -311,8 +311,10 @@ class XMPP(Protocol):
     except IOError:
       raise ConnectFailure
 
-  def broadcast(self,text,room,frm=None):
+  def broadcast(self,text,room,frm=None,users=None):
     """send a message to every user in a room"""
+
+    users = self.get_occupants(room)+(users or [])
 
     # XMPP has no built-in broadcast, so we'll just highlight everyone
     s = 'All: %s --- ' % text
@@ -320,10 +322,8 @@ class XMPP(Protocol):
       s += frm.get_name()+' --- '
 
     me = JID(self,room.get_name()+'/'+self.get_nick(room),typ=Message.GROUP)
-    for user in self.get_occupants(room):
-      if user!=me and (not frm or user!=frm):
-        s += (user.get_name()+' ')
-    s = s[:-1]
+    names = [u.get_name() for u in users if (u!=me and (not frm or u!=frm))]
+    s += ' '.join(set(names))
 
     self.send(s,room)
     return s

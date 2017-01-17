@@ -215,6 +215,9 @@ protocols = cli
 # Allow unicode characters in user names when bridging
 #room.unicode_users = True
 
+# Get occupants from bridged rooms when broadcasting messages to all users
+#room.bridge_broadcast = True
+
 # IP address where the XBMC/Kodi/OSMC/etc. web interface is running
 # Format is IP:PORT or just IP (port defaults to 80 if not specified)
 # The default assumes XBMC is running on the same host as Sibyl

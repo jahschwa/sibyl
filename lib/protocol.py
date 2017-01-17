@@ -214,6 +214,17 @@ class Room(object):
     """return this Room's password or None"""
     return self.pword
 
+  # @return (list of User) the Users in this room
+  def get_occupants(self):
+    """return the users in this room"""
+    return self.protocol.get_occupants(self)
+
+  # @param nick (str) the nick to examine
+  # @return (User) the "real" User behind the specified nick/room
+  def get_real(self,nick):
+    """return the specified nick name's real user"""
+    return self.protocol.get_real(self,nick)
+
   # @return (str) the string version of this Room (includes protocol)
   def __str__(self):
     return self.protocol.get_name()+':'+self.get_name()
@@ -401,9 +412,10 @@ class Protocol(object):
   # @param text (str,unicode) body of the message
   # @param room (Room) room to broadcast in
   # @param frm (User) [None] the User requesting the broadcast
+  # @param users (list of User) [None] extra users to highlight
   # @return (str,unicode) the text that was actually sent
   @abstractmethod
-  def broadcast(self,text,room,frm=None):
+  def broadcast(self,text,room,frm=None,users=None):
     pass
 
   # join the specified room using the specified nick and password

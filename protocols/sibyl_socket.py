@@ -409,7 +409,7 @@ class SocketServer(Protocol):
   def send(self,text,to):
     self.thread.send(text,to.address)
 
-  def broadcast(self,text,room,frm=None):
+  def broadcast(self,text,room,frm=None,users=None):
     pass
 
   def join_room(self,room):

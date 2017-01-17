@@ -695,7 +695,7 @@ class SibylBot(object):
       self.log.debug(long_msg)
     self.log.debug(full)
 
-  def __send(self,text,to,bcast=False,frm=None,hook=True):
+  def __send(self,text,to,bcast=False,frm=None,users=None,hook=True):
     """actually send a message"""
 
     if isinstance(text,str):
@@ -704,7 +704,12 @@ class SibylBot(object):
       text = unicode(text)
 
     if bcast:
-      text = to.get_protocol().broadcast(text,to,frm)
+      if self.has_plugin('room') and self.opt('room.bridge_broadcast'):
+        users = (users or [])
+        for room in self.get_bridged(to):
+          nick = room.get_protocol().get_nick(room)
+          users += [u for u in room.get_occupants() if u.get_name()!=nick]
+      text = to.get_protocol().broadcast(text,to,frm,users)
     else:
       to.get_protocol().send(text,to)
 
@@ -1075,14 +1080,16 @@ class SibylBot(object):
   # @param to (User,Room) the recipient
   # @param broadcast (bool) [False] highlight all users (only works for Rooms)
   # @param frm (User) [None] the sending user (only relevant for broadcast)
+  # @param users (list of User) [None] additional users to highlight (broadcast)
   # @param hook (bool) [True] don't execute @botsend hooks for this message
   #   NOTE: when @botsend hooks call send(), they MUST set hook=False
-  def send(self,text,to,broadcast=False,frm=None,hook=True):
+  def send(self,text,to,broadcast=False,frm=None,users=None,hook=True):
     """send a message (this function is thread-safe)"""
 
     broadcast = (broadcast and isinstance(to,Room))
     frm = (frm if broadcast else None)
-    self.__pending_send.put((text,to,broadcast,frm,hook))
+    users = (users if broadcast else None)
+    self.__pending_send.put((text,to,broadcast,frm,users,hook))
 
   # @param (str) the name of a protocol
   # @return (Protocol) the Protocol associated with the given object
