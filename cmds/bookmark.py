@@ -53,11 +53,12 @@ def init(bot):
       bm_store = {}
 
   bot.add_var('bm_store',bm_store)
+  bot.add_var('last_resume',persist=True)
   # note the "last_played" var is created in xbmc.py so don't do it here
 
 @botcmd
 def bookmark(bot,mess,args):
-  """manage bookmarks - bookmarks [show|set|remove] [name]"""
+  """manage bookmarks - bookmark [show|set|remove|update] [name]"""
 
   if not args:
     args = ['show']
@@ -100,6 +101,11 @@ def bookmark(bot,mess,args):
     if not bm_remove(bot,args[1]):
       return 'Bookmark "'+name+'" not found'
     return 'Removed bookmark "%s"' % args[1]
+
+  elif args[0]=='update':
+    if not bot.last_resume:
+      return 'No active bookmark'
+    return bot.run_cmd('bookmark',['set',bot.last_resume])
 
   elif args[0]=='show':
     args = args[1:]
@@ -182,6 +188,7 @@ def resume(bot,mess,args):
     bot.run_cmd('seek',[t])
     result += ' at '+t
 
+  bot.last_resume = name
   return result
 
 def bm_parse(bot):

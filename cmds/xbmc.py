@@ -375,6 +375,8 @@ def stream(bot,mess,args):
   # account for "&start=" custom start times
   msg = msg.replace('&start=','&t=')
 
+  s = 'Unsupported URL'
+
   # parse youtube links
   if msg.lower().startswith('youtube'):
 
@@ -437,7 +439,6 @@ def stream(bot,mess,args):
     s = 'Streaming "'+title+'" by "'+channel+'" from YouTube'
     if tim:
       s += (' at '+tim)
-    return s
 
   elif 'twitch' in msg.lower():
 
@@ -462,10 +463,12 @@ def stream(bot,mess,args):
 
     response = bot.xbmc('Player.Open',{'item':{'file':
         'plugin://plugin.video.twitch/playLive/'+vid}})
-    return 'Streaming "'+title+'" by "'+stream+'" from Twitch Live'
+    s = 'Streaming "'+title+'" by "'+stream+'" from Twitch Live'
 
-  else:
-    return 'Unsupported URL'
+  bot.last_played = None
+  if bot.has_plugin('bookmark'):
+    bot.last_resume = None
+  return s
 
 @botcmd
 def videos(bot,mess,args):
@@ -732,5 +735,7 @@ def _file(bot,args,dirs):
 
   # clear last_played
   bot.last_played = None
+  if bot.has_plugin('bookmark'):
+    bot.last_resume = None
 
   return 'Playing "'+matches[0]+'"'
