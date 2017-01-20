@@ -248,6 +248,18 @@ class Config(object):
       f.writelines(lines)
     return True
 
+  # @param opt (str) the name of the opt to reload
+  def reload_opt(self,opt):
+    """reload the specified opt from the config file"""
+
+    old = self.real_time
+    self.real_time = False
+    self.reload(opt)
+    msgs = [x for x in self.log_msgs[:] if 'Unknown config option' not in x[1]]
+    self.clear_log()
+    self.real_time = old
+    return msgs
+
   # @param line (str) the line to check
   # @return (bool) True if the line contains an active (uncommented) option
   def __is_opt_line(self,line):
@@ -265,11 +277,13 @@ class Config(object):
       return True
     return set_char<com_char
 
+  # @param opt (None,str) [None] if specified, only reload the named opt
+  # @param log (bool) [True] whether to log messages during the reload
   # @return (int) the result of the reload
   #   SUCCESS - no errors or warnings of any kind
   #   ERRORS  - ignored sections, ignore opts, parse fails, or validate fails
   #   FAIL    - missing any required opts
-  def reload(self,log=True):
+  def reload(self,opt=None,log=True):
     """load opts from config file and check for errors"""
 
     orig = self.logging
@@ -278,7 +292,7 @@ class Config(object):
 
     # parse options from the config file and store them in self.opts
     try:
-      self.__update()
+      self.__update(opt)
     except cp.InterpolationError as e:
       self.log('critical','Interpolation error; check for invalid % syntax')
     except Exception as e:
@@ -306,14 +320,20 @@ class Config(object):
     else:
       return self.SUCCESS
 
-  def __update(self):
+  def __update(self,opt=None):
     """update self.opts from config file"""
 
     # start with the defaults
-    self.opts = self.get_default()
+    if not opt:
+      self.opts = self.get_default()
 
     # get the values in the config file
     opts = self.__read()
+    if opt:
+      if opt in opts:
+        opts = {opt:opts[opt]}
+      else:
+        opts = {}
     self.__parse(opts)
     self.__validate(opts)
     self.__post(opts)
@@ -365,7 +385,6 @@ class Config(object):
           try:
             opts[opt] = func(self,opt,opts[opt])
           except Exception as e:
-            print traceback.format_exc(e)
             self.log('error','Error parsing "%s"; using default=%s' %
                 (opt,self.opts[opt]))
             del opts[opt]

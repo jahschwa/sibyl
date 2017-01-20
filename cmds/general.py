@@ -215,13 +215,13 @@ def alias_write(bot):
 
 @botcmd(ctrl=True)
 def config(bot,mess,args):
-  """view and edit config - config (show|set|save|diff|reset) (opt|*) [value]"""
+  """view and edit config - config (show|set|save|diff|reset|reload) (opt|*) [value]"""
 
   if (not bot.opt('general.config_rooms')) and mess.get_type()==Message.GROUP:
     return 'The config command is disabled in rooms'
 
   # default action is 'show'
-  if not args or args[0] not in ('show','set','save','diff','reset'):
+  if not args or args[0] not in ('show','set','save','diff','reset','reload'):
     args.insert(0,'show')
   cmd = args[0]
   opt = '*'
@@ -298,6 +298,22 @@ def config(bot,mess,args):
       return 'Set opt "'+opt+'" to "'+args[2]+'"'
     else:
       return 'Invalid value for opt "'+opt+'"'
+
+  # reload the specified config option
+  if cmd=='reload':
+    if opt not in bot.opt():
+      print opt
+      return 'Invalid opt'
+    old = bot.opt(opt)
+    result = bot.conf.reload_opt(opt)
+    if not result:
+      s = 'Success reloading "%s"; ' % (opt,)
+      if old==bot.opt(opt):
+        return s+'value unchanged'
+      else:
+        return s+'new value = "%s"' % (bot.opt(opt),)
+    return ('Errors reloading "%s" so nothing changed: %s'
+        % (opt,' '.join(['(%s) %s' % (l,m) for (l,m) in result])))
 
   # logic for 'save' command that also modified the config file
   if len(args)>2:
