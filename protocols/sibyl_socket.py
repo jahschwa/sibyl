@@ -288,7 +288,7 @@ class Client(User):
     return self.user
 
   def __eq__(self,other):
-    if not isinstance(Client,other):
+    if not isinstance(other,Client):
       return False
     return self.address==other.address
 

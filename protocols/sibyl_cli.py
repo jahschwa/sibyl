@@ -116,7 +116,7 @@ class Admin(User):
     return self.user
 
   def __eq__(self,other):
-    if not isinstance(Admin,other):
+    if not isinstance(other,Admin):
       return False
     return self.user==other.user
 
