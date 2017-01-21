@@ -200,7 +200,7 @@ def alias_read(bot):
           % (name,bot.which(name)))
 
   if removed:
-    bot.errors.append('Some aliases failed to load')
+    bot.error('Some aliases failed to load','general.alias')
 
   return aliases
 

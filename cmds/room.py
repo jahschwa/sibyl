@@ -419,7 +419,7 @@ def trigger_read(bot):
           % (name,bot.which[name]))
 
   if removed:
-    bot.errors.append('Some triggers failed to load')
+    bot.error('Some triggers failed to load','room.trigger')
 
   return triggers
 

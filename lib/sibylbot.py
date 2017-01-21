@@ -76,8 +76,16 @@ class SibylBot(object):
     'An unexpected error occurred.'
   MSG_UNHANDLED = 'Please consider reporting the above error to the developers.'
 
+  # Bot state
+  INIT = 0
+  READY = 1
+  RUNNING = 2
+  EXITED = 3
+
   def __init__(self,conf_file='sibyl.conf'):
     """create a new sibyl instance, load: conf, protocol, plugins"""
+
+    self.__state = SibylBot.INIT
 
     # keep track of errors for use with "errors" command
     self.errors = []
@@ -104,7 +112,7 @@ class SibylBot(object):
     self.__log_startup_msg()
 
     # log config errors and check for success
-    self.errors.extend([x[1] for x in self.conf.log_msgs])
+    self.errors.extend(['(startup.config) '+x[1] for x in self.conf.log_msgs])
     self.conf.process_log()
     self.conf.real_time = True
     if dup_plugins:
@@ -175,7 +183,7 @@ class SibylBot(object):
         success = False
 
     if not success:
-      self.errors.append('Some rename operations failed')
+      self.errors.append('(startup.sibyl) Some rename operations failed')
 
     for (old,new) in self.opt('rename').items():
       self.hooks['chat'][new] = cmds[new]
@@ -188,6 +196,8 @@ class SibylBot(object):
     if self.__run_hooks('init'):
       self.log.critical('Exception executing @botinit hooks; exiting')
       self.__fatal('a plugin\'s @botinit failed')
+
+    self.__state = SibylBot.READY
 
   def __fatal(self,msg):
     """exit due to a fatal error"""
@@ -277,7 +287,7 @@ class SibylBot(object):
         except Exception as e:
           msg = 'Error loading plugin "%s"' % f
           self._log_ex(e,msg)
-          self.errors.append(msg)
+          self.errors.append('(startup.sibyl) '+msg)
           continue
 
         mods[f] = mod
@@ -846,7 +856,7 @@ class SibylBot(object):
     """list any errors that occurred during startup"""
 
     if self.errors:
-      return str(self.errors)
+      return ', '.join(self.errors)
     return 'No errors'
 
 ################################################################################
@@ -1046,6 +1056,8 @@ class SibylBot(object):
   def run_forever(self):
     """run the bot catching any unhandled exceptions"""
 
+    self.__state = SibylBot.RUNNING
+
     # unfortunately xmpppy has a couple print statements, so kill stdout
     if self.opt('kill_stdout'):
       sys.stdout = open(os.devnull,'wb')
@@ -1073,6 +1085,7 @@ class SibylBot(object):
         pickle.dump(d,f,-1)
 
     sys.stdout = sys.__stdout__
+    self.__state = SibylBot.EXITED
     return self.__reboot
 
   # this function is thread-safe
@@ -1174,6 +1187,15 @@ class SibylBot(object):
     self.log.debug('  CMD: %s.%s via run_cmd() with %s' %
         (ns,cmd,applied))
     return self.hooks['chat'][cmd](self,mess,args)
+
+  # @param msg (str) the message to log
+  # @param ns (str) an identifier for the caller (e.g. plugin name)
+  def error(self,msg,ns):
+    """add an error to the bot's list accessible via the error chat cmd"""
+
+    if bot.state==SibylBot.INIT:
+      ns = 'startup.'+ns
+    self.errors.append('(%s) %s' % (ns,msg))
 
   # this function is thread-safe
   # @param func (Function) the function to remove from our hooks
