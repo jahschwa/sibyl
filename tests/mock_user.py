@@ -21,6 +21,37 @@
 #
 ################################################################################
 
-import lib
-from lib.sibylbot import SibylBot
-import protocols
+import sys,os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
+
+from lib.protocol import User,Message
+
+class MockUser(User):
+
+  def parse(self,user,typ):
+    self.user = user
+    self.typ = typ
+
+  def get_name(self):
+    return 'NAME:'+self.user
+
+  def get_room(self):
+    if self.typ==Message.PRIVATE:
+      return None
+    return 'MOCK_ROOM'
+
+  def get_base(self):
+    return 'BASE:'+self.user
+
+  def __eq__(self,other):
+    if not isinstance(other,MockUser):
+      return False
+    return str(self)==str(other)
+
+  def __str__(self):
+    user = 'STR:'+self.user
+    if self.get_room():
+      user += ':ROOM'
+    return user
+

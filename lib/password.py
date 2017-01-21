@@ -21,6 +21,14 @@
 #
 ################################################################################
 
-import lib
-from lib.sibylbot import SibylBot
-import protocols
+class Password(object):
+
+  def __init__(self,pword):
+    self.password = pword
+
+  def get(self):
+    return self.password
+
+  def __str__(self):
+    return 'REDACTED'
+  __repr__ = __str__

@@ -21,6 +21,25 @@
 #
 ################################################################################
 
-import lib
-from lib.sibylbot import SibylBot
-import protocols
+import time,logging
+
+class MockLog(object):
+
+  def __init__(self):
+    self.msgs = []
+  def log(self,lvl,msg):
+    self.msgs.append('%s | %s | %s' % (time.asctime(),lvl,msg))
+
+  def debug(self,msg):
+    self.log('DEB',msg)
+  def info(self,msg):
+    self.log('INF',msg)
+  def warning(self,msg):
+    self.log('WAR',msg)
+  def error(self,msg):
+    self.log('ERR',msg)
+  def critical(self,msg):
+    self.log('CRI',msg)
+
+  def getEffectiveLevel(self):
+    return logging.DEBUG

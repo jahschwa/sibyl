@@ -1,35 +1,109 @@
-OVERHAUL list:
+(   ) low priority, ( . ) normal priority, ( ! ) high priority, ( # ) done
+(jah) actively assigned to jah, (jef) actively assigned to jef
+categories: main, plug, conf, docs, cmds, (protocol names), (plug-in names)
 
- - abstract out chat protocol (some sort of plugin framework)
- ! redo DOCS following config rework
- - review logging levels for everything
- ! implement unicode support
+NEXT RELEASE:
 
-TODO list:
+  (jah) [main] abstract out chat protocol
+        ( # ) define API for chat plugins
+        ( # ) write skeleton chat plugin example file
+        ( # ) refactor sibylbot and jabberbot (make jabberbot a chat plug in)
+        ( # ) plug in framework for chat (including config option)
+        ( # ) add config option
+        ( ! ) finalize API with help from @jef
+        ( # ) add docs page about chat plug in API
 
- ! add config to enable/disable plugins
- ! add dependencies to cmds framework
- ! add auto-bw-list entries for chat_ctrl commands
- - comment everything
- - add ping command
- - add isup command
- - add remind command
- - add tell command
- - add stalk command
- - add subtitle logic for files without them
+  (jef) [matr] write matrix plug in
+        ( ! ) work with @jah on above
+        ( ! ) write and test plug in
+        ( ! ) write wiki page
 
-MAYBE list:
+  ( # ) [cli ] write CLI interface
 
- - switch from real JID dict to on execute requests
- - allow user to set requests timeout (currently 60s)
- - read and search media tags (e.g. title, album, artist from mp3)
- - allow searching xbmc library
- - daemonize inside python
+  ( # ) [sock] write socket interface
+        ( # ) write protocol
+        ( # ) write client
 
-DOC list:
+  (jef) [main] write setup.py
 
- - add reconnect_wait option
- - add ping_freq option
- - add command_prefix option
- - add link_echo option
- - add wiki entry on notes
+  ( # ) [main] write systemd module
+
+  ( # ) [plug] finish cmds plug in framework
+        ( # ) implement dependency checking
+        ( # ) add config options to disable plug ins
+        ( # ) implement duplicate checking
+              ( # ) modules
+              ( # ) chat cmds
+              ( # ) bot funcs
+              ( # ) config opts
+
+  (jah) [docs] finish redo ing docs to reflect plug ins changes
+        ( # ) home page
+        ( # ) config
+        ( # ) protocols
+              ( # ) xmpp (note realjid non-anonymous rooms)
+              ( # ) matrix
+        ( # ) b/w list
+        ( # ) writing plug ins intro
+        ( # ) writing plug in example (alarm)
+        ( # ) write protocol sibyl_stdin.py
+        ( . ) tutorial for threading
+        ( . ) tutorial for chat protocol
+        ( # ) about unittests
+        ( # ) add dependencies info to plug in pages
+        ( # ) bookmark.py
+        ( # ) general.py
+        ( # ) library.py
+        ( # ) muc.py
+        ( # ) note.py
+        ( # ) xbmc.py
+
+  (jah) [docs] add extended help text to all commands accessible via "help" cmd
+        ( ! ) review existing help text
+        ( ! ) add more detailed descriptions
+
+  (jah) [main] review logging
+        (   ) audit existing levels
+        (   ) add lots of debug info to all commands
+        ( # ) remove/control "requests" library logging
+
+  ( . ) [main] figure out if unicode is broken anywhere
+
+  (jah) [main] review and add comments to everything
+
+  ( # ) [main] support multiple protocols
+
+  (jah) [plug] add decorator options
+        ( # ) add chat_ctrl parameter to @botcmd decorator
+        ( ! ) add interval parameter to @botidle decorator
+
+  ( # ) [cmds] add tell command (send msg when specified user joins room)
+
+  ( # ) [conf] add kill_stdout option
+  ( # ) [conf] add option to overwrite log
+
+FUTURE:
+
+  (   ) [conf] add custom logging string config option
+  (   ) [conf] add max reconnect attempts option
+  (   ) [conf] allow user to set requests timeout (currently 60s)
+  (   ) [conf] add log rotate option
+
+  (   ) [cmds] add ping command
+  ( . ) [cmds] add isup command
+  (   ) [cmds] add remind command (send msg highlighting user at specified time)
+  (   ) [cmds] add stalk command (send msg when user changes to avilable)
+  ( . ) [cmds] add trigger command (add triggers to say things)
+
+  ( ! ) [docs] move to sphinx and/or readthedocs
+
+  (   ) [sock] proc hooks over socket protocol (full API?)
+
+  (   ) [xmpp] review and refactor (specifically JabberBot leftovers)
+
+MAYBE:
+
+  (   ) [libr] read and search media tags (e.g. title, album, artist)
+  (   ) [libr] allow searching xbmc library
+  (   ) [main] daemonize inside python
+  (   ) [main] move to python3

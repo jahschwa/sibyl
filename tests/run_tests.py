@@ -21,6 +21,35 @@
 #
 ################################################################################
 
-import lib
-from lib.sibylbot import SibylBot
-import protocols
+import sys,os,unittest
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
+
+from lib.util import load_module
+
+def main():
+
+  suite = get_suite()
+  unittest.TextTestRunner().run(suite)
+
+def get_suite():
+
+  suite = unittest.TestSuite()
+
+  pwd = os.path.abspath(os.path.join(os.path.dirname(__file__),'.'))
+  mods = [mod.split('.')[0] for mod in os.listdir(pwd)
+      if mod.endswith('.py') and mod.startswith('test')]
+
+  mods = ['test_protocol']
+
+  for mod in mods:
+    mod = load_module(mod,pwd)
+    try:
+      suite.addTest(mod.suite())
+    except:
+      suite.addTest(unittest.TestLoader().loadTestsFromModule(mod))
+
+  return suite
+
+if __name__=='__main__':
+  main()

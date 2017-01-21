@@ -1,20 +1,60 @@
-#!/usr/bin/env python
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# Sibyl: A modular Python chat bot framework
+# Copyright (c) 2015-2017 Joshua Haas <jahschwa.com>
+#
+# This file is part of Sibyl.
+#
+# Sibyl is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
 
 import random,requests,json,os
 
-from jabberbot import botcmd,botfunc,botinit
-from sibylbot import botconf
-import util
+from sibyl.lib.decorators import *
+import sibyl.lib.util as util
+
+import logging
+log = logging.getLogger(__name__)
+
+__wants__ = ['library']
 
 @botconf
 def conf(bot):
   """add config options"""
 
-  return [{'name' : 'xbmc_ip',
-            'default' : '127.0.0.1',
+  return [{'name' : 'ip',
+            'default' : '127.0.0.1:8080',
+            'required' : True,
             'valid' : bot.conf.valid_ip},
-          {'name' : 'xbmc_user'},
-          {'name' : 'xbmc_pass'}]
+
+          {'name' : 'username'},
+
+          {'name' : 'password'},
+
+          {'name' : 'timeout',
+            'default' : 15,
+            'parse' : bot.conf.parse_int,
+            'valid' : bot.conf.valid_nump}
+  ]
+
+@botinit
+def init(bot):
+  """create empty vars"""
+
+  bot.add_var('last_played',persist=True)
 
 @botcmd
 def remote(bot,mess,args):
@@ -37,13 +77,13 @@ def volume(bot,mess,args):
   """set the player volume percentage - volume %"""
 
   # if no arguments are passed, return the current volume
-  if len(args.strip())==0:
+  if not args:
     result = bot.xbmc('Application.GetProperties',{'properties':['volume']})
     vol = result['result']['volume']
     return 'Current volume: '+str(vol)+'%'
 
   # otherwise try to set the volume
-  args = args.replace('%','')
+  args = args[0].replace('%','')
   try:
     val = int(args.strip())
   except ValueError as e:
@@ -58,7 +98,11 @@ def volume(bot,mess,args):
 def subtitles(bot,mess,args):
   """change the subtitles - subtitles (info|on|off|next|prev|set) [index]"""
 
-  args = args.split(' ')
+  # default action is 'info'
+  if not args:
+    args = ['info']
+
+  # return if nothing is playing
   active = bot.xbmc_active_player()
   if not active or active[1]!='video':
     return 'No video playing'
@@ -67,6 +111,7 @@ def subtitles(bot,mess,args):
   if args[0]=='prev':
     args[0] = 'previous'
 
+  # change subtitles
   if args[0]=='on' or args[0]=='off' or args[0]=='next' or args[0]=='previous':
     bot.xbmc('Player.SetSubtitle',{'playerid':pid,'subtitle':args[0]})
     if args[0]=='off':
@@ -76,11 +121,13 @@ def subtitles(bot,mess,args):
     subs = subs['result']['currentsubtitle']
     return 'Subtitle: '+str(subs['index'])+'-'+subs['language']+'-'+subs['name']
 
+  # get subtitles
   subs = bot.xbmc('Player.GetProperties',{'playerid':pid,
       'properties':['subtitles','currentsubtitle']})
   cur = subs['result']['currentsubtitle']
   subs = subs['result']['subtitles']
 
+  # allow the user to specify an index from the list
   if args[0]=='set':
     try:
       index = int(args[1])
@@ -103,12 +150,12 @@ def subtitles(bot,mess,args):
       bot.subtitles(None,func)
     return
 
+  # else return a list of all the subtitles
   sub = []
   for i in range(0,len(subs)):
     for s in subs:
       if i==s['index']:
         sub.append(subs[i])
-        continue
 
   if not len(sub):
     return 'No subtitles'
@@ -138,9 +185,10 @@ def info(bot,mess,args):
   name = result['result']['item']['label']
 
   # get speed, current time, and total time
-  result = bot.xbmc('Player.GetProperties',{'playerid':pid,'properties':['speed','time','totaltime']})
-  current = result['result']['time']
-  total = result['result']['totaltime']
+  result = bot.xbmc('Player.GetProperties',
+      {'playerid':pid,'properties':['speed','time','totaltime']})
+  current = util.time2str(result['result']['time'])
+  total = util.time2str(result['result']['totaltime'])
 
   # translate speed: 0 = 'paused', 1 = 'playing'
   speed = result['result']['speed']
@@ -148,23 +196,26 @@ def info(bot,mess,args):
   if speed==0:
     status = 'paused'
 
-  return typ.title()+' '+status+' at '+util.time2str(current)+'/'+util.time2str(total)+' - "'+name+'"'
+  return '%s %s at %s/%s - "%s"' % (typ.title(),status,current,total,name)
 
 @botcmd
 def play(bot,mess,args):
   """if xbmc is paused, resume playing"""
 
-  if len(args)==0:
+  # if no args are passed, start playing again
+  if not args:
     playpause(bot,0)
     return
 
-  if os.path.isfile(args):
-    result = bot.xbmc('Player.Open',{'item':{'file':args}})
+  # if args are passed, play the specified file
+  # [TODO] make work with samba shares
+  if args[0].startswith('smb://') or os.path.isfile(args[0]):
+    result = bot.xbmc('Player.Open',{'item':{'file':args[0]}})
     if 'error' in result:
       s = 'Unable to open: '+args
-      bot.log.error(s)
+      log.info(s)
       return s
-    return bot.run_cmd('info',None)
+    return bot.run_cmd('info')
   return 'Invalid file'
 
 @botcmd
@@ -195,7 +246,15 @@ def prev(bot,mess,args):
     return 'Nothing playing'
   (pid,typ) = active
 
-  bot.xbmc('Player.GoTo',{'playerid':pid,'to':'previous'})
+  # the "previous" option for GoTo seems to not work consistently in XBMC
+  params = {'playlistid':pid,'properties':['size']}
+  siz = bot.xbmc('Playlist.GetProperties',params)['result']['size']
+
+  params = {'playerid':pid,'properties':['position']}
+  pos = bot.xbmc('Player.GetProperties',params)['result']['position']
+
+  pos = min(siz-1,max(0,pos-1))
+  bot.run_cmd('jump',[str(pos+1)])
 
 @botcmd
 def next(bot,mess,args):
@@ -219,9 +278,12 @@ def jump(bot,mess,args):
     return 'Nothing playing'
   (pid,typ) = active
 
+  if not args:
+    return 'You must specify a playlist position'
+
   # try to parse the arg to an int
   try:
-    num = int(args.split(' ')[-1])-1
+    num = int(args[0])-1
     bot.xbmc('Player.GoTo',{'playerid':pid,'to':num})
     return None
   except ValueError:
@@ -237,19 +299,13 @@ def seek(bot,mess,args):
     return 'Nothing playing'
   (pid,typ) = active
 
+  if not args:
+    return 'You must specify a time'
+
   # try to parse the arg as a time
   try:
-    t = args.split(' ')[-1]
-    c1 = t.find(':')
-    c2 = t.rfind(':')
-    s = int(t[c2+1:])
-    h = 0
-    if c1==c2:
-      m = int(t[:c1])
-    else:
-      m = int(t[c1+1:c2])
-      h = int(t[:c1])
-    bot.xbmc('Player.Seek',{'playerid':pid,'value':{'hours':h,'minutes':m,'seconds':s}})
+    t = util.str2time(args[0])
+    bot.xbmc('Player.Seek',{'playerid':pid,'value':t})
   except ValueError:
     return 'Times must be in the format m:ss or h:mm:ss'
 
@@ -268,6 +324,8 @@ def restart(bot,mess,args):
 @botcmd
 def hop(bot,mess,args):
   """move forward or back - hop [small|big] [back|forward]"""
+
+  args = ' '.join(args)
 
   # abort if nothing is playing
   active = bot.xbmc_active_player()
@@ -294,8 +352,12 @@ def hop(bot,mess,args):
 def stream(bot,mess,args):
   """stream from [YouTube, Twitch (Live)] - stream url"""
 
-  agent = {'User-agent':'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:46.0) Gecko/20100101 Firefox/46.0'}
-  msg = args
+  if not args:
+    return 'You must specify a URL'
+
+  agent = {'User-agent':'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:46.0) '
+      +'Gecko/20100101 Firefox/46.0'}
+  msg = args[0]
 
   # remove http:// https:// www. from start
   msg = msg.replace('http://','').replace('https://','').replace('www.','')
@@ -312,6 +374,8 @@ def stream(bot,mess,args):
 
   # account for "&start=" custom start times
   msg = msg.replace('&start=','&t=')
+
+  s = 'Unsupported URL'
 
   # parse youtube links
   if msg.lower().startswith('youtube'):
@@ -366,59 +430,79 @@ def stream(bot,mess,args):
     channel = html[start:stop]
 
     # send xbmc request and seek if given custom start time
-    bot.xbmc('Player.Open',{'item':{'file':'plugin://plugin.video.youtube/play/?video_id='+vid}})
+    bot.xbmc('Player.Open',{'item':{'file':
+        'plugin://plugin.video.youtube/play/?video_id='+vid}})
     if tim:
-      bot.run_cmd('seek',tim)
+      bot.run_cmd('seek',[tim])
 
     # respond to the user with video info
     s = 'Streaming "'+title+'" by "'+channel+'" from YouTube'
     if tim:
       s += (' at '+tim)
-    return s
 
   elif 'twitch' in msg.lower():
 
-    url = msg[msg.find('twitch.tv/')+10:]
-    vid = url.split('/')[0]
+    # get the webpage
+    if 'channel=' in msg:
+      vid = msg.split('channel=')[-1].split('&')[0]
+    else:
+      vid = msg.split('twitch.tv/')[-1].split('/')[0]
     html = requests.get('http://twitch.tv/'+vid,headers=agent).text
 
+    # find the stream title
     stream = html.find("property='og:title'")
     stop = html.rfind("'",0,stream)
     start = html.rfind("'",0,stop)+1
     stream = html[start:stop]
 
+    # find the stream description
     title = html.find("property='og:description'")
     stop = html.rfind("'",0,title)
     start = html.rfind("'",0,stop)+1
     title = html[start:stop]
 
-    response = bot.xbmc('Player.Open',{'item':{'file':'plugin://plugin.video.twitch/playLive/'+url}})
-    return 'Streaming "'+title+'" by "'+stream+'" from Twitch Live'
+    response = bot.xbmc('Player.Open',{'item':{'file':
+        'plugin://plugin.video.twitch/playLive/'+vid}})
+    s = 'Streaming "'+title+'" by "'+stream+'" from Twitch Live'
 
-  else:
-    return 'Unsupported URL'
+  bot.last_played = None
+  if bot.has_plugin('bookmark'):
+    bot.last_resume = None
+  return s
 
 @botcmd
 def videos(bot,mess,args):
-  """open a folder as a playlist - videos [include -exclude] [#track] [@match]"""
+  """open folder as a playlist - videos [include -exclude] [#track] [@match]"""
 
-  return files(bot,args,bot.lib_video_dir,1)
+  if not bot.has_plugin('library'):
+    return 'This command not available because plugin "library" not loaded'
+
+  return _files(bot,args,bot.lib_video_dir,1)
 
 @botcmd
 def video(bot,mess,args):
   """search and play a single video - video [include -exclude]"""
 
+  if not bot.has_plugin('library'):
+    return 'This command not available because plugin "library" not loaded'
+
   return _file(bot,args,bot.lib_video_file)
 
 @botcmd
 def audios(bot,mess,args):
-  """open a folder as a playlist - audios [include -exclude] [#track] [@match]"""
+  """open folder as a playlist - audios [include -exclude] [#track] [@match]"""
 
-  return files(bot,args,bot.lib_audio_dir,0)
+  if not bot.has_plugin('library'):
+    return 'This command not available because plugin "library" not loaded'
+
+  return _files(bot,args,bot.lib_audio_dir,0)
 
 @botcmd
 def audio(bot,mess,args):
   """search and play a single audio file - audio [include -exclude]"""
+
+  if not bot.has_plugin('library'):
+    return 'This command not available because plugin "library" not loaded'
 
   return _file(bot,args,bot.lib_audio_file)
 
@@ -426,7 +510,7 @@ def audio(bot,mess,args):
 def fullscreen(bot,mess,args):
   """control fullscreen - fullscreen [toggle|on|off]"""
 
-  args = args.lower()
+  args = ' '.join(args).lower()
   opt = 'toggle'
   if args=='on':
     opt = True
@@ -438,40 +522,47 @@ def fullscreen(bot,mess,args):
 def random_chat(bot,mess,args):
   """play random song - random [include -exclude]"""
 
-  # check if a search term was passed
-  name = args.split(' ')
-  if args=='':
-    _matches = bot.lib_audio_file
-  else:
-    _matches = util.matches(bot.lib_audio_file,name)
+  if not bot.has_plugin('library'):
+    return 'This command not available because plugin "library" not loaded'
 
-  if len(_matches)==0:
+  # check if a search term was passed
+  if not args:
+    matches = bot.lib_audio_file
+  else:
+    matches = util.matches(bot.lib_audio_file,args)
+
+  if len(matches)==0:
     return 'Found 0 matches'
 
   # play a random audio file from the matches
-  rand = random.randint(0,len(_matches)-1)
+  rand = random.randint(0,len(matches)-1)
 
-  result = bot.xbmc('Player.Open',{'item':{'file':_matches[rand]}})
+  result = bot.xbmc('Player.Open',{'item':{'file':matches[rand]}})
   if 'error' in result.keys():
-    s = 'Unable to open: '+_matches[rand]
-    bot.log.error(s)
+    s = 'Unable to open: '+matches[rand]
+    log.error(s)
     return s
 
-  bot.run_cmd('fullscreen','on')
+  bot.run_cmd('fullscreen',['on'])
 
-  return 'Playing "'+_matches[rand]+'"'
+  return 'Playing "'+matches[rand]+'"'
 
 @botcmd(name='xbmc')
 def xbmc_chat(bot,mess,args):
   """send raw JSON request - xbmc method [params]"""
 
-  if len(args)==0:
+  if not args:
     return 'http://http://kodi.wiki/view/JSON-RPC_API/v6'
-  args = args.split(' ')
+
+  text = mess.get_text()
+  args = text.split(' ')[1:]
+
+  # if specified convert params to a dict
   params = None
   if len(args)>1:
     params = json.loads(' '.join(args[1:]))
-    
+
+  # make the request and check for an error
   result = bot.xbmc(args[0],params)
   if 'error' in result:
     return str(result['error'])
@@ -481,19 +572,24 @@ def xbmc_chat(bot,mess,args):
 def shuffle(bot,mess,args):
   """change shuffle - shuffle [check|on|off]"""
 
+  if not args:
+    args = ['check']
+
   active = bot.xbmc_active_player()
   if active is None:
     return 'Nothing playing'
   (pid,typ) = active
-  
-  if args=='on':
+
+  # set shuffle
+  if args[0]=='on':
     bot.xbmc('Player.SetShuffle',{'playerid':pid,'shuffle':True})
     return 'Enabled shuffle'
 
-  if args=='off':
+  if args[0]=='off':
     bot.xbmc('Player.SetShuffle',{'playerid':pid,'shuffle':False})
     return 'Disabled shuffle'
 
+  # return the shuffle status of the current player
   params = {'playerid':pid,'properties':['shuffled']}
   result = bot.xbmc('Player.GetProperties',params)['result']['shuffled']
   if result:
@@ -501,16 +597,20 @@ def shuffle(bot,mess,args):
   return 'Shuffle is disabled'
 
 @botfunc
-def xbmc(bot,method,params=None):
+def xbmc(bot,method,params=None,timeout=None):
   """wrapper method to always provide IP to static method"""
 
-  return util.xbmc(bot.xbmc_ip,method,params,bot.xbmc_user,bot.xbmc_pass)
+  timeout = (timeout or bot.opt('xbmc.timeout'))
+  return util.xbmc(bot.opt('xbmc.ip'),method,params,
+      bot.opt('xbmc.username'),bot.opt('xbmc.password'),timeout)
 
 @botfunc
-def xbmc_active_player(bot):
+def xbmc_active_player(bot,timeout=None):
   """wrapper method to always provide IP to static method"""
 
-  return util.xbmc_active_player(bot.xbmc_ip,bot.xbmc_user,bot.xbmc_pass)
+  timeout = (timeout or bot.opt('xbmc.timeout'))
+  return util.xbmc_active_player(bot.opt('xbmc.ip'),
+      bot.opt('xbmc.username'),bot.opt('xbmc.password'),timeout)
 
 def playpause(bot,target):
   """helper function for play() and pause()"""
@@ -522,25 +622,26 @@ def playpause(bot,target):
   (pid,typ) = active
 
   # check player status before sending PlayPause command
-  speed = bot.xbmc('Player.GetProperties',{'playerid':pid,'properties':["speed"]})
+  speed = bot.xbmc('Player.GetProperties',
+      {'playerid':pid,'properties':["speed"]})
   speed = speed['result']['speed']
   if speed==target:
     bot.xbmc('Player.PlayPause',{"playerid":pid})
 
-def files(bot,cmd,dirs,pid):
+def _files(bot,args,dirs,pid):
   """helper function for videos() and audios()"""
 
+  if not args:
+    return 'You must specify a search term'
+  cmd = ' '.join(args)
+
   # check for item# as last arg and @ for item match string
-  args = cmd.split(' ')
   last = args[-1]
   num = None
   search = None
-  if '@' in cmd:
-    i = cmd.find('@')
-    if i==0:
-      return 'Missing required search term before @match'
-    args = cmd[:i].strip().split(' ')
-    search = cmd[i+1:].strip().split(' ')
+
+  if last.startswith('@'):
+    search = util.get_args(last[1:])
   elif last.startswith('#'):
     try:
       num = int(last[1:])-1
@@ -548,45 +649,47 @@ def files(bot,cmd,dirs,pid):
       pass
 
   # default is 0 if not specified
-  name = args
-  if num is not None:
-    name = args[:-1]
-  elif search is None:
+  if (search is not None) or (num is not None):
+    args = args[:-1]
+  if not search and not num:
     num = 0
 
   # find matches and respond if len(matches)!=1
-  _matches = util.matches(dirs,name)
+  matches = util.matches(dirs,args)
 
-  if len(_matches)==0:
+  if len(matches)==0:
     return 'Found 0 matches'
 
   # default to top dir if every match is a sub dir
-  _matches = util.reducetree(_matches)
+  matches = util.reducetree(matches)
 
-  if len(_matches)>1:
-    if bot.max_matches<1 or len(_matches)<=bot.max_matches:
-      return 'Found '+str(len(_matches))+' matches: '+util.list2str(_matches)
+  if len(matches)>1:
+    maxm = bot.opt('library.max_matches')
+    if maxm<1 or len(matches)<=maxm:
+      return 'Found '+str(len(matches))+' matches: '+util.list2str(matches)
     else:
-      return 'Found '+str(len(_matches))+' matches'
+      return 'Found '+str(len(matches))+' matches'
 
   # if there was 1 match, add the whole directory to a playlist
   # also check for an error opening the directory
   bot.xbmc('Playlist.Clear',{'playlistid':pid})
 
-  result = bot.xbmc('Playlist.Add',{'playlistid':pid,'item':{'directory':_matches[0]}})
+  result = bot.xbmc('Playlist.Add',{'playlistid':pid,'item':
+      {'directory':matches[0]}},timeout=60)
   if 'error' in result.keys():
-    s = 'Unable to open: '+_matches[0]
-    bot.log.error(s)
+    s = 'Unable to open: '+matches[0]
+    log.error(s)
     return s
 
   msg = ''
-  
+
   # find first item matching @search
   if search:
     params = {'playlistid':pid,'properties':['file']}
     items = bot.xbmc('Playlist.GetItems',params)['result']['items']
     items = [x['file'] for x in items]
     item_matches = util.matches(items,search,False)
+
     if len(item_matches):
       num = items.index(item_matches[0])
       msg += 'Found matching item "%s" --- ' % os.path.basename(item_matches[0])
@@ -595,40 +698,44 @@ def files(bot,cmd,dirs,pid):
       msg += 'No item matching "%s" --- ' % ' '.join(search)
 
   bot.xbmc('Player.Open',{'item':{'playlistid':pid,'position':num}})
-  bot.run_cmd('fullscreen','on')
+  bot.run_cmd('fullscreen',['on'])
 
   # set last_played for bookmarking
-  bot.last_played = (pid,_matches[0])
+  bot.last_played = (pid,matches[0])
 
-  return msg+'Playlist from "'+_matches[0]+'" starting with #'+str(num+1)
+  return msg+'Playlist from "'+matches[0]+'" starting with #'+str(num+1)
 
 def _file(bot,args,dirs):
   """helper function for video() and audio()"""
 
-  name = args.split(' ')
+  if not args:
+    return 'You must specify a search term'
 
   # find matches and respond if len(matches)!=1
-  _matches = util.matches(dirs,name)
+  matches = util.matches(dirs,args)
 
-  if len(_matches)==0:
+  if len(matches)==0:
     return 'Found 0 matches'
 
-  if len(_matches)>1:
-    if bot.max_matches<1 or len(_matches)<=bot.max_matches:
-      return 'Found '+str(len(_matches))+' matches: '+util.list2str(_matches)
+  if len(matches)>1:
+    maxm = bot.opt('library.max_matches')
+    if maxm<1 or len(matches)<=maxm:
+      return 'Found '+str(len(matches))+' matches: '+util.list2str(matches)
     else:
-      return 'Found '+str(len(_matches))+' matches'
+      return 'Found '+str(len(matches))+' matches'
 
   # if there was 1 match, play the file, and check for not found error
-  result = bot.xbmc('Player.Open',{'item':{'file':_matches[0]}})
+  result = bot.xbmc('Player.Open',{'item':{'file':matches[0]}})
   if 'error' in result.keys():
-    s = 'Unable to open: '+_matches[0]
-    bot.log.error(s)
+    s = 'Unable to open: '+matches[0]
+    log.error(s)
     return s
 
-  bot.run_cmd('fullscreen','on')
+  bot.run_cmd('fullscreen',['on'])
 
   # clear last_played
   bot.last_played = None
+  if bot.has_plugin('bookmark'):
+    bot.last_resume = None
 
-  return 'Playing "'+_matches[0]+'"'
+  return 'Playing "'+matches[0]+'"'

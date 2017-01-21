@@ -14,7 +14,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -58,3 +57,9 @@ target/
 
 # Config
 sibyl.conf
+
+# User files
+.bash_history
+.bash_logout
+.bashrc
+.profile

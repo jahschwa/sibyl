@@ -1,0 +1,12 @@
+[Unit]
+Description=Sibyl chat bot
+After=network-online.target
+
+[Service]
+User=sibyl
+Environment=LANG=en_US.UTF-8
+ExecStart=/opt/sibyl/run.py
+
+[Install]
+Alias=sibyl.service
+WantedBy=multi-user.target

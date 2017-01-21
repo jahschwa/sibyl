@@ -1,38 +1,63 @@
-#!/usr/bin/env python
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# Sibyl: A modular Python chat bot framework
+# Copyright (c) 2015-2017 Joshua Haas <jahschwa.com>
+#
+# This file is part of Sibyl.
+#
+# Sibyl is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
 
-import os
+import os,codecs
 
-from jabberbot import botcmd,botfunc,botinit
-from sibylbot import botconf
-from util import *
+from sibyl.lib.decorators import *
+import sibyl.lib.util as util
+
+import logging
+log = logging.getLogger(__name__)
+
+__wants__ = ['xbmc']
 
 @botconf
 def conf(bot):
   """add config options"""
 
-  return [{'name':'note_file',
-          'default':'data/sibyl_note.txt',
-          'valid':bot.conf.valid_file}]
+  return {'name':'file',
+          'default':'data/notes.txt',
+          'valid':bot.conf.valid_wfile}
 
 @botinit
 def init(bot):
   """initialize note list"""
-  
-  if os.path.isfile(bot.note_file):
-    bot.notes = note_parse(bot)
+
+  if os.path.isfile(bot.opt('note.file')):
+    notes = note_parse(bot)
   else:
-    with open(bot.note_file,'w') as f:
-      bot.notes = []
+    with open(bot.opt('note.file'),'w') as f:
+      notes = []
+
+  bot.add_var('notes',notes)
 
 @botcmd
 def note(bot,mess,args):
   """add a note - note (show|add|playing|remove) [body|num]"""
 
-  args = args.split(' ')
-
   # default behavior is "show"
-  if args[0]=='':
-    args[0] = 'show'
+  if not args:
+    args = ['show']
   if args[0] not in ['show','add','playing','remove']:
     args.insert(0,'show')
 
@@ -44,14 +69,19 @@ def note(bot,mess,args):
 
   # add the currently playing file to the body of the note then do "add"
   if args[0]=='playing':
+
+    if not bot.has_plugin('xbmc'):
+      return 'This feature not available because plugin "xbmc" not loaded'
+
     args[0] = 'add'
 
     active = bot.xbmc_active_player()
     if not active:
       return 'Nothing playing; note not added'
     (pid,typ) = active
-    result = bot.xbmc('Player.GetProperties',{'playerid':pid,'properties':['time']})
-    t = str(time2str(result['result']['time']))
+    params = {'playerid':pid,'properties':['time']}
+    result = bot.xbmc('Player.GetProperties',params)
+    t = str(util.time2str(result['result']['time']))
 
     result = bot.xbmc('Player.GetItem',{'playerid':pid,'properties':['file']})
     fil = os.path.basename(str(result['result']['item']['file']))
@@ -105,7 +135,8 @@ def note(bot,mess,args):
 
   # if args[1] is text, show matching notes
   search = args[1].lower()
-  matches = [i for i in range(0,len(bot.notes)) if search in bot.notes[i].lower()]
+  matches = [i for i in range(0,len(bot.notes))
+      if search in bot.notes[i].lower()]
 
   s = 'Found '+str(len(matches))+' matches: '
   for i in matches:
@@ -115,11 +146,11 @@ def note(bot,mess,args):
 def note_parse(bot):
   """read the note file into a list"""
 
-  with open(bot.note_file,'r') as f:
+  with codecs.open(bot.opt('note.file'),'r',encoding='utf8') as f:
     lines = f.readlines()
 
   notes = [l.strip() for l in lines if l!='\n']
-  bot.log.info('Read '+str(len(notes))+' notes from "'+bot.note_file+'"')
+  log.info('Read '+str(len(notes))+' notes from "'+bot.opt('note.file')+'"')
   return notes
 
 def note_write(bot):
@@ -128,5 +159,5 @@ def note_write(bot):
   lines = [l+'\n' for l in bot.notes]
   lines.append('\n')
 
-  with open(bot.note_file,'w') as f:
+  with codecs.open(bot.opt('note.file'),'w',encoding='utf8') as f:
     f.writelines(lines)

@@ -1,0 +1,219 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# Sibyl: A modular Python chat bot framework
+# Copyright (c) 2015-2017 Joshua Haas <jahschwa.com>
+#
+# This file is part of Sibyl.
+#
+# Sibyl is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+#
+# If you are implementing a new Protocol you must override the @abstractmethod
+# methods in both the User class and the Protocol class
+#
+# For Messages, you are required to at least use OFFLINE and AVAILABLE;
+# all other status types are optional and protocol-dependant
+#
+# Some functions in Protocol are required to call methods from SibylBot and
+# these are noted with "@call" in general this should be the method's last line
+#
+################################################################################
+
+import json,logging
+
+import dbus
+
+from lib.protocol import *
+from lib.decorators import botconf
+
+################################################################################
+# Config options                                                               #
+################################################################################
+
+@botconf
+def conf(bot):
+  return [{'name':'bus_name','default':None,'required':True}]
+
+################################################################################
+# DUser(User) class                                                            #
+################################################################################
+
+class DUser(object):
+
+  def parse(self,user,typ):
+
+    d = json.loads(user)
+    self.name = d['name']
+    self.room = d['room']
+    self.base = d['base']
+    if 'real' in d:
+      self.real = DUser(d['real'],d['real']['type'])
+
+    self.pfmt = d['priv-str']
+    self.gfmt = d['group-str']
+    self.typ = typ
+
+  def get_name(self):
+    return self.name
+
+  def get_room(self):
+    return self.room
+
+  def get_base(self):
+    return self.base
+
+  def __eq__(self,other):
+    if not isinstance(other,DUser):
+      return False
+    return str(self)==str(other)
+
+  def __str__(self):
+
+    d = {'name':self.name,
+          'room':self.room,
+          'base':self.base}
+
+    if self.typ==Message.GROUP:
+      return self.gfmt % d
+    return self.pfmt % d
+
+################################################################################
+# DBus(Protocol) class                                                         #
+################################################################################
+
+class DBus(Protocol):
+
+  def setup(self):
+
+    self.bus = dbus.SystemBus()
+    self.service = self.bus.get_object(self.opt('bus_name'),'/')
+
+    self.conf = self.service.
+
+  def connect(self):
+
+    self.
+
+  # @return (bool) True if we are connected to the server
+  @abstractmethod
+  def is_connected(self):
+    pass
+
+  # called whenever the bot detects a disconnect as insurance
+  @abstractmethod
+  def disconnected(self):
+    pass
+
+  # receive/process messages and call bot._cb_message()
+  # this function should take/block for around 1 second if possible
+  # must ignore msgs from myself and from users not in any of our rooms
+  # @call bot._cb_message(Message) upon receiving a valid status or message
+  # @return (Message) the received Message
+  # @raise (PingTimeout) if implemented
+  # @raise (ConnectFailure) if disconnected
+  # @raise (ServerShutdown) if server shutdown
+  @abstractmethod
+  def process(self):
+    pass
+
+  # called when the bot is exiting for whatever reason
+  @abstractmethod
+  def shutdown(self):
+    pass
+
+  # send a message to a user
+  # @param text (str,unicode) text to send
+  # @param to (User) send to a User
+  # @param to (str) send to a room
+  @abstractmethod
+  def send(self,text,to):
+    pass
+
+  # send a message with text to every user in a room
+  # optionally note that the broadcast was requested by a specific User
+  # @param text (str,unicode) body of the message
+  # @param room (str) room to broadcast in
+  # @param frm (User) [None] the User requesting the broadcast
+  @abstractmethod
+  def broadcast(self,text,room,frm=None):
+    pass
+
+  # join the specified room user the specified nick and password
+  # @call bot._cb_join_room_success(room) on successful join
+  # @call bot._cb_join_room_failure(room,error) on failed join
+  # @param room (str) the room to join
+  # @param nick (str) the nick name to use in the room
+  # @param pword (str) [None] the password for the room
+  @abstractmethod
+  def join_room(self,room,nick,pword=None):
+    pass
+
+  # part the specified room
+  # @param room (str) the room to leave
+  @abstractmethod
+  def part_room(self,room):
+    pass
+
+  # @param room (str) the room to check
+  # @return (bool) whether we are currently connected and in the room
+  @abstractmethod
+  def in_room(self,room):
+    pass
+
+  # return the rooms we have joined in the past and present
+  # @param in_only (bool) [False] only return the rooms we are currently in
+  # @return (list of str) our rooms
+  @abstractmethod
+  def get_rooms(self,in_only=False):
+    pass
+
+  # @param room (str) the room to query
+  # @return (list of User) the Users in the specified room
+  @abstractmethod
+  def get_occupants(self,room):
+    pass
+
+  # @param room (str) the room to query
+  # @return (str) the nick name we are using in the specified room
+  @abstractmethod
+  def get_nick(self,room):
+    pass
+
+  # @param room (str) the room to query
+  # @param nick (str) the nick to examine
+  # @return (User) the "real" User behind the specified nick/room
+  @abstractmethod
+  def get_real(self,room,nick):
+    pass
+
+  # create a new User using this Protocol's custom User subclass
+  # @param user (str) the new username to convert
+  # @param typ (int) Message type enum (either PRIVATE or GROUP)
+  @abstractmethod
+  def new_user(self,user,typ):
+    pass
+
+  # @param bot (SibylBot) the sibyl instance
+  # @param log (Logger) the logger this protocol should use
+  def __init__(self,bot,log):
+    self.bot = bot
+    self.log = log
+    self.setup()
+
+  # @param opt (str) name of the option to get
+  # @return (object) the value of the option
+  def opt(self,opt):
+    return self.bot.opt(opt)

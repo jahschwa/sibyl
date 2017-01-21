@@ -1,39 +1,76 @@
-#!/usr/bin/env python
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# Sibyl: A modular Python chat bot framework
+# Copyright (c) 2015-2017 Joshua Haas <jahschwa.com>
+#
+# This file is part of Sibyl.
+#
+# Sibyl is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
 
-import os,time
+import os,time,codecs
 
-from jabberbot import botcmd,botfunc,botinit
-from sibylbot import botconf
-from util import *
+from sibyl.lib.decorators import *
+import sibyl.lib.util as util
+
+import logging
+log = logging.getLogger(__name__)
+
+__depends__ = ['xbmc','library']
 
 @botconf
 def conf(bot):
   """add config options"""
 
-  return [{'name':'bm_file',
-          'default':'data/sibyl_bm.txt',
-          'valid':bot.conf.valid_file}]
+  return [{'name':'file',
+          'default':'data/bookmarks.txt',
+          'valid':bot.conf.valid_wfile},
+          {'name':'resume_next',
+          'default':False,
+          'parse':bot.conf.parse_bool}]
 
 @botinit
 def init(bot):
   """initialize bookmark dict and last played str for bookmarking"""
-  
-  if os.path.isfile(bot.bm_file):
-    bot.bm_store = bm_parse(bot)
+
+  if os.path.isfile(bot.opt('bookmark.file')):
+    bm_store = bm_parse(bot)
   else:
-    with open(bot.bm_file,'w') as f:
-      bot.bm_store = {}
-  bot.last_played = None
+    with open(bot.opt('bookmark.file'),'w') as f:
+      bm_store = {}
+
+  bot.add_var('bm_store',bm_store)
+  bot.add_var('last_resume',persist=True)
+  # note the "last_played" var is created in xbmc.py so don't do it here
 
 @botcmd
 def bookmark(bot,mess,args):
-  """manage bookmarks - bookmarks [show|set|remove] [name]"""
+  """manage bookmarks - bookmark [show|set|remove|update] [name]"""
 
-  args = args.split(' ')
+  if not args:
+    args = ['show']
+
   if args[0]=='set':
     # check if last_played is set
     if bot.last_played is None:
       return 'No active audios or videos playlist to bookmark'
+
+    # check if anything is actually playing
+    if bot.xbmc_active_player() is None:
+      return 'Nothing playing'
 
     # check if a name was passed
     name = bot.last_played[1]
@@ -44,15 +81,17 @@ def bookmark(bot,mess,args):
     # get info for bookmark
     pid = bot.last_played[0]
     path = bot.last_played[1]
-    result = bot.xbmc('Player.GetProperties',{'playerid':pid,'properties':['position','time']})
+    params = {'playerid':pid,'properties':['position','time']}
+    result = bot.xbmc('Player.GetProperties',params)
     pos = result['result']['position']
-    t = str(time2str(result['result']['time']))
+    t = str(util.time2str(result['result']['time']))
     add = time.time()
     result = bot.xbmc('Player.GetItem',{'playerid':pid,'properties':['file']})
     fil = os.path.basename(str(result['result']['item']['file']))
 
     # note that the position is stored 0-indexed
-    bot.bm_store[name] = {'path':path,'add':add,'time':t,'pid':pid,'pos':pos,'file':fil}
+    bot.bm_store[name] = {'path':path,'add':add,'time':t,
+                          'pid':pid,'pos':pos,'file':fil}
     bm_update(bot,name,bot.bm_store[name])
     return 'Bookmark added for "'+name+'" item '+str(pos+1)+' at '+t
 
@@ -61,7 +100,12 @@ def bookmark(bot,mess,args):
       return 'To remove all bookmarks use "bookmarks remove *"'
     if not bm_remove(bot,args[1]):
       return 'Bookmark "'+name+'" not found'
-    return
+    return 'Removed bookmark "%s"' % args[1]
+
+  elif args[0]=='update':
+    if not bot.last_resume:
+      return 'No active bookmark'
+    return bot.run_cmd('bookmark',['set',bot.last_resume])
 
   elif args[0]=='show':
     args = args[1:]
@@ -84,33 +128,38 @@ def bookmark(bot,mess,args):
     item = bot.bm_store[m]
     pos = item['pos']
     t = item['time']
-    fil = item['file']
-    entries.append('"'+m+'" at item '+str(pos+1)+' and time '+t+' which is "'+fil+'"')
+    f = item['file']
+    entries.append('"%s" at item %s and time %s which is "%s"' % (m,pos+1,t,f))
   if len(entries)==0:
     return 'Found 0 bookmarks'
   if len(entries)==1:
     return 'Found 1 bookmark: '+str(entries[0])
-  return 'Found '+str(len(entries))+' bookmarks: '+list2str(entries)
+  return 'Found '+str(len(entries))+' bookmarks: '+util.list2str(entries)
 
 @botcmd
 def resume(bot,mess,args):
   """resume playing a playlist - resume [name] [next]"""
+
+  if not args:
+    args = ['']
 
   # if there are no bookmarks return
   if len(bot.bm_store)==0:
     return 'No bookmarks'
 
   # check for "next" as last arg
-  opts = args.strip().split(' ')
-  start_next = (opts[-1]=='next')
-  if start_next:
-    opts = opts[:-1]
-    args = ' '.join(opts)
+  start_next = (args[-1]=='next')
+  start_current = (args[-1]=='current')
+
+  if start_next or start_current:
+    args = args[:-1]
+
+  start_next |= (bot.opt('bookmark.resume_next') and not start_current)
 
   # check if a name was passed
   name = bm_recent(bot)
-  if len(args)>0:
-    name = args
+  if args and args[0]:
+    name = ' '.join(args)
 
   # get info from bookmark
   if name not in bot.bm_store.keys():
@@ -126,7 +175,8 @@ def resume(bot,mess,args):
     pos += 1
 
   # note that the user-facing functions assume 1-indexing
-  args = '"'+path+'" #'+str(pos+1)
+  args = [path,'#'+str(pos+1)]
+
   if pid==0:
     result = bot.run_cmd('audios',args)
   elif pid==1:
@@ -134,25 +184,27 @@ def resume(bot,mess,args):
   else:
     return 'Error in bookmark for "'+name+'": invalid pid'+pid
 
-  if not start_next:
-    bot.run_cmd('seek',t)
+  if not start_next and util.str2sec(t)>10:
+    bot.run_cmd('seek',[t])
     result += ' at '+t
 
+  bot.last_resume = name
   return result
 
 def bm_parse(bot):
   """read the bm_file into a dict"""
 
   d = {}
-  with open(bot.bm_file,'r') as f:
-    lines = [l.strip() for l in f.readlines() if l!='\n']
+  with codecs.open(bot.opt('bookmark.file'),'r',encoding='utf8') as f:
+    lines = [l.strip() for l in f.readlines() if l.strip()]
 
   # tab-separated each line is: name path pid position file time added
   for l in lines:
     (name,props) = bm_unformat(l)
     d[name] = props
 
-  bot.log.info('Parsed '+str(len(d))+' bookmarks from "'+bot.bm_file+'"')
+  fname = bot.opt('bookmark.file')
+  log.info('Parsed %s bookmarks from "%s"' % (len(d),fname))
   return d
 
 def bm_update(bot,name,props):
@@ -170,7 +222,7 @@ def bm_add(bot,name,props):
   bot.bm_store[name] = props
 
   # the bookmark file should always end in a newline
-  with open(bot.bm_file,'a') as f:
+  with codecs.open(bot.opt('bookmark.file'),'a',encoding='utf8') as f:
     f.write(bm_format(name,props)+'\n')
 
 def bm_remove(bot,name):
@@ -180,7 +232,7 @@ def bm_remove(bot,name):
   # passing "*" removes all bookmarks
   if name=='*':
     bot.bm_store = {}
-    with open(bot.bm_file,'w') as f:
+    with codecs.open(bot.opt('bookmark.file'),'w',encoding='utf8') as f:
       f.write('')
     return True
 
@@ -190,12 +242,12 @@ def bm_remove(bot,name):
 
   del bot.bm_store[name]
 
-  with open(bot.bm_file,'r') as f:
+  with codecs.open(bot.opt('bookmark.file'),'r',encoding='utf8') as f:
     lines = f.readlines()
 
   lines = [l for l in lines if l.split('\t')[0]!=name]
 
-  with open(bot.bm_file,'w') as f:
+  with codecs.open(bot.opt('bookmark.file'),'w',encoding='utf8') as f:
     f.writelines(lines)
 
   # return True if name was removed
@@ -206,7 +258,7 @@ def bm_format(name,props):
 
   order = ['path','pid','pos','file','time','add']
   for prop in order:
-    name += ('\t'+str(props[prop]))
+    name += ('\t'+unicode(props[prop]))
   return name
 
 def bm_unformat(line):
