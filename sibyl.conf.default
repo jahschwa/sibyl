@@ -232,7 +232,7 @@ protocols = cli
 #xbmc.timeout = 15
 
 ################################################################################
-# Advanced options
+# Logging options
 ################################################################################
 
 # Log level can be: critical, error, warning, info, debug
@@ -250,6 +250,10 @@ protocols = cli
 
 # If True log a debug message every time a hook is run (excluding idle hooks)
 #log_hooks = False
+
+################################################################################
+# Advanced options
+################################################################################
 
 # Directory to search for plugins; note the default uses relative paths
 #cmd_dir = cmds
