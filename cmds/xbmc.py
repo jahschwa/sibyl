@@ -200,7 +200,7 @@ def info(bot,mess,args):
 
 @botcmd
 def play(bot,mess,args):
-  """if xbmc is paused, resume playing"""
+  """unpause, or play a file - play [/path | http://url | smb://server/share/path]"""
 
   # if no args are passed, start playing again
   if not args:
@@ -208,8 +208,9 @@ def play(bot,mess,args):
     return
 
   # if args are passed, play the specified file
-  # [TODO] make work with samba shares
-  if args[0].startswith('smb://') or os.path.isfile(args[0]):
+  # [TODO] make work with samba shares requiring passwords
+  if (args[0].startswith('smb://') or os.path.isfile(args[0])
+      or args[0].startswith('http')):
     result = bot.xbmc('Player.Open',{'item':{'file':args[0]}})
     if 'error' in result:
       s = 'Unable to open: '+args
