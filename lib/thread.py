@@ -50,7 +50,7 @@ class SmartThread(threading.Thread):
     try:
       reply = self.func(self.bot,self.mess,self.args)
     except Exception as e:
-      self.bot._log_ex(e,
+      self.bot.log_ex(e,
           'Error while executing threaded cmd "%s":' % self.name,
           '  Message text: "%s"' % self.mess.get_text())
       reply = self.bot.MSG_ERROR_OCCURRED
@@ -65,6 +65,6 @@ class SmartThread(threading.Thread):
     try:
       self.func(self.bot)
     except Exception as e:
-      self.bot._log_ex(e,
+      self.bot.log_ex(e,
           'Error while executing threaded idle hook "%s":' % self.name)
       self.bot.del_hook(self.func,'idle')

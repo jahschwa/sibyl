@@ -151,7 +151,7 @@ class SibylBot(object):
         with open(self.opt('state_file'),'rb') as f:
           self.__state = pickle.load(f)
     except Exception as e:
-      self._log_ex(e,'Unable to load persistent variables',
+      self.log_ex(e,'Unable to load persistent variables',
           'Unpickling of "%s" failed' % self.opt('state_file'))
     self.__persist = []
 
@@ -286,7 +286,7 @@ class SibylBot(object):
           mod = util.load_module(f,d)
         except Exception as e:
           msg = 'Error loading plugin "%s"' % f
-          self._log_ex(e,msg)
+          self.log_ex(e,msg)
           self.errors.append('(startup.sibyl) '+msg)
           continue
 
@@ -430,7 +430,7 @@ class SibylBot(object):
       try:
         func(self,*args)
       except Exception as e:
-        self._log_ex(e,'Exception running %s hook %s:' % (hook,name))
+        self.log_ex(e,'Exception running %s hook %s:' % (hook,name))
         errors[name] = e
 
     return errors
@@ -468,7 +468,7 @@ class SibylBot(object):
           counts[name] = max(counts.get(name,0)-1,0)
 
       except Exception as e:
-        self._log_ex(e,'Exception running idle hook %s:' % name)
+        self.log_ex(e,'Exception running idle hook %s:' % name)
         self.log.critical('Deleting idle hook %s' % name)
         del self.hooks['idle'][name]
 
@@ -600,7 +600,7 @@ class SibylBot(object):
       else:
         reply = func(self,mess,args)
     except Exception as e:
-      self._log_ex(e,
+      self.log_ex(e,
           'Error while executing cmd "%s":' % cmd_name,
           '  Message text: "%s"' % text)
 
@@ -692,18 +692,6 @@ class SibylBot(object):
 
     filename = os.path.basename(inspect.getfile(func))
     return os.path.extsep.join(filename.split(os.path.extsep)[:-1])
-
-  def _log_ex(self,ex,short_msg,long_msg=None):
-    """log the exception and traceback"""
-
-    full = traceback.format_exc(ex)
-    short = full.split('\n')[-2]
-
-    self.log.error(short_msg)
-    self.log.error('  %s' % short)
-    if long_msg:
-      self.log.debug(long_msg)
-    self.log.debug(full)
 
   def __send(self,text,to,bcast=False,frm=None,users=None,hook=True):
     """actually send a message"""
@@ -1203,6 +1191,21 @@ class SibylBot(object):
     if bot.state==SibylBot.INIT:
       ns = 'startup.'+ns
     self.errors.append('(%s) %s' % (ns,msg))
+
+  # @param ex (Exception) the exception to log
+  # @param short_msg (str) text to log at logging.ERROR
+  # @param long_msg (str) [None] text to log at logging.DEBUG
+  def log_ex(self,ex,short_msg,long_msg=None):
+    """log the exception name (logging.ERROR) and traceback (logging.DEBUG)"""
+
+    full = traceback.format_exc(ex)
+    short = full.split('\n')[-2]
+
+    self.log.error(short_msg)
+    self.log.error('  %s' % short)
+    if long_msg:
+      self.log.debug(long_msg)
+    self.log.debug(full)
 
   # this function is thread-safe
   # @param func (Function) the function to remove from our hooks
