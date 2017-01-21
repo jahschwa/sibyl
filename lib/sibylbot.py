@@ -85,6 +85,7 @@ class SibylBot(object):
   def __init__(self,conf_file='sibyl.conf'):
     """create a new sibyl instance, load: conf, protocol, plugins"""
 
+    self.__stats = {'born':time.time(),'cmds':0,'ex':0,'forbid':0,'discon':0}
     self.__state = SibylBot.INIT
 
     # keep track of errors for use with "errors" command
@@ -163,7 +164,8 @@ class SibylBot(object):
     # load plug-in hooks from this file
     self.hooks = {x:{} for x in ['chat','init','down','con','discon','recon',
         'rooms','roomf','msg','priv','group','status','err','idle','send']}
-    self.__load_funcs(self,'sibylbot',silent=True)
+    self.log.info('Loading built-in commands from "sibylbot"')
+    self.__load_funcs(self,'sibylbot')
 
     # exit if we failed to load plugin hooks from self.cmd_dir
     if not self.__load_plugins(self.opt('cmd_dir')):
@@ -569,6 +571,7 @@ class SibylBot(object):
       self.log.info('FORBIDDEN: %s.%s from %s:%s with %s'
           % (ns,cmd_name,pname,real,applied))
       self.__send("You don't have permission to run \"%s\"" % cmd_name,frm)
+      self.__stats['forbid'] += 1
       return
 
     # if the command was redo, retrieve the last command from that user
@@ -593,6 +596,7 @@ class SibylBot(object):
 
     # execute the command and catch exceptions
     reply = None
+    self.__stats['cmds'] += 1
     try:
       if func._sibylbot_dec_chat_thread:
         self.log.debug('Spawning new thread for cmd "%s"' % cmd_name)
@@ -600,6 +604,7 @@ class SibylBot(object):
       else:
         reply = func(self,mess,args)
     except Exception as e:
+      self.__stats['ex'] += 1
       self.log_ex(e,
           'Error while executing cmd "%s":' % cmd_name,
           '  Message text: "%s"' % text)
@@ -854,6 +859,30 @@ class SibylBot(object):
       return 'No matching errors'
     return ', '.join(matches)
 
+  @staticmethod
+  @botcmd(name='stats')
+  def __stats_cmd(self,mess,args):
+    """respond with some stats"""
+
+    return (('Born: %s --- Cmds-Run: %s --- Cmds-Forbid: %s --- ' +
+        'Cmds-Error: %s --- Disconnects: %s') %
+        (time.asctime(time.localtime(self.__stats['born'])),
+        self.__stats['cmds'],self.__stats['forbid'],
+        self.__stats['ex'],self.__stats['discon']))
+
+  @staticmethod
+  @botcmd(name='uptime')
+  def __uptime(self,mess,args):
+    """respond with the bot's current uptime"""
+
+    diff = time.time()-self.__stats['born']
+    days = int(diff/(60*60*24))
+    hrs = int((diff % (60*60*24))/(60*60))
+    mins = int((diff % (60*60))/60)
+    secs = diff % 60
+
+    return 'Up for %s days and %.2d:%.2d:%.2d' % (days,hrs,mins,secs)
+
 ################################################################################
 # FFF - UI Functions
 ################################################################################
@@ -979,6 +1008,7 @@ class SibylBot(object):
         proto = self.protocols[name]
         proto.disconnected()
         self.__run_hooks('discon',name,e)
+        self.__stats['discon'] += 1
 
         if not self.opt('catch_except'):
           raise e
