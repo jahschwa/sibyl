@@ -853,11 +853,18 @@ class SibylBot(object):
   @staticmethod
   @botcmd(name='errors')
   def __errors(self,mess,args):
-    """list any errors that occurred during startup"""
+    """list errors - errors [search1 search2]"""
 
-    if self.errors:
-      return ', '.join(self.errors)
-    return 'No errors'
+    if not self.errors:
+      return 'No errors'
+
+    if not args:
+      args = ['-startup']
+    matches = util.matches(self.errors,args,sort=False)
+
+    if not matches:
+      return 'No matching errors'
+    return ', '.join(matches)
 
 ################################################################################
 # FFF - UI Functions
@@ -942,7 +949,7 @@ class SibylBot(object):
       del self.__tell_rooms[self.__tell_rooms.index(room)]
       if self.errors:
         msg = 'Errors during startup: '
-        self.__send(msg+self.run_cmd('errors'),room,hook=False)
+        self.__send(msg+self.run_cmd('errors',['startup']),room,hook=False)
     if not self.__tell_rooms:
       self.del_hook(self.__tell_errors)
 
