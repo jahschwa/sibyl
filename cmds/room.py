@@ -534,10 +534,13 @@ def parse_args(bot,mess,args):
   if proto.get_rooms():
 
     if args:
-      r = proto.new_room(args[0])
-      if proto.in_room(r):
-        room = r
-        del args[0]
+      try:
+        r = proto.new_room(args[0])
+        if proto.in_room(r):
+          room = r
+          del args[0]
+      except:
+        pass
 
     # if they didn't specify a room, but we're only in one, use that
     if not room:
