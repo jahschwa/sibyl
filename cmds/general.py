@@ -323,7 +323,7 @@ def config(bot,mess,args):
   elif opt!='*':
     return 'Invalid value'
 
-  name = mess.get_from().get_real().get_base()
+  name = mess.get_user().get_real().get_base()
 
   # save all changed opts
   if opt=='*':
