@@ -188,10 +188,19 @@ class MailProtocol(Protocol):
       if isinstance(mail,Exception):
         raise mail
 
-      # begin parsing the e-mail
+      # parse the sender
       frm = email.utils.parseaddr(mail['From'])[1]
       user = MailUser(self,frm)
-      body = mail.get_payload().replace('\r','').strip()
+
+      # handle multi-part messages
+      body = mail.get_payload()
+      if isinstance(body,list):
+        for b in body:
+          if m.get_content_type()=='plain':
+            body = b.replace('\r','').strip()
+      if isinstance(body,list):
+        self.log.warning('Ignoring multi-part from "%s"; no plaintext' % frm)
+        self.send('Unable to process multi-part message; no plaintext',user)
 
       # check for authentication key if configured
       if self.opt('email.key') and self.opt('email.key').get() not in body:
