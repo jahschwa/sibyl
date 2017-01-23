@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 #
 # Sibyl: A modular Python chat bot framework
-# Copyright (c) 2016 Jonathan Frederickson <jonathan@terracrypt.net>
+# Copyright (c) 2015-2017 Joshua Haas <haas.josh.a@gmail.com>
+# Copyright (c) 2016-2017 Jonathan Frederickson <jonathan@terracrypt.net>
 #
 # This file is part of Sibyl.
 #
@@ -90,7 +91,7 @@ class MatrixUser(User):
 
   # @return (str) the username in private chat or the nick name in a room
   def get_name(self):
-    return self.user.get_display_name()
+    return self.user.get_display_name() or self.user.user_id
 
   # @return (str) the username without resource identifier
   def get_base(self):
@@ -252,7 +253,22 @@ class MatrixProtocol(Protocol):
   # @param users (list of User) [None] extra users to highlight
   # @return (str,unicode) the text that was actually sent
   def broadcast(self,text,room,frm=None,users=None):
-    raise NotImplementedError
+    """send a message to every user in a room"""
+
+    users = self.get_occupants(room)+(users or [])
+
+    # Matrix has no built-in broadcast, so we'll just highlight everyone
+    s = 'All: %s --- ' % text
+    if frm:
+      self.log.debug('Broadcast message from: ' + str(frm))
+      s += frm.get_name()+' --- '
+
+    me = self.get_user()
+    names = [u.get_name() for u in users if (u!=me and (not frm or u!=frm))]
+    s += ' '.join(set(names))
+
+    self.send(s,room)
+    return s
 
   # join the specified room using the specified nick and password
   # @param room (Room) the room to join
