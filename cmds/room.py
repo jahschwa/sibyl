@@ -57,6 +57,7 @@ def conf(bot):
      'valid':bot.conf.valid_wfile
     },
     {'name':'bridges',
+     'default':[],
      'parse':parse,
      'post':post
     },
