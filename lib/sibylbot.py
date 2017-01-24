@@ -999,8 +999,8 @@ class SibylBot(object):
     # try to reconnect forever unless self.quit()
     while not self.__finished:
       try:
-        self.__serve()
         self.__idle_proc()
+        self.__serve()
         time.sleep(0.1)
 
       except (PingTimeout,ConnectFailure,ServerShutdown) as e:
@@ -1092,6 +1092,10 @@ class SibylBot(object):
     # catch unhandled Exceptions and write traceback to the log
     try:
       self.__run_forever()
+
+      # send any pending messages before disconnecting
+      self.__idle_send()
+
     except Exception as e:
       self.log.critical('UNHANDLED: %s\n\n%s' %
           (e.__class__.__name__,traceback.format_exc(e)))
