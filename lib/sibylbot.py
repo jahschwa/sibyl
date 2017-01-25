@@ -999,8 +999,8 @@ class SibylBot(object):
     # try to reconnect forever unless self.quit()
     while not self.__finished:
       try:
-        self.__idle_proc()
         self.__serve()
+        self.__idle_proc()
         time.sleep(0.1)
 
       except (PingTimeout,ConnectFailure,ServerShutdown) as e:
