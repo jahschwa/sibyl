@@ -267,7 +267,7 @@ def config(bot,mess,args):
         % (opt,bot.conf_diff[opt][0],bot.opt[opt]))
 
   # some options don't make sense to edit in chat
-  if opt in ('protocols','disabled','enabled','rename','cmd_dir','rooms'):
+  if opt in ('protocols','disable','enable','rename','cmd_dir','rooms'):
     return 'You may not edit that option via chat'
 
   # revert to original config
@@ -373,7 +373,7 @@ def reboot(bot,mess,args):
 
 @botcmd
 def tv(bot,mess,args):
-  """pass command to cec-client - tv (on|standby|as)"""
+  """pass command to cec-client - tv (pow|on|standby|as)"""
 
   if not args:
     args = ['pow']
@@ -452,7 +452,7 @@ def wiki(bot,mess,args):
 
 @botcmd(name='log',ctrl=True)
 def _log(bot,mess,args):
-  """set the log level - log (info|level|clear|tail|trace)"""
+  """set the log level - log (info|level|clear|tail|trace) [n] [regex]"""
 
   # default print some info
   if not args:

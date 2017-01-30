@@ -16,7 +16,7 @@ NEXT RELEASE:
   (jef) [matr] write matrix plug in
         ( ! ) work with @jah on above
         ( ! ) write and test plug in
-        ( ! ) write wiki page
+        ( # ) write wiki page
 
   ( # ) [cli ] write CLI interface
 
@@ -37,7 +37,7 @@ NEXT RELEASE:
               ( # ) bot funcs
               ( # ) config opts
 
-  (jah) [docs] finish redo ing docs to reflect plug ins changes
+  ( # ) [docs] finish redo ing docs to reflect plug ins changes
         ( # ) home page
         ( # ) config
         ( # ) protocols
@@ -47,8 +47,8 @@ NEXT RELEASE:
         ( # ) writing plug ins intro
         ( # ) writing plug in example (alarm)
         ( # ) write protocol sibyl_stdin.py
-        ( . ) tutorial for threading
-        ( . ) tutorial for chat protocol
+        ( # ) tutorial for threading
+        ( # ) tutorial for chat protocol
         ( # ) about unittests
         ( # ) add dependencies info to plug in pages
         ( # ) bookmark.py
@@ -73,9 +73,9 @@ NEXT RELEASE:
 
   ( # ) [main] support multiple protocols
 
-  (jah) [plug] add decorator options
+  ( # ) [plug] add decorator options
         ( # ) add chat_ctrl parameter to @botcmd decorator
-        ( ! ) add interval parameter to @botidle decorator
+        ( # ) add interval parameter to @botidle decorator
 
   ( # ) [cmds] add tell command (send msg when specified user joins room)
 
@@ -86,14 +86,14 @@ FUTURE:
 
   (   ) [conf] add custom logging string config option
   (   ) [conf] add max reconnect attempts option
-  (   ) [conf] allow user to set requests timeout (currently 60s)
+  ( # ) [conf] allow user to set requests timeout (currently 60s)
   (   ) [conf] add log rotate option
 
   (   ) [cmds] add ping command
   ( . ) [cmds] add isup command
   (   ) [cmds] add remind command (send msg highlighting user at specified time)
   (   ) [cmds] add stalk command (send msg when user changes to avilable)
-  ( . ) [cmds] add trigger command (add triggers to say things)
+  ( # ) [cmds] add trigger command (add triggers to say things)
 
   ( ! ) [docs] move to sphinx and/or readthedocs
 

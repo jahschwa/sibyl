@@ -172,9 +172,9 @@ class CLI(Protocol):
   def disconnected(self):
     pass
 
-  def process(self,wait=0):
+  def process(self):
 
-    if not self.event_data.wait(wait):
+    if not self.event_data.is_set():
       return
 
     usr = Admin(self,USER)

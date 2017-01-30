@@ -140,12 +140,11 @@ class MYPROTOCOL(Protocol):
 
   # receive/process messages and call bot._cb_message()
   # must ignore msgs from myself and from users not in any of our rooms
-  # @param wait (int) time to wait for new messages before returning
   # @call bot._cb_message(Message) upon receiving a valid status or message
   # @raise (PingTimeout) if implemented
   # @raise (ConnectFailure) if disconnected
   # @raise (ServerShutdown) if server shutdown
-  def process(self,wait=0):
+  def process(self):
     raise NotImplementedError
 
   # called when the bot is exiting for whatever reason

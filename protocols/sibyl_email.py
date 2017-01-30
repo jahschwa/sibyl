@@ -172,12 +172,11 @@ class MailProtocol(Protocol):
 
   # receive/process messages and call bot._cb_message()
   # must ignore msgs from myself and from users not in any of our rooms
-  # @param wait (int) time to wait for new messages before returning
   # @call bot._cb_message(Message) upon receiving a valid status or message
   # @raise (PingTimeout) if implemented
   # @raise (ConnectFailure) if disconnected
   # @raise (ServerShutdown) if server shutdown
-  def process(self,wait=0):
+  def process(self):
 
     # every time SibylBot calls process(), this method synchronously checks for
     # new messages that the IMAPThread added while we were doing other things
@@ -323,13 +322,13 @@ class MailProtocol(Protocol):
       self.smtp.starttls()
       self.smtp.ehlo()
     except:
-      raise EmailConnectFailure
+      raise ConnectFailure
 
     # if the protocol raises AuthFailure, SibylBot will never try to reconnect
     try:
       self.smtp.login(self.opt('email.address'),self.opt('email.password'))
     except:
-      raise EmailAuthFailure
+      raise AuthFailure
 
 ################################################################################
 # IMAPThread class
