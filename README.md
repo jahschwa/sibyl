@@ -4,9 +4,8 @@
 
 This is my personal XMPP bot made mostly for controlling XBMC on my Raspberry
 Pi. I find the `videos`, `seek`, `info`, `bookmark`, and `resume` commands to
-be very handy. This is tested on RaspBMC and OSMC, but should work on anything
-if you resolve the dependencies and setup python correctly. Sibyl does not
-support windows, although you could probably get it working via cygwin. Sibyl
+be very handy. This is tested on RaspBMC, OSMC, Ubuntu, and Windows 7, but
+should work on anything that runs python if you resolve the dependencies. Sibyl
 imports chat commands from python files in the directory specified by the
 `cmd_dir` config option, which by default is `cmds`. This repository comes with
 several plugins that most uers should find useful. For command explanations and
