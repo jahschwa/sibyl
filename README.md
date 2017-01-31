@@ -15,14 +15,14 @@ device that is running XBMC (e.g. an RPi).
 
 ## Dependencies
 
-You'll need the following installed in order to use sibyl:
+REQUIERD: You'll need the following installed in order to use sibyl:
 
  - [requests][req] - HTTP request and wrapper library - `pip install requests`
  - [dns][dns] - required for requests - `pip install dnspython`
 
-Most users will also want some optional packages:
+OPTIONAL: Most users will also want some optional packages:
 
- - [smbc][samba] - python samba bindings - `pip install pysmbc`
+ - [smbc][samba] - samba (not available on Windows) - `pip install pysmbc`
  - [lxml][lxml] - xml and html parsing - `pip install lxml`
  - [JSON-RPC][json] - you have to enable the web server in XBMC (see below)
 
