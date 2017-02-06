@@ -323,7 +323,7 @@ class XMPP(Protocol):
 
     me = JID(self,room.get_name()+'/'+self.get_nick(room),typ=Message.GROUP)
     names = [u.get_name() for u in users if (u!=me and (not frm or u!=frm))]
-    s += ' '.join(set(names))
+    s += ', '.join(set(names))
 
     self.send(s,room)
     return s
