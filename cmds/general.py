@@ -22,6 +22,7 @@
 ################################################################################
 
 import sys,os,subprocess,json,socket,re,codecs,math
+from collections import OrderedDict
 
 import requests
 
@@ -42,7 +43,8 @@ def conf(bot):
     {'name':'log_lines','default':10,'parse':bot.conf.parse_int},
     {'name':'alias_file','default':'data/aliases.txt','valid':bot.conf.valid_wfile},
     {'name':'alias_depth','default':10,'parse':bot.conf.parse_int},
-    {'name':'calc_scientific','default':False,'parse':bot.conf.parse_bool}
+    {'name':'calc_scientific','default':False,'parse':bot.conf.parse_bool},
+    {'name':'calc_degrees','default':True,'parse':bot.conf.parse_bool}
   ]
 
 @botinit
@@ -216,27 +218,33 @@ def alias_write(bot):
 
 @botcmd
 def calc(bot,mess,args):
-  """available: $e, $pi, (a)cos, (a)sin, (a)tan, exp, fact, log, log10, pow"""
+  """available: $e, $pi, cos, sin, tan, exp, fact, log, log10, pow"""
 
   args = ''.join(args)
 
-  funcs = {
-    '$e':'math.e',
-    '$pi':'math.pi',
-    'acos(':'math.acos(',
-    'asin(':'math.asin(',
-    'atan(':'math.atan(',
-    'cos(':'math.cos(',
-    'exp(':'math.exp(',
-    'fact(':'math.factorial(',
-    'log(':'math.log(',
-    'log10(':'math.log10(',
-    'pow(':'math.pow(',
-    'sin(':'math.sin(',
-    'sqrt(':'math.sqrt(',
-    'tan(':'math.tan(',
-    '^':'**'
-  }
+  funcs = OrderedDict([
+    ('$e','math.e'),
+    ('$pi','math.pi'),
+    ('cos(','math.cos('),
+    ('exp(','math.exp('),
+    ('fact(','math.factorial('),
+    ('log(','math.log('),
+    ('log10(','math.log10('),
+    ('pow(','math.pow('),
+    ('sin(','math.sin('),
+    ('sqrt(','math.sqrt('),
+    ('tan(','math.tan('),
+    ('cos-1(','math.acos('),
+    ('sin-1(','math.asin('),
+    ('tan-1(','math.atan('),
+    ('^','**')
+  ])
+
+  if bot.opt('general.calc_degrees'):
+    for func in ('sin(','cos(','tan('):
+      funcs[func] = funcs[func]+'math.pi/180*'
+    for func in ('sin-1(','cos-1(','tan-1('):
+      funcs[func] = '180/math.pi*'+funcs[func]
 
   # sanitize args
   cleaned = args

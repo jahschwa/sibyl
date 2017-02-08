@@ -167,6 +167,9 @@ protocols = cli
 # File for storing aliases
 #general.alias_file = data/aliases.txt
 
+# Use degrees instead of radians for trig functions in the calc cmd
+#general.calc_degrees = True
+
 # Display results from calc cmd in scientific notation
 #general.calc_scientific = False
 
