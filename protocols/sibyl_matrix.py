@@ -23,6 +23,7 @@
 ################################################################################
 
 from Queue import Queue
+from urlparse import urlparse
 
 from sibyl.lib.protocol import User,Room,Message,Protocol
 from sibyl.lib.protocol import ProtocolError as SuperProtocolError
@@ -228,8 +229,19 @@ class MatrixProtocol(Protocol):
       # Create a new Message to send to Sibyl
       u = self.new_user(msg['sender'], Message.GROUP)
       r = self.new_room(msg['room_id'])
-      m = Message(u, msg['content']['body'], room=r, typ=Message.GROUP)
-      self.msg_queue.put(m)
+      
+      if(msg['content']['msgtype'] == 'm.text'):
+        m = Message(u, msg['content']['body'], room=r, typ=Message.GROUP)
+        self.msg_queue.put(m)
+        
+      if(msg['content']['msgtype'] == 'm.image'):
+        media_url = urlparse(msg['content']['url'])
+        http_url = self.client.api.base_url + "/_matrix/media/r0/download/{0}{1}".format(media_url.netloc, media_url.path)
+        body = "{0} uploaded an image: {1}".format(msg['sender'], http_url)
+        m = Message(u, body, room=r, typ=Message.GROUP)
+        self.log.debug("Sending m.image: " + body)
+        self.msg_queue.put(m)
+        
     except KeyError as e:
       self.log.debug("Incoming message did not have all required fields: " + e.message)
 
