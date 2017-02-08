@@ -57,6 +57,7 @@ def conf(bot):
      'valid':bot.conf.valid_wfile
     },
     {'name':'bridges',
+     'default':[],
      'parse':parse,
      'post':post
     },
@@ -150,7 +151,6 @@ def all(bot,mess,args):
   error = check_args(bot,mess,pname,room,args)
   if error:
     return error
-
   
   bot.send(' '.join(args),room,broadcast=True,frm=mess.get_user())
 

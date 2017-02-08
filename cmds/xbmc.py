@@ -548,7 +548,7 @@ def random_chat(bot,mess,args):
 
   return 'Playing "'+matches[rand]+'"'
 
-@botcmd(name='xbmc')
+@botcmd(name='xbmc',ctrl=True)
 def xbmc_chat(bot,mess,args):
   """send raw JSON request - xbmc method [params]"""
 
@@ -571,7 +571,7 @@ def xbmc_chat(bot,mess,args):
 
 @botcmd
 def shuffle(bot,mess,args):
-  """change shuffle - shuffle [check|on|off]"""
+  """change shuffle - shuffle (check|on|off)"""
 
   if not args:
     args = ['check']

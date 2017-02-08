@@ -155,6 +155,7 @@ class User(object):
 ################################################################################
 
 class Room(object):
+  __metaclass__ = ABCMeta
 
   # get_room flags
   FLAG_CONF = 0
@@ -277,7 +278,7 @@ class Message(object):
   # @param user (User) the User who sent the Message
   # @param txt (str,unicode) the body of the msg
   # @param typ (int) [Message.PRIVATE] a Message type enum
-  # @param status (str) [None] status enum
+  # @param status (int) [None] status enum
   # @param msg (str) [None] custom status msg (e.g. "Doing awesome!")
   # @param room (Room) [None] the room that sent the message
   def __init__(self,user,txt,typ=None,status=None,msg=None,room=None):
@@ -386,13 +387,12 @@ class Protocol(object):
 
   # receive/process messages and call bot._cb_message()
   # must ignore msgs from myself and from users not in any of our rooms
-  # @param wait (int) time to wait for new messages before returning
   # @call bot._cb_message(Message) upon receiving a valid status or message
   # @raise (PingTimeout) if implemented
   # @raise (ConnectFailure) if disconnected
   # @raise (ServerShutdown) if server shutdown
   @abstractmethod
-  def process(self,wait=0):
+  def process(self):
     pass
 
   # called when the bot is exiting for whatever reason

@@ -142,7 +142,7 @@ def init(bot):
 
 @botcmd(thread=True)
 def library(bot,mess,args):
-  """control media library - library (info|load|rebuild|save)"""
+  """control media library - library (info|load|rebuild|save|reload)"""
 
   # before botcmd had the threading option, I implemented library as a subclass
   # of threading.Thread and ran it; now that I'm using botcmd(thread=True),
@@ -440,3 +440,15 @@ class Library(object):
     t = time.asctime(time.localtime(self.bot.lib_last_rebuilt))
 
     return 'Rebuilt on %s in %s with %s files' % (t,s,n)
+
+  def reload(self):
+    """reload search paths from the config file"""
+
+    if not self.bot.has_plugin('general'):
+      return 'Operation not available because plugin "general" not loaded'
+
+    for opt in ('video','audio'):
+      result = self.bot.run_cmd('config',['reload','library.%s_dirs' % opt])
+      self.send(result)
+
+    return 'NOTE: run "library rebuild" to index new directories'

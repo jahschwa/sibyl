@@ -277,11 +277,11 @@ class XMPP(Protocol):
       self.mucs[muc]['status'] = self.MUC_PARTED
     self.seen = {}
 
-  def process(self,wait=0):
+  def process(self):
     """process messages and __idle_proc"""
 
     try:
-      self.conn.Process(wait)
+      self.conn.Process()
     except SystemShutdown:
       raise ServerShutdown
     except StreamError as e:
@@ -323,7 +323,7 @@ class XMPP(Protocol):
 
     me = JID(self,room.get_name()+'/'+self.get_nick(room),typ=Message.GROUP)
     names = [u.get_name() for u in users if (u!=me and (not frm or u!=frm))]
-    s += ' '.join(set(names))
+    s += ', '.join(set(names))
 
     self.send(s,room)
     return s

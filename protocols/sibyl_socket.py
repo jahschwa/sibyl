@@ -383,9 +383,9 @@ class SocketServer(Protocol):
   def disconnected(self):
     self.connected = False
 
-  def process(self,wait=0):
+  def process(self):
 
-    if not self.event_data.wait(wait):
+    if not self.event_data.is_set():
       return
 
     (address,text) = self.queue.get()

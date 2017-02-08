@@ -21,7 +21,8 @@
 #
 ################################################################################
 
-import sys,os,subprocess,json,socket,re,codecs
+import sys,os,subprocess,json,socket,re,codecs,math
+from collections import OrderedDict
 
 import requests
 
@@ -41,7 +42,9 @@ def conf(bot):
     {'name':'log_time','default':True,'parse':bot.conf.parse_bool},
     {'name':'log_lines','default':10,'parse':bot.conf.parse_int},
     {'name':'alias_file','default':'data/aliases.txt','valid':bot.conf.valid_wfile},
-    {'name':'alias_depth','default':10,'parse':bot.conf.parse_int}
+    {'name':'alias_depth','default':10,'parse':bot.conf.parse_int},
+    {'name':'calc_scientific','default':False,'parse':bot.conf.parse_bool},
+    {'name':'calc_degrees','default':True,'parse':bot.conf.parse_bool}
   ]
 
 @botinit
@@ -213,6 +216,53 @@ def alias_write(bot):
   with codecs.open(bot.opt('general.alias_file'),'w',encoding='utf8') as f:
     f.writelines(lines)
 
+@botcmd
+def calc(bot,mess,args):
+  """available: $e, $pi, cos, sin, tan, exp, fact, log, log10, pow"""
+
+  args = ''.join(args)
+
+  funcs = OrderedDict([
+    ('$e','math.e'),
+    ('$pi','math.pi'),
+    ('cos(','math.cos('),
+    ('exp(','math.exp('),
+    ('fact(','math.factorial('),
+    ('log(','math.log('),
+    ('log10(','math.log10('),
+    ('pow(','math.pow('),
+    ('sin(','math.sin('),
+    ('sqrt(','math.sqrt('),
+    ('tan(','math.tan('),
+    ('cos-1(','math.acos('),
+    ('sin-1(','math.asin('),
+    ('tan-1(','math.atan('),
+    ('^','**')
+  ])
+
+  if bot.opt('general.calc_degrees'):
+    for func in ('sin(','cos(','tan('):
+      funcs[func] = funcs[func]+'math.pi/180*'
+    for func in ('sin-1(','cos-1(','tan-1('):
+      funcs[func] = '180/math.pi*'+funcs[func]
+
+  # sanitize args
+  cleaned = args
+  for func in funcs:
+    cleaned = cleaned.replace(func,'')
+  if reduce(lambda a,b: a or b.isalpha(),cleaned,False):
+    return 'Unknown character or function'
+
+  # execute calculation
+  for (old,new) in funcs.items():
+    args = args.replace(old,new)
+  try:
+    result = eval('1.0*'+args)
+  except:
+    return 'Invalid syntax'
+
+  return ('%'+('E' if bot.opt('general.calc_scientific') else 's')) % result
+
 @botcmd(ctrl=True)
 def config(bot,mess,args):
   """view and edit config - config (show|set|save|diff|reset|reload) (opt|*) [value]"""
@@ -267,7 +317,7 @@ def config(bot,mess,args):
         % (opt,bot.conf_diff[opt][0],bot.opt[opt]))
 
   # some options don't make sense to edit in chat
-  if opt in ('protocols','disabled','enabled','rename','cmd_dir','rooms'):
+  if opt in ('protocols','disable','enable','rename','cmd_dir','rooms'):
     return 'You may not edit that option via chat'
 
   # revert to original config
@@ -323,7 +373,7 @@ def config(bot,mess,args):
   elif opt!='*':
     return 'Invalid value'
 
-  name = mess.get_user().get_real().get_base()
+  name = (mess.get_user().get_real().get_base() if mess else 'SibylBot')
 
   # save all changed opts
   if opt=='*':
@@ -373,7 +423,7 @@ def reboot(bot,mess,args):
 
 @botcmd
 def tv(bot,mess,args):
-  """pass command to cec-client - tv (on|standby|as)"""
+  """pass command to cec-client - tv (pow|on|standby|as)"""
 
   if not args:
     args = ['pow']
@@ -452,7 +502,7 @@ def wiki(bot,mess,args):
 
 @botcmd(name='log',ctrl=True)
 def _log(bot,mess,args):
-  """set the log level - log (info|level|clear|tail|trace)"""
+  """set the log level - log (info|level|clear|tail|trace) [n] [regex]"""
 
   # default print some info
   if not args:

@@ -479,11 +479,11 @@ class Config(object):
       return False
 
   @staticmethod
-  def valid_dir(self,cmd):
+  def valid_dir(self,s):
     """return True if the directory exists"""
 
     try:
-      os.listdir(os.path.abspath(cmd))
+      os.listdir(os.path.abspath(s))
       return True
     except:
       return False
@@ -744,7 +744,7 @@ class Config(object):
 # Logging
 ################################################################################
 
-  # @param lvl (int) a human-readable log level (e.g. 'debug')
+  # @param lvl (str) a human-readable log level (e.g. 'debug')
   # @param msg (str) the message to log
   def log(self,lvl,msg):
     """add the message to the queue"""

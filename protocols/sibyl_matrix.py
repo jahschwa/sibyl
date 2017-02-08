@@ -212,12 +212,11 @@ class MatrixProtocol(Protocol):
 
   # receive/process messages and call bot._cb_message()
   # must ignore msgs from myself and from users not in any of our rooms
-  # @param wait (int) time to wait for new messages before returning
   # @call bot._cb_message(Message) upon receiving a valid status or message
   # @raise (PingTimeout) if implemented
   # @raise (ConnectFailure) if disconnected
   # @raise (ServerShutdown) if server shutdown
-  def process(self,wait=0):
+  def process(self):
     while(not self.msg_queue.empty()):
       self.bot._cb_message(self.msg_queue.get())
 
@@ -277,7 +276,7 @@ class MatrixProtocol(Protocol):
 
     me = self.get_user()
     names = [u.get_name() for u in users if (u!=me and (not frm or u!=frm))]
-    s += ' '.join(set(names))
+    s += ', '.join(set(names))
 
     self.send(s,room)
     return s

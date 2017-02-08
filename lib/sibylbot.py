@@ -96,7 +96,7 @@ class SibylBot(object):
     self.ns_func = {}
     self.ns_cmd = {}
 
-    # load config to get cmd_dir and chat_proto
+    # load config to get cmd_dir and protocols
     self.conf_file = conf_file
     (result,dup_plugins,duplicates) = self.__init_config()
 
@@ -1092,6 +1092,10 @@ class SibylBot(object):
     # catch unhandled Exceptions and write traceback to the log
     try:
       self.__run_forever()
+
+      # send any pending messages before disconnecting
+      self.__idle_send()
+
     except Exception as e:
       self.log.critical('UNHANDLED: %s\n\n%s' %
           (e.__class__.__name__,traceback.format_exc(e)))
@@ -1119,7 +1123,7 @@ class SibylBot(object):
   # @param broadcast (bool) [False] highlight all users (only works for Rooms)
   # @param frm (User) [None] the sending user (only relevant for broadcast)
   # @param users (list of User) [None] additional users to highlight (broadcast)
-  # @param hook (bool) [True] don't execute @botsend hooks for this message
+  # @param hook (bool) [True] execute @botsend hooks for this message
   #   NOTE: when @botsend hooks call send(), they MUST set hook=False
   def send(self,text,to,broadcast=False,frm=None,users=None,hook=True):
     """send a message (this function is thread-safe)"""
@@ -1130,9 +1134,9 @@ class SibylBot(object):
     self.__pending_send.put((text,to,broadcast,frm,users,hook))
 
   # @param (str) the name of a protocol
-  # @return (Protocol) the Protocol associated with the given object
+  # @return (Protocol) the Protocol object with that name
   def get_protocol(self,name):
-    """return the Protocol object associated with the given object"""
+    """return the Protocol object with the given name"""
 
     return self.protocols[name]
 
