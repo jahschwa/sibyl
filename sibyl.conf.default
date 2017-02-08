@@ -167,6 +167,9 @@ protocols = cli
 # File for storing aliases
 #general.alias_file = data/aliases.txt
 
+# Display results from calc cmd in scientific notation
+#general.calc_scientific = False
+
 # If True, allow the use of the config chat command in rooms
 #general.config_rooms = True
 

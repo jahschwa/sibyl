@@ -21,7 +21,7 @@
 #
 ################################################################################
 
-import sys,os,subprocess,json,socket,re,codecs
+import sys,os,subprocess,json,socket,re,codecs,math
 
 import requests
 
@@ -41,7 +41,8 @@ def conf(bot):
     {'name':'log_time','default':True,'parse':bot.conf.parse_bool},
     {'name':'log_lines','default':10,'parse':bot.conf.parse_int},
     {'name':'alias_file','default':'data/aliases.txt','valid':bot.conf.valid_wfile},
-    {'name':'alias_depth','default':10,'parse':bot.conf.parse_int}
+    {'name':'alias_depth','default':10,'parse':bot.conf.parse_int},
+    {'name':'calc_scientific','default':False,'parse':bot.conf.parse_bool}
   ]
 
 @botinit
@@ -212,6 +213,47 @@ def alias_write(bot):
 
   with codecs.open(bot.opt('general.alias_file'),'w',encoding='utf8') as f:
     f.writelines(lines)
+
+@botcmd
+def calc(bot,mess,args):
+  """available: $e, $pi, (a)cos, (a)sin, (a)tan, exp, fact, log, log10, pow"""
+
+  args = ''.join(args)
+
+  funcs = {
+    '$e':'math.e',
+    '$pi':'math.pi',
+    'acos(':'math.acos(',
+    'asin(':'math.asin(',
+    'atan(':'math.atan(',
+    'cos(':'math.cos(',
+    'exp(':'math.exp(',
+    'fact(':'math.factorial(',
+    'log(':'math.log(',
+    'log10(':'math.log10(',
+    'pow(':'math.pow(',
+    'sin(':'math.sin(',
+    'sqrt(':'math.sqrt(',
+    'tan(':'math.tan(',
+    '^':'**'
+  }
+
+  # sanitize args
+  cleaned = args
+  for func in funcs:
+    cleaned = cleaned.replace(func,'')
+  if reduce(lambda a,b: a or b.isalpha(),cleaned,False):
+    return 'Unknown character or function'
+
+  # execute calculation
+  for (old,new) in funcs.items():
+    args = args.replace(old,new)
+  try:
+    result = eval('1.0*'+args)
+  except:
+    return 'Invalid syntax'
+
+  return ('%'+('E' if bot.opt('general.calc_scientific') else 's')) % result
 
 @botcmd(ctrl=True)
 def config(bot,mess,args):
