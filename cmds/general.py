@@ -21,7 +21,7 @@
 #
 ################################################################################
 
-import sys,os,subprocess,json,socket,re,codecs,math
+import sys,os,subprocess,json,socket,re,codecs,math,time
 from collections import OrderedDict
 
 import requests
@@ -218,19 +218,19 @@ def alias_write(bot):
 
 @botcmd
 def calc(bot,mess,args):
-  """available: $e, $pi, cos, sin, tan, exp, fact, log, log10, pow"""
+  """available: $e, $pi, $time, cos, sin, tan, fact, int, log, log10"""
 
   args = ''.join(args)
 
   funcs = OrderedDict([
     ('$e','math.e'),
     ('$pi','math.pi'),
+    ('$time','time.time()'),
     ('cos(','math.cos('),
-    ('exp(','math.exp('),
     ('fact(','math.factorial('),
+    ('int(','int('),
     ('log(','math.log('),
     ('log10(','math.log10('),
-    ('pow(','math.pow('),
     ('sin(','math.sin('),
     ('sqrt(','math.sqrt('),
     ('tan(','math.tan('),
