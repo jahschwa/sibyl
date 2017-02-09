@@ -195,7 +195,7 @@ class MailProtocol(Protocol):
       body = mail.get_payload()
       if isinstance(body,list):
         for b in body:
-          if m.get_content_type()=='plain':
+          if b.get_content_type()=='plain':
             body = b.replace('\r','').strip()
       if isinstance(body,list):
         self.log.warning('Ignoring multi-part from "%s"; no plaintext' % frm)
