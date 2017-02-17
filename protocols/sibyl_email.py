@@ -200,6 +200,7 @@ class MailProtocol(Protocol):
       if isinstance(body,list):
         self.log.warning('Ignoring multi-part from "%s"; no plaintext' % frm)
         self.send('Unable to process multi-part message; no plaintext',user)
+        return
 
       # check for authentication key if configured
       if self.opt('email.key') and self.opt('email.key').get() not in body:
