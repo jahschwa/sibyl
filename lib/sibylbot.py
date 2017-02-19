@@ -233,7 +233,7 @@ class SibylBot(object):
     files = sorted(files,key=os.path.basename)
     files = [x for x in files if os.path.basename(x) not in self.opt('disable')]
     if self.opt('enable'):
-      files = [x for x in files if x in self.opt('enable')]
+      files = [x for x in files if os.path.basename(x) in self.opt('enable')]
 
     base_names = [os.path.basename(x) for x in files]
     if len(files)!=len(set(base_names)):
