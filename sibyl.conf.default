@@ -197,6 +197,10 @@ protocols = cli
 #library.audio_dirs =
 #library.video_dirs =
 
+# Translations for library paths if running Sibyl on a different box than Kodi
+# Format: localpath1, remotepath1; localpath2, remotepath2
+#library.remote = 
+
 # File in which to store notes; format is tab-delineated text file
 #note.file = data/notes.txt
 

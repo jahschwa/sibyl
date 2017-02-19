@@ -671,14 +671,17 @@ def _files(bot,args,dirs,pid):
     else:
       return 'Found '+str(len(matches))+' matches'
 
+  # translate library path if necessary
+  match = bot.library_translate(matches[0])
+
   # if there was 1 match, add the whole directory to a playlist
   # also check for an error opening the directory
   bot.xbmc('Playlist.Clear',{'playlistid':pid})
 
   result = bot.xbmc('Playlist.Add',{'playlistid':pid,'item':
-      {'directory':matches[0]}},timeout=60)
+      {'directory':match}},timeout=60)
   if 'error' in result.keys():
-    s = 'Unable to open: '+matches[0]
+    s = 'Unable to open: '+match
     log.error(s)
     return s
 
@@ -704,7 +707,7 @@ def _files(bot,args,dirs,pid):
   # set last_played for bookmarking
   bot.last_played = (pid,matches[0])
 
-  return msg+'Playlist from "'+matches[0]+'" starting with #'+str(num+1)
+  return msg+'Playlist from "'+match+'" starting with #'+str(num+1)
 
 def _file(bot,args,dirs):
   """helper function for video() and audio()"""
@@ -725,10 +728,13 @@ def _file(bot,args,dirs):
     else:
       return 'Found '+str(len(matches))+' matches'
 
+  # translate library path if necessary
+  match = bot.library_translate(matches[0])
+
   # if there was 1 match, play the file, and check for not found error
-  result = bot.xbmc('Player.Open',{'item':{'file':matches[0]}})
+  result = bot.xbmc('Player.Open',{'item':{'file':match}})
   if 'error' in result.keys():
-    s = 'Unable to open: '+matches[0]
+    s = 'Unable to open: '+match
     log.error(s)
     return s
 
@@ -739,4 +745,4 @@ def _file(bot,args,dirs):
   if bot.has_plugin('bookmark'):
     bot.last_resume = None
 
-  return 'Playing "'+matches[0]+'"'
+  return 'Playing "'+match+'"'

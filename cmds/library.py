@@ -36,40 +36,31 @@ log = logging.getLogger(__name__)
 def conf(bot):
   """add config options"""
 
-  return [{'name' : 'file',
-            'default' : 'data/library.pickle',
-            'valid' : bot.conf.valid_wfile},
-          {'name' : 'max_matches',
-            'default' : 10,
-            'parse' : bot.conf.parse_int},
-          {'name' : 'audio_dirs',
-            'default' : [],
-            'valid' : valid_lib,
-            'parse' : parse_lib},
-          {'name' : 'video_dirs',
-            'default' : [],
-            'valid' : valid_lib,
-            'parse' : parse_lib}]
-
-def valid_lib(conf,lib):
-  """return True if the lib contains valid directories or samba shares"""
-
-  new = []
-  for (i,l) in enumerate(lib):
-    if isinstance(l,str):
-      if not os.path.isdir(l):
-        conf.log('warning','path "'+l+'" is not a valid directory')
-        continue
-    elif isinstance(l,dict):
-      if 'server' not in l.keys():
-        conf.log('warning','key "server" missing from item '+str(i+1))
-        continue
-      if 'share' not in l.keys():
-        conf.log('warning','key "share" missing from item '+str(i+1))
-        continue
-    new.append(l)
-  lib[:] = new
-  return True
+  return [
+    { 'name'    : 'file',
+      'default' : 'data/library.pickle',
+      'valid'   : bot.conf.valid_wfile
+    },
+    { 'name'    : 'max_matches',
+      'default' : 10,
+      'parse'   : bot.conf.parse_int
+    },
+    { 'name'    : 'audio_dirs',
+      'default' : [],
+      'parse'   : parse_lib,
+      'valid'   : valid_lib
+    },
+    { 'name'    : 'video_dirs',
+      'default' : [],
+      'parse'   : parse_lib,
+      'valid'   : valid_lib
+    },
+    { 'name'    : 'remote',
+      'default' : {},
+      'parse'   : parse_remote,
+      'valid'   : valid_remote
+    }
+  ]
 
 def parse_lib(conf,opt,val):
   """parse the lib into a list"""
@@ -100,6 +91,49 @@ def parse_lib(conf,opt,val):
       item = entry
     lib.append(item)
   return lib
+
+def valid_lib(conf,lib):
+  """return True if the lib contains valid directories or samba shares"""
+
+  new = []
+  for (i,l) in enumerate(lib):
+    if isinstance(l,str):
+      if not os.path.isdir(l):
+        conf.log('warning','path "'+l+'" is not a valid directory')
+        continue
+    elif isinstance(l,dict):
+      if 'server' not in l.keys():
+        conf.log('warning','key "server" missing from item '+str(i+1))
+        continue
+      if 'share' not in l.keys():
+        conf.log('warning','key "share" missing from item '+str(i+1))
+        continue
+    new.append(l)
+  lib[:] = new
+  return True
+
+def parse_remote(conf,opt,val):
+  """parse the remote replace list into a dict"""
+
+  val = val.replace('\n','')
+  entries = util.split_strip(val,';')
+
+  replace = {}
+  for entry in entries:
+    (local,remote) = util.split_strip(entry,',')
+    replace[local] = remote
+
+  return replace
+
+def valid_remote(conf,replace):
+  """return True if the local paths are valid"""
+
+  for local in replace.keys():
+    if (not os.path.isdir(local)) and (not local.startswith('smb://')):
+      conf.log('warning','path "%s" is not a valid directory' % local)
+      del replace[local]
+
+  return True
 
 @botinit
 def init(bot):
@@ -139,6 +173,18 @@ def init(bot):
 
   else:
     log.error("Can't find module smbc; network shares will be disabled")
+
+# @param path (str) the path to translate
+# @return (str) the translated path
+@botfunc
+def library_translate(bot,path):
+  """return the specified library paths, translated if requested"""
+
+  for (local,remote) in bot.opt('library.remote').items():
+    if path.startswith(local):
+      return path.replace(local,remote,1)
+
+  return path
 
 @botcmd(thread=True)
 def library(bot,mess,args):
