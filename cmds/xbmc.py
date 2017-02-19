@@ -207,13 +207,15 @@ def play(bot,mess,args):
     playpause(bot,0)
     return
 
+  path  = library.translate(args[0])
+
   # if args are passed, play the specified file
   # [TODO] make work with samba shares requiring passwords
-  if (args[0].startswith('smb://') or os.path.isfile(args[0])
-      or args[0].startswith('http')):
-    result = bot.xbmc('Player.Open',{'item':{'file':args[0]}})
+  if (path.startswith('smb://') or os.path.isfile(path)
+      or path.startswith('http')):
+    result = bot.xbmc('Player.Open',{'item':{'file':path}})
     if 'error' in result:
-      s = 'Unable to open: '+args
+      s = 'Unable to open: '+path
       log.info(s)
       return s
     return bot.run_cmd('info')
@@ -537,16 +539,17 @@ def random_chat(bot,mess,args):
 
   # play a random audio file from the matches
   rand = random.randint(0,len(matches)-1)
+  match = bot.library_translate(matches[rand])
 
-  result = bot.xbmc('Player.Open',{'item':{'file':matches[rand]}})
+  result = bot.xbmc('Player.Open',{'item':{'file':match}})
   if 'error' in result.keys():
-    s = 'Unable to open: '+matches[rand]
+    s = 'Unable to open: '+match
     log.error(s)
     return s
 
   bot.run_cmd('fullscreen',['on'])
 
-  return 'Playing "'+matches[rand]+'"'
+  return 'Playing "'+match+'"'
 
 @botcmd(name='xbmc',ctrl=True)
 def xbmc_chat(bot,mess,args):
