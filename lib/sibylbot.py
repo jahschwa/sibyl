@@ -86,7 +86,7 @@ class SibylBot(object):
     """create a new sibyl instance, load: conf, protocol, plugins"""
 
     self.__stats = {'born':time.time(),'cmds':0,'ex':0,'forbid':0,'discon':0}
-    self.__state = SibylBot.INIT
+    self.__status = SibylBot.INIT
 
     # keep track of errors for use with "errors" command
     self.errors = []
@@ -199,7 +199,7 @@ class SibylBot(object):
       self.log.critical('Exception executing @botinit hooks; exiting')
       self.__fatal('a plugin\'s @botinit failed')
 
-    self.__state = SibylBot.READY
+    self.__status = SibylBot.READY
 
   def __fatal(self,msg):
     """exit due to a fatal error"""
@@ -1081,7 +1081,7 @@ class SibylBot(object):
   def run_forever(self):
     """run the bot catching any unhandled exceptions"""
 
-    self.__state = SibylBot.RUNNING
+    self.__status = SibylBot.RUNNING
 
     # unfortunately xmpppy has a couple print statements, so kill stdout
     if self.opt('kill_stdout'):
@@ -1114,7 +1114,7 @@ class SibylBot(object):
         pickle.dump(d,f,-1)
 
     sys.stdout = sys.__stdout__
-    self.__state = SibylBot.EXITED
+    self.__status = SibylBot.EXITED
     return self.__reboot
 
   # this function is thread-safe
@@ -1222,7 +1222,7 @@ class SibylBot(object):
   def error(self,msg,ns):
     """add an error to the bot's list accessible via the error chat cmd"""
 
-    if self.__state==SibylBot.INIT:
+    if self.__status==SibylBot.INIT:
       ns = 'startup.'+ns
     self.errors.append('(%s) %s' % (ns,msg))
 
