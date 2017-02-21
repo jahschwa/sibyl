@@ -21,7 +21,7 @@
 #
 ################################################################################
 
-import os,pickle,time,traceback,threading,Queue,multiprocessing
+import os,sys,pickle,time,traceback,threading,Queue,multiprocessing
 
 # we import smbc in init(), find(), and rsamba() if needed
 
@@ -172,7 +172,16 @@ def init(bot):
     bot.add_var('smbc_dir',DIR)
 
   else:
-    log.error("Can't find module smbc; network shares will be disabled")
+    log.warning("Can't find module smbc; network shares will be disabled")
+
+  # check for filename unicode support
+  enc = sys.getfilesystemencoding()
+  if enc!='UTF-8':
+    log.warning('Missing unicode support (filesystemencoding=%s)' % enc)
+    log.warning('  more details: '
+        'https://github.com/TheSchwa/sibyl/wiki/Library'
+        '#unicode-considerations')
+    bot.error('Unicode file names not supported','library')
 
 # @param path (str) the path to translate
 # @return (str) the translated path
@@ -380,7 +389,7 @@ class Library(object):
     try:
 
       if self.args:
-        if self.args[0] not in ('load','save','rebuild','info'):
+        if self.args[0] not in ('load','save','rebuild','info','reload'):
           self.send('Unknown option "%s"' % self.args[0])
           return
       else:

@@ -1222,7 +1222,7 @@ class SibylBot(object):
   def error(self,msg,ns):
     """add an error to the bot's list accessible via the error chat cmd"""
 
-    if bot.state==SibylBot.INIT:
+    if self.__state==SibylBot.INIT:
       ns = 'startup.'+ns
     self.errors.append('(%s) %s' % (ns,msg))
 
