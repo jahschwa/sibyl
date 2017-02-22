@@ -250,7 +250,7 @@ def calc(bot,mess,args):
   cleaned = args
   for func in funcs:
     cleaned = cleaned.replace(func,'')
-  if reduce(lambda a,b: a or b.isalpha(),cleaned,False):
+  if '_' in cleaned or reduce(lambda a,b: a or b.isalpha(),cleaned,False):
     return 'Unknown character or function'
 
   # execute calculation
