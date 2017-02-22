@@ -240,6 +240,8 @@ def calc(bot,mess,args):
     ('^','**')
   ])
 
+  allowed = '0123456789.+-*/%^() '
+
   if bot.opt('general.calc_degrees'):
     for func in ('sin(','cos(','tan('):
       funcs[func] = funcs[func]+'math.pi/180*'
@@ -250,8 +252,9 @@ def calc(bot,mess,args):
   cleaned = args
   for func in funcs:
     cleaned = cleaned.replace(func,'')
-  if '_' in cleaned or reduce(lambda a,b: a or b.isalpha(),cleaned,False):
-    return 'Unknown character or function'
+  for c in cleaned:
+    if c not in allowed:
+      return 'Unknown character or function'
 
   # execute calculation
   for (old,new) in funcs.items():
