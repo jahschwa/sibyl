@@ -233,10 +233,12 @@ class MatrixProtocol(Protocol):
       
       if(msgtype == 'm.text'):
         m = Message(u, msg['content']['body'], room=r, typ=Message.GROUP)
+        self.log.debug('Sending m.text: ' + msg['content']['body'])
         self.msg_queue.put(m)
 
       if(msgtype == 'm.emote'):
-        m = Message(u, '* ' + msg['content']['body'], typ=Message.GROUP)
+        m = Message(u, '* ' + msg['content']['body'], room=r, typ=Message.GROUP)
+        self.log.debug('Sending m.emote: ' + msg['content']['body'])
         self.msg_queue.put(m)
         
       if(msgtype == 'm.image' or msgtype == 'm.audio'):
