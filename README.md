@@ -107,6 +107,9 @@ Many systems have recently switched to systemd. Simply copy
 `ExecStart` line to point to `run.py` and make sure `run.py` is executable
 (e.g. `chmod +x run.py`). Finally, run `sudo systemctl enable sibyl`.
 
+**NOTE:** If you're not from the US, you might have to change the
+`LANG` setting in the `Environment` line.
+
 ## More Info and Troubleshooting
 
 There is a great deal of information on [the wiki][wiki]. Also see the
