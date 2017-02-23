@@ -228,18 +228,28 @@ class MatrixProtocol(Protocol):
       # Create a new Message to send to Sibyl
       u = self.new_user(msg['sender'], Message.GROUP)
       r = self.new_room(msg['room_id'])
+
+      msgtype = msg['content']['msgtype']
       
-      if(msg['content']['msgtype'] == 'm.text'):
+      if(msgtype == 'm.text'):
         m = Message(u, msg['content']['body'], room=r, typ=Message.GROUP)
         self.msg_queue.put(m)
+
+      if(msgtype == 'm.emote'):
+        m = Message(u, '* ' + msg['content']['body'], typ=Message.GROUP)
+        self.msg_queue.put(m)
         
-      if(msg['content']['msgtype'] == 'm.image'):
+      if(msgtype == 'm.image' or msgtype == 'm.audio'):
         media_url = urlparse(msg['content']['url'])
         http_url = self.client.api.base_url + "/_matrix/media/r0/download/{0}{1}".format(media_url.netloc, media_url.path)
-        body = "{0} uploaded an image: {1}".format(msg['sender'], http_url)
+        if(msgtype == 'm.image'):
+          body = "{0} uploaded an image: {1}".format(msg['sender'], http_url)
+        elif(msgtype == 'm.audio'):
+          body = "{0} uploaded an audio file: {1}".format(msg['sender'], http_url)
         m = Message(u, body, room=r, typ=Message.GROUP)
-        self.log.debug("Sending m.image: " + body)
+        self.log.debug("Sending " + msgtype + ": " + body)
         self.msg_queue.put(m)
+        
         
     except KeyError as e:
       self.log.debug("Incoming message did not have all required fields: " + e.message)
