@@ -233,12 +233,12 @@ class MatrixProtocol(Protocol):
       
       if(msgtype == 'm.text'):
         m = Message(u, msg['content']['body'], room=r, typ=Message.GROUP)
-        self.log.debug('Sending m.text: ' + msg['content']['body'])
+        self.log.debug('Handling m.text: ' + msg['content']['body'])
         self.msg_queue.put(m)
 
       if(msgtype == 'm.emote'):
         m = Message(u, '* ' + msg['content']['body'], room=r, typ=Message.GROUP)
-        self.log.debug('Sending m.emote: ' + msg['content']['body'])
+        self.log.debug('Handling m.emote: ' + msg['content']['body'])
         self.msg_queue.put(m)
         
       if(msgtype == 'm.image' or msgtype == 'm.audio'):
@@ -249,7 +249,7 @@ class MatrixProtocol(Protocol):
         elif(msgtype == 'm.audio'):
           body = "{0} uploaded an audio file: {1}".format(msg['sender'], http_url)
         m = Message(u, body, room=r, typ=Message.GROUP)
-        self.log.debug("Sending " + msgtype + ": " + body)
+        self.log.debug("Handling " + msgtype + ": " + body)
         self.msg_queue.put(m)
         
         
