@@ -161,7 +161,6 @@ class MatrixProtocol(Protocol):
 
     # Create a client in setup() because we might use self.client before
     # connect() is called
-    print(self.opt('matrix.server'))
     homeserver = self.opt('matrix.server')
     self.client = MatrixClient(homeserver)
 
@@ -236,12 +235,12 @@ class MatrixProtocol(Protocol):
         self.log.debug('Handling m.text: ' + msg['content']['body'])
         self.msg_queue.put(m)
 
-      if(msgtype == 'm.emote'):
+      elif(msgtype == 'm.emote'):
         m = Message(u, '* ' + msg['content']['body'], room=r, typ=Message.GROUP)
         self.log.debug('Handling m.emote: ' + msg['content']['body'])
         self.msg_queue.put(m)
         
-      if(msgtype == 'm.image' or msgtype == 'm.audio'):
+      elif(msgtype == 'm.image' or msgtype == 'm.audio'):
         media_url = urlparse(msg['content']['url'])
         http_url = self.client.api.base_url + "/_matrix/media/r0/download/{0}{1}".format(media_url.netloc, media_url.path)
         if(msgtype == 'm.image'):
@@ -251,6 +250,10 @@ class MatrixProtocol(Protocol):
         m = Message(u, body, room=r, typ=Message.GROUP)
         self.log.debug("Handling " + msgtype + ": " + body)
         self.msg_queue.put(m)
+
+      else:
+        self.log.debug('Not handling message, unknown msgtype')
+          
         
         
     except KeyError as e:
