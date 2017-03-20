@@ -476,7 +476,7 @@ def stream(bot,mess,args):
 
 @botcmd
 def videos(bot,mess,args):
-  """open folder as a playlist - videos [all] [include -exclude] [#track] [@match]"""
+  """open folder(s) as a playlist - videos [all] [include -exclude] [#track] [@match]"""
 
   plugin = _check_plugin(bot,'library')
   if plugin:
