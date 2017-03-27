@@ -148,7 +148,7 @@ protocols = cli
 # username, password, homeserver
 #matrix.username =
 #matrix.password =
-#matrix.homeserver =
+#matrix.server =
 
 ################################################################################
 # Plugin options
