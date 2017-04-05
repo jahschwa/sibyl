@@ -242,16 +242,27 @@ class MatrixProtocol(Protocol):
         self.log.debug('Handling m.emote: ' + msg['content']['body'])
         self.msg_queue.put(m)
         
-      elif(msgtype == 'm.image' or msgtype == 'm.audio'):
+      elif(msgtype == 'm.image' or msgtype == 'm.audio' or msgtype == 'm.file' or msgtype == 'm.video'):
         media_url = urlparse(msg['content']['url'])
         http_url = self.client.api.base_url + "/_matrix/media/r0/download/{0}{1}".format(media_url.netloc, media_url.path)
         if(msgtype == 'm.image'):
-          body = "{0} uploaded an image: {1}".format(msg['sender'], http_url)
+          body = "{0} uploaded {1}: {2}".format(msg['sender'], msg['content'].get('body', 'an image'), http_url)
         elif(msgtype == 'm.audio'):
-          body = "{0} uploaded an audio file: {1}".format(msg['sender'], http_url)
+          body = "{0} uploaded {1}: {2}".format(msg['sender'], msg['content'].get('body', 'an audio file'), http_url)
+        elif(msgtype == 'm.video'):
+          body = "{0} uploaded {1}: {2}".format(msg['sender'], msg['content'].get('body', 'a video file'), http_url)
+        elif(msgtype == 'm.file'):
+          body = "{0} uploaded {1}: {2}".format(msg['sender'], msg['content'].get('body', 'a file'), http_url)
         m = Message(u, body, room=r, typ=Message.GROUP)
         self.log.debug("Handling " + msgtype + ": " + body)
         self.msg_queue.put(m)
+
+      elif(msgtype == 'm.location'):
+        body = "{0} sent a location: {1}".format(msg['sender'], msg['content']['geo_uri'])
+        m = Message(u, body, room=r, typ=Message.GROUP)
+        self.log.debug('Handling m.location: ' + body)
+        self.msg_queue.put(m)
+
 
       else:
         self.log.debug('Not handling message, unknown msgtype')
