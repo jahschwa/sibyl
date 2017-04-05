@@ -68,7 +68,8 @@ def conf(bot):
   return [
     {"name": "username", "req": True},
     {"name": "password", "req": True},
-    {"name": "server", "req": True}
+    {"name": "server", "req": True},
+    {"name": "debug", "req": False, "default": False}
   ]
 
 ################################################################################
@@ -221,7 +222,8 @@ class MatrixProtocol(Protocol):
 
 
   def messageHandler(self, msg):
-    self.log.debug(str(msg))
+    if(self.opt('matrix.debug')):
+      self.log.debug(str(msg))
 
     try:
       # Create a new Message to send to Sibyl

@@ -150,6 +150,9 @@ protocols = cli
 #matrix.password =
 #matrix.server =
 
+# Optional: log full Matrix events at DEBUG level
+#matrix.debug = False
+
 ################################################################################
 # Plugin options
 ################################################################################
