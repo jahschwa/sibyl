@@ -148,7 +148,10 @@ protocols = cli
 # username, password, homeserver
 #matrix.username =
 #matrix.password =
-#matrix.homeserver =
+#matrix.server =
+
+# Optional: log full Matrix events at DEBUG level
+#matrix.debug = False
 
 ################################################################################
 # Plugin options

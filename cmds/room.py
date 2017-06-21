@@ -483,8 +483,8 @@ def link_echo(bot,mess,cmd):
     if len(urls)==0:
       return
     for url in urls:
-      r = requests.get(url)
-      title = fromstring(r.content).findtext('.//title')
+      r = requests.get(url, timeout=5)
+      title = fromstring(r.text).findtext('.//title')
       titles.append(title.strip())
     linkcount = 1
     reply = ""
