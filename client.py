@@ -28,8 +28,8 @@ from Queue import Queue
 readline = None
 
 try:
-  from PyQt4 import QtGui,QtCore
-  from PyQt4.Qt import QApplication
+  from PyQt5 import QtGui,QtCore,QtWidgets
+  from PyQt5.Qt import QApplication
 except:
   pass
 
@@ -72,7 +72,7 @@ def main():
       pass
 
   if args.gui:
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     chat = ChatBox(args)
     chat.log('Ready')
     sys.exit(app.exec_())
@@ -389,7 +389,7 @@ if 'QtCore' in locals():
 ################################################################################
 
 if 'QtGui' in locals():
-  class ChatBox(QtGui.QMainWindow):
+  class ChatBox(QtWidgets.QMainWindow):
 
     def __init__(self,args):
 
@@ -418,20 +418,20 @@ if 'QtGui' in locals():
       self.make_item(menu,'Quit','Ctrl+Q')
 
       # create the main grid where the buttons will be located
-      grid = QtGui.QGridLayout()
+      grid = QtWidgets.QGridLayout()
       grid.setSpacing(10)
-      area = QtGui.QWidget(self)
+      area = QtWidgets.QWidget(self)
       area.setLayout(grid)
       self.setCentralWidget(area)
 
       # add text boxes for chat
-      self.chatpane = QtGui.QTextEdit()
+      self.chatpane = QtWidgets.QTextEdit()
       self.chatpane.setReadOnly(True)
       self.chatpane.setMinimumSize(500,200)
       self.chatpane.resize(500,200)
       grid.addWidget(self.chatpane,0,0)
 
-      self.editpane = QtGui.QTextEdit()
+      self.editpane = QtWidgets.QTextEdit()
       self.editpane.setMinimumSize(500,50)
       self.editpane.setMaximumHeight(50)
       self.editpane.resize(500,50)
@@ -445,10 +445,11 @@ if 'QtGui' in locals():
     def make_item(self,menu,name,shortcut):
       """helper function to create a menu item and add it to the menu"""
 
-      opts = QtGui.QAction(name,self)
-      opts.setShortcut(shortcut)
-      opts.triggered.connect(self.cb_menu)
-      menu.addAction(opts)
+      item = QtWidgets.QAction(name,self)
+      item.setShortcut(QtGui.QKeySequence(shortcut))
+      item.triggered.connect(self.cb_menu)
+      menu.addAction(item)
+      self.addAction(item)
 
     def center(self):
       """center the window on the current monitor"""
@@ -456,9 +457,9 @@ if 'QtGui' in locals():
       # http://stackoverflow.com/a/20244839/2258915
 
       fg = self.frameGeometry()
-      cursor = QtGui.QApplication.desktop().cursor().pos()
-      screen = QtGui.QApplication.desktop().screenNumber(cursor)
-      cp = QtGui.QApplication.desktop().screenGeometry(screen).center()
+      cursor = QtWidgets.QApplication.desktop().cursor().pos()
+      screen = QtWidgets.QApplication.desktop().screenNumber(cursor)
+      cp = QtWidgets.QApplication.desktop().screenGeometry(screen).center()
       fg.moveCenter(cp)
       self.move(fg.topLeft())
 
@@ -482,7 +483,7 @@ if 'QtGui' in locals():
       elif t=='Copy Plaintext':
         QApplication.clipboard().setText(self.chatpane.toPlainText())
       elif t=='Quit':
-        QtGui.qApp.quit()
+        QtWidgets.qApp.quit()
 
     def cb_text(self):
       """handle typing and send on enter"""
@@ -565,7 +566,7 @@ if 'QtGui' in locals():
 ################################################################################
 
 if 'QtGui' in locals():
-  class ConnectDialog(QtGui.QDialog):
+  class ConnectDialog(QtWidgets.QDialog):
 
     def __init__(self,parent):
 
@@ -576,27 +577,27 @@ if 'QtGui' in locals():
       """create labels and edit boxes"""
 
       # create grid layout
-      grid = QtGui.QGridLayout()
+      grid = QtWidgets.QGridLayout()
       grid.setSpacing(10)
       self.setLayout(grid)
 
       # add QLabels and QLineEdits
-      grid.addWidget(QtGui.QLabel('Hostname',self),0,0)
-      self.hostbox = QtGui.QLineEdit(self.parent().args.host,self)
+      grid.addWidget(QtWidgets.QLabel('Hostname',self),0,0)
+      self.hostbox = QtWidgets.QLineEdit(self.parent().args.host,self)
       grid.addWidget(self.hostbox,0,1)
 
-      grid.addWidget(QtGui.QLabel('Password',self),1,0)
-      self.passbox = QtGui.QLineEdit(self.parent().pword,self)
-      self.passbox.setEchoMode(QtGui.QLineEdit.Password)
+      grid.addWidget(QtWidgets.QLabel('Password',self),1,0)
+      self.passbox = QtWidgets.QLineEdit(self.parent().pword,self)
+      self.passbox.setEchoMode(QtWidgets.QLineEdit.Password)
       grid.addWidget(self.passbox,1,1)
 
-      grid.addWidget(QtGui.QLabel('Use SSL',self),2,0)
-      self.sslbox = QtGui.QCheckBox(self)
+      grid.addWidget(QtWidgets.QLabel('Use SSL',self),2,0)
+      self.sslbox = QtWidgets.QCheckBox(self)
       self.sslbox.setChecked(self.parent().args.ssl)
       grid.addWidget(self.sslbox,2,1)
 
-      grid.addWidget(QtGui.QLabel('Verify SSL',self),3,0)
-      self.verifybox = QtGui.QCheckBox(self)
+      grid.addWidget(QtWidgets.QLabel('Verify SSL',self),3,0)
+      self.verifybox = QtWidgets.QCheckBox(self)
       self.verifybox.setChecked(not self.parent().args.noverify)
       grid.addWidget(self.verifybox,3,1)
 
@@ -611,7 +612,7 @@ if 'QtGui' in locals():
     def make_button(self,grid,name,x,y,func):
       """helper function to add a button to the grid"""
 
-      button = QtGui.QPushButton(name,self)
+      button = QtWidgets.QPushButton(name,self)
       button.clicked.connect(func)
       button.resize(button.sizeHint())
       grid.addWidget(button,x,y)
