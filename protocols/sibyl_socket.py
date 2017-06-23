@@ -335,9 +335,7 @@ class SocketServer(Protocol):
       self.event_data.set()
     self.event_close = Event()
 
-    hostname = 'localhost'
-    if self.opt('socket.internet'):
-      hostname = socket.gethostname()
+    hostname = '0.0.0.0' if self.opt('socket.internet') else 'localhost'
     port = self.opt('socket.port')
     pword = self.opt('socket.key_password')
 
