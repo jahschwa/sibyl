@@ -283,9 +283,11 @@ protocols = cli
 
 # Messages to remember when a protocol disconnects and resend when reconnects
 # or we get kicked from a room for whatever reason then rejoin
-# positive is limit per recipient (i.e. room/user)
-# 0 is disabled, negative is infinite
-#defer_queue = 10
+# positive is limit, 0 disables deferring, negative is infinite
+#defer_total = 100
+#defer_proto = 100
+#defer_room = 10
+#defer_priv = 10
 
 # Whether to include the name of plugins in the "help" list
 #help_plugin = False

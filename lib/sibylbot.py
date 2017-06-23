@@ -42,9 +42,9 @@ import sys,logging,re,os,imp,inspect,traceback,time,pickle,Queue,collections
 
 from sibyl.lib.config import Config
 from sibyl.lib.protocol import Message,Room,User
-from sibyl.lib.protocol import (PingTimeout,ConnectFailure,AuthFailure,
-    ServerShutdown)
-from sibyl.lib.decorators import botcmd,botrooms
+from sibyl.lib.protocol import (ProtocolError,PingTimeout,ConnectFailure,
+    AuthFailure,ServerShutdown)
+from sibyl.lib.decorators import botcmd,botrooms,botcon
 import sibyl.lib.util as util
 from sibyl.lib.thread import SmartThread
 
@@ -139,6 +139,8 @@ class SibylBot(object):
     self.__recons = {}
     self.__tell_rooms = []
     self.__pending_send = Queue.Queue()
+    self.__deferred = []
+    self.__deferred_count = {}
     self.__pending_del = Queue.Queue()
     self.__last_idle = 0
     self.__idle_count = {}
@@ -755,6 +757,63 @@ class SibylBot(object):
     else:
       return rule_str==name
 
+  def __defer(self,msg):
+    """add messages to __deferred_priv"""
+
+    d = self.__deferred
+    c = self.__deferred_count
+
+    to = msg[1]
+    proto = to.get_protocol()
+    drop = None
+    if len(d)>self.opt('defer_total'):
+      drop = lambda m: True
+    elif c.get(proto,0)>self.opt('defer_proto'):
+      drop = lambda m: m[1].get_protocol()==proto
+    elif ((isinstance(to,Room) and c.get(to,0)>self.opt('defer_room'))
+        or (isinstance(to,User) and c.get(to,0)>self.opt('defer_priv'))):
+      drop = lambda m: m[1]==to
+
+    if drop:
+      for i in range(0,len(d)):
+        if drop(d[i]):
+          del d[i]
+          break
+
+    c[proto] = c.get(proto,0)+1
+    c[to] = c.get(to,0)+1
+    d.append(msg)
+    self.log.debug('Deferring msg for "%s:%s" (now %s in queue)'
+        % (proto.get_name(),to,len(d)))
+
+  def __requeue(self,match):
+    """helper function for requeueing msgs"""
+
+    d = self.__deferred
+    c = self.__deferred_count
+
+    i = 0
+    re = 0
+    while i<len(self.__deferred):
+      msg = d[i]
+      to = msg[1]
+      proto = to.get_protocol()
+      if match(msg):
+        self.__pending_send.put(msg)
+        c[proto] -= 1
+        if c[proto]==0:
+          del c[proto]
+        c[to] -= 1
+        if c[to]==0:
+          del c[to]
+        del d[i]
+        re += 1
+      else:
+        i += 1
+
+    if re:
+      self.log.debug('Requeued %s msgs (now %s in queue)' % (re,len(d)))
+
 ################################################################################
 # EEE - Chat commands
 #
@@ -1072,7 +1131,32 @@ class SibylBot(object):
     """send queued messages synchronously"""
 
     while not self.__pending_send.empty():
-      self.__send(*self.__pending_send.get())
+      try:
+        msg = self.__pending_send.get()
+        if (msg[1].get_protocol().is_connected() and
+            (isinstance(msg[1],User) or msg[1].get_protocol().in_room(msg[1]))):
+          self.__send(*msg)
+        else:
+          self.__defer(msg)
+      except ProtocolError as e:
+        self.__defer(msg)
+        if msg[1].get_protocol().is_connected():
+          raise e
+      except Exception as e:
+        self.log_ex(e,'Error sending %s msg' % msg[1].get_protocol().get_name())
+
+  @staticmethod
+  @botcon
+  def __requeue_priv(bot,pname):
+    """requeue deferred private messages on protocol connect"""
+    bot.__requeue(lambda m: m[1].get_protocol().get_name()==pname
+        and isinstance(m[1],User))
+
+  @staticmethod
+  @botrooms
+  def __requeue_group(bot,room):
+    """requeue deferred group messages on room join"""
+    bot.__requeue(lambda m: m[1]==room)
 
 ################################################################################
 # HHH - User-facing functions

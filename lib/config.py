@@ -89,7 +89,11 @@ class Config(object):
 ('state_file',  ('data/state.pickle', False,  None,                 self.valid_wfile,   None)),
 ('idle_time',   (0.1,                 False,  self.parse_float,     self.valid_nump,    None)),
 ('idle_count',  (5,                   False,  self.parse_int,       self.valid_nump,    None)),
-('idle_freq',   (1,                   False,  self.parse_int,       self.valid_nump,    None))
+('idle_freq',   (1,                   False,  self.parse_int,       self.valid_nump,    None)),
+('defer_total', (100,                 False,  self.parse_int,       None,               None)),
+('defer_proto', (100,                 False,  self.parse_int,       None,               None)),
+('defer_room',  (10,                  False,  self.parse_int,       None,               None)),
+('defer_priv',  (10,                  False,  self.parse_int,       None,               None))
 
     ])
 
