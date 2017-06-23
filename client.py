@@ -25,6 +25,8 @@ import sys,socket,select,argparse,time,traceback,getpass,ssl,thread
 from threading import Thread,Event
 from Queue import Queue
 
+readline = None
+
 try:
   from PyQt4 import QtGui,QtCore
   from PyQt4.Qt import QApplication
@@ -63,7 +65,9 @@ def main():
 
   if (not args.gui) and (not args.noreadline):
     try:
-      import readline
+      import readline as temp
+      global readline
+      readline = temp
     except:
       pass
 
