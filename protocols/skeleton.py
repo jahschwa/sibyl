@@ -154,6 +154,7 @@ class MYPROTOCOL(Protocol):
   # send a message to a user
   # @param text (str,unicode) text to send
   # @param to (User,Room) recipient
+  # @raise (ConnectFailure) if failed to send message
   def send(self,text,to):
     raise NotImplementedError
 
