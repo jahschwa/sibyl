@@ -25,7 +25,7 @@
 #
 ################################################################################
 
-import logging,time,re,traceback
+import logging,time,re,traceback,socket
 
 import xmpp
 from xmpp.protocol import SystemShutdown,StreamError
@@ -249,6 +249,7 @@ class XMPP(Protocol):
 
     # Connection established - save connection
     self.conn = conn
+    self.conn.Connection._sock.setblocking(False)
 
     # Register handlers
     self.conn.RegisterHandler('message',self.callback_message)
@@ -306,8 +307,21 @@ class XMPP(Protocol):
       to = to.get_name()
     mess.setTo(xmpp.JID(str(to)))
 
+    # outer try block catches disconnected from _sock.recv() and conn.send()
     try:
+
+      # check if the socket is dead (send doesn't do that, so we'll recv)
+      # if recv() raises an exception it timed out and everything is fine
+      # if it returns an empty string the socket is dead
+      try:
+        if not self.conn.Connection._sock.recv(1,socket.MSG_PEEK):
+          raise IOError
+      except socket.error as e:
+        pass
+
+      # actually try to send the message
       self.conn.send(mess)
+
     except IOError:
       raise ConnectFailure
 
