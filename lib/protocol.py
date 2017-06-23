@@ -403,6 +403,7 @@ class Protocol(object):
   # send a message to a user
   # @param text (str,unicode) text to send
   # @param to (User,Room) recipient
+  # @raise (ConnectFailure) if failed to send message
   @abstractmethod
   def send(self,text,to):
     pass
@@ -500,6 +501,10 @@ class Protocol(object):
   # @return (bool) whether self!=other
   def __ne__(self,other):
     return not self==other
+
+  # override hash for use as dict keys
+  def __hash__(self):
+    return hash(self.get_name())
 
   # @param opt (str) name of the option to get
   # @return (object) the value of the option
