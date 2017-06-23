@@ -351,271 +351,274 @@ class BufferThread(Thread):
 # Qt signal bridge class
 ################################################################################
 
-class QtSocketThread(QtCore.QObject):
+if 'QtCore' in locals():
+  class QtSocketThread(QtCore.QObject):
 
-  sig_say = QtCore.pyqtSignal(str)
-  sig_log = QtCore.pyqtSignal(str)
-  sig_err = QtCore.pyqtSignal(str)
+    sig_say = QtCore.pyqtSignal(str)
+    sig_log = QtCore.pyqtSignal(str)
+    sig_err = QtCore.pyqtSignal(str)
 
-  def __init__(self,gui):
+    def __init__(self,gui):
 
-    super(QtSocketThread,self).__init__()
-    self.gui = gui
-    self.args = gui.args
-    self.pword = gui.pword
+      super(QtSocketThread,self).__init__()
+      self.gui = gui
+      self.args = gui.args
+      self.pword = gui.pword
 
-    self.send_queue = Queue()
-    self.event_close = Event()
-    self.socket = SocketThread(self)
+      self.send_queue = Queue()
+      self.event_close = Event()
+      self.socket = SocketThread(self)
 
-  def connect(self):
-    return self.socket.connect()
+    def connect(self):
+      return self.socket.connect()
 
-  def run(self):
-    self.socket.run()
+    def run(self):
+      self.socket.run()
 
-  def say(self,txt):
-    self.sig_say.emit(txt)
+    def say(self,txt):
+      self.sig_say.emit(txt)
 
-  def log(self,txt):
-    self.sig_log.emit(txt)
+    def log(self,txt):
+      self.sig_log.emit(txt)
 
-  def error(self,txt):
-    self.sig_err.emit(txt)
+    def error(self,txt):
+      self.sig_err.emit(txt)
 
 ################################################################################
 # Qt GUI class
 ################################################################################
 
-class ChatBox(QtGui.QMainWindow):
+if 'QtGui' in locals():
+  class ChatBox(QtGui.QMainWindow):
 
-  def __init__(self,args):
+    def __init__(self,args):
 
-    super(ChatBox,self).__init__()
-    self.args = args
-    self.pword = ''
-    self.connected = False
+      super(ChatBox,self).__init__()
+      self.args = args
+      self.pword = ''
+      self.connected = False
 
-    self.worker = None
-    self.thread = None
+      self.worker = None
+      self.thread = None
 
-    self.initUI()
-    self.center()
-    self.show()
+      self.initUI()
+      self.center()
+      self.show()
 
-  def initUI(self):
-    """create the main window UI including callbacks"""
+    def initUI(self):
+      """create the main window UI including callbacks"""
 
-    # create a file menu and add options to it
-    menu = self.menuBar().addMenu('&Chat')
-    self.make_item(menu,'Connect','Ctrl+N')
-    self.make_item(menu,'Reconnect','Ctrl+R')
-    self.make_item(menu,'Disconnect','Ctrl+D')
-    self.make_item(menu,'Copy HTML','Ctrl+H')
-    self.make_item(menu,'Copy Plaintext','Ctrl+P')
-    self.make_item(menu,'Quit','Ctrl+Q')
+      # create a file menu and add options to it
+      menu = self.menuBar().addMenu('&Chat')
+      self.make_item(menu,'Connect','Ctrl+N')
+      self.make_item(menu,'Reconnect','Ctrl+R')
+      self.make_item(menu,'Disconnect','Ctrl+D')
+      self.make_item(menu,'Copy HTML','Ctrl+H')
+      self.make_item(menu,'Copy Plaintext','Ctrl+P')
+      self.make_item(menu,'Quit','Ctrl+Q')
 
-    # create the main grid where the buttons will be located
-    grid = QtGui.QGridLayout()
-    grid.setSpacing(10)
-    area = QtGui.QWidget(self)
-    area.setLayout(grid)
-    self.setCentralWidget(area)
+      # create the main grid where the buttons will be located
+      grid = QtGui.QGridLayout()
+      grid.setSpacing(10)
+      area = QtGui.QWidget(self)
+      area.setLayout(grid)
+      self.setCentralWidget(area)
 
-    # add text boxes for chat
-    self.chatpane = QtGui.QTextEdit()
-    self.chatpane.setReadOnly(True)
-    self.chatpane.setMinimumSize(500,200)
-    self.chatpane.resize(500,200)
-    grid.addWidget(self.chatpane,0,0)
+      # add text boxes for chat
+      self.chatpane = QtGui.QTextEdit()
+      self.chatpane.setReadOnly(True)
+      self.chatpane.setMinimumSize(500,200)
+      self.chatpane.resize(500,200)
+      grid.addWidget(self.chatpane,0,0)
 
-    self.editpane = QtGui.QTextEdit()
-    self.editpane.setMinimumSize(500,50)
-    self.editpane.setMaximumHeight(50)
-    self.editpane.resize(500,50)
-    self.editpane.textChanged.connect(self.cb_text)
-    grid.addWidget(self.editpane,1,0)
+      self.editpane = QtGui.QTextEdit()
+      self.editpane.setMinimumSize(500,50)
+      self.editpane.setMaximumHeight(50)
+      self.editpane.resize(500,50)
+      self.editpane.textChanged.connect(self.cb_text)
+      grid.addWidget(self.editpane,1,0)
 
-    # set title, size, focus
-    self.setWindowTitle('Sibyl Socket Chat')
-    self.setFocus()
+      # set title, size, focus
+      self.setWindowTitle('Sibyl Socket Chat')
+      self.setFocus()
 
-  def make_item(self,menu,name,shortcut):
-    """helper function to create a menu item and add it to the menu"""
+    def make_item(self,menu,name,shortcut):
+      """helper function to create a menu item and add it to the menu"""
 
-    opts = QtGui.QAction(name,self)
-    opts.setShortcut(shortcut)
-    opts.triggered.connect(self.cb_menu)
-    menu.addAction(opts)
+      opts = QtGui.QAction(name,self)
+      opts.setShortcut(shortcut)
+      opts.triggered.connect(self.cb_menu)
+      menu.addAction(opts)
 
-  def center(self):
-    """center the window on the current monitor"""
+    def center(self):
+      """center the window on the current monitor"""
 
-    # http://stackoverflow.com/a/20244839/2258915
+      # http://stackoverflow.com/a/20244839/2258915
 
-    fg = self.frameGeometry()
-    cursor = QtGui.QApplication.desktop().cursor().pos()
-    screen = QtGui.QApplication.desktop().screenNumber(cursor)
-    cp = QtGui.QApplication.desktop().screenGeometry(screen).center()
-    fg.moveCenter(cp)
-    self.move(fg.topLeft())
+      fg = self.frameGeometry()
+      cursor = QtGui.QApplication.desktop().cursor().pos()
+      screen = QtGui.QApplication.desktop().screenNumber(cursor)
+      cp = QtGui.QApplication.desktop().screenGeometry(screen).center()
+      fg.moveCenter(cp)
+      self.move(fg.topLeft())
 
-  def cb_menu(self):
-    """handle menu item presses"""
+    def cb_menu(self):
+      """handle menu item presses"""
 
-    t = self.sender().text()
-    if t=='Connect':
-      cd = ConnectDialog(self)
-      if cd.exec_():
-        (self.args.host,self.pword,self.args.ssl,self.args.noverify) = cd.get()
+      t = self.sender().text()
+      if t=='Connect':
+        cd = ConnectDialog(self)
+        if cd.exec_():
+          (self.args.host,self.pword,self.args.ssl,self.args.noverify) = cd.get()
+          self.start_thread()
+      elif t=='Reconnect':
         self.start_thread()
-    elif t=='Reconnect':
-      self.start_thread()
-    elif t=='Disconnect':
-      if self.worker:
-        self.worker.event_close.set()
-        self.connected = False
-    elif t=='Copy HTML':
-      QApplication.clipboard().setText(self.chatpane.toHtml())
-    elif t=='Copy Plaintext':
-      QApplication.clipboard().setText(self.chatpane.toPlainText())
-    elif t=='Quit':
-      QtGui.qApp.quit()
+      elif t=='Disconnect':
+        if self.worker:
+          self.worker.event_close.set()
+          self.connected = False
+      elif t=='Copy HTML':
+        QApplication.clipboard().setText(self.chatpane.toHtml())
+      elif t=='Copy Plaintext':
+        QApplication.clipboard().setText(self.chatpane.toPlainText())
+      elif t=='Quit':
+        QtGui.qApp.quit()
 
-  def cb_text(self):
-    """handle typing and send on enter"""
+    def cb_text(self):
+      """handle typing and send on enter"""
 
-    text = str(self.editpane.toPlainText())
-    if '\n' in text:
-      if self.connected:
-        text = text.replace('\n','')
-        if text:
-          self.said(text)
-          self.worker.send_queue.put(text)
-        self.editpane.clear()
+      text = str(self.editpane.toPlainText())
+      if '\n' in text:
+        if self.connected:
+          text = text.replace('\n','')
+          if text:
+            self.said(text)
+            self.worker.send_queue.put(text)
+          self.editpane.clear()
+        else:
+          self.editpane.textCursor().deletePreviousChar()
+
+    def start_thread(self):
+
+      worker = QtSocketThread(self)
+      thread = QtCore.QThread(self)
+      worker.moveToThread(thread)
+      thread.started.connect(worker.run)
+
+      worker.sig_say.connect(self.say)
+      worker.sig_log.connect(self.log)
+      worker.sig_err.connect(self.error)
+
+      if worker.connect():
+        self.connected = True
+        thread.start()
+        self.thread = thread
+        self.worker = worker
       else:
-        self.editpane.textCursor().deletePreviousChar()
+        self.log('Disconnected')
 
-  def start_thread(self):
+    @QtCore.pyqtSlot()
+    def cleanup(self):
+      if self.worker and not self.worker.event_close.is_set():
+        self.worker.event_close.set()
+        if self.thread.isRunning():
+          self.thread.wait()
 
-    worker = QtSocketThread(self)
-    thread = QtCore.QThread(self)
-    worker.moveToThread(thread)
-    thread.started.connect(worker.run)
+    def said(self,txt):
+      self.chat('%s: %s' % (USER,txt))
 
-    worker.sig_say.connect(self.say)
-    worker.sig_log.connect(self.log)
-    worker.sig_err.connect(self.error)
+    @QtCore.pyqtSlot(str)
+    def say(self,txt):
+      self.chat('%s: %s' % (SIBYL,txt),color='hotpink')
 
-    if worker.connect():
-      self.connected = True
-      thread.start()
-      self.thread = thread
-      self.worker = worker
-    else:
-      self.log('Disconnected')
+    @QtCore.pyqtSlot(str)
+    def log(self,txt):
+      self.chat('INFO: '+txt,color='darkgray',ts=False)
 
-  @QtCore.pyqtSlot()
-  def cleanup(self):
-    if self.worker and not self.worker.event_close.is_set():
-      self.worker.event_close.set()
-      if self.thread.isRunning():
-        self.thread.wait()
+    @QtCore.pyqtSlot(str)
+    def error(self,txt):
+      self.connected = False
+      self.chat(' *** '+txt,color='red',ts=False,strong=True)
 
-  def said(self,txt):
-    self.chat('%s: %s' % (USER,txt))
+    def chat(self,txt,color=None,ts=True,strong=False):
 
-  @QtCore.pyqtSlot(str)
-  def say(self,txt):
-    self.chat('%s: %s' % (SIBYL,txt),color='hotpink')
+      color = (color or 'black')
+      txt = self.html(txt).replace('\n','<br/>')
+      if ts:
+        txt = time.asctime()+' | '+txt
+      txt = '<font color="%s">%s</font>' % (color,txt)
+      if strong:
+        txt = '<strong>%s</strong>' % txt
+      self.chatpane.append(txt)
 
-  @QtCore.pyqtSlot(str)
-  def log(self,txt):
-    self.chat('INFO: '+txt,color='darkgray',ts=False)
+    def html(self,s):
+      """escape characters that break html parsing"""
 
-  @QtCore.pyqtSlot(str)
-  def error(self,txt):
-    self.connected = False
-    self.chat(' *** '+txt,color='red',ts=False,strong=True)
-
-  def chat(self,txt,color=None,ts=True,strong=False):
-
-    color = (color or 'black')
-    txt = self.html(txt).replace('\n','<br/>')
-    if ts:
-      txt = time.asctime()+' | '+txt
-    txt = '<font color="%s">%s</font>' % (color,txt)
-    if strong:
-      txt = '<strong>%s</strong>' % txt
-    self.chatpane.append(txt)
-
-  def html(self,s):
-    """escape characters that break html parsing"""
-
-    s = s.replace('&','&amp;')
-    chars = { '"':'&quot;', "'":'&#039;', '<':'&lt;', '>':'&gt;'}
-    for (k,v) in chars.items():
-      s = s.replace(k,v)
-    return s
+      s = s.replace('&','&amp;')
+      chars = { '"':'&quot;', "'":'&#039;', '<':'&lt;', '>':'&gt;'}
+      for (k,v) in chars.items():
+        s = s.replace(k,v)
+      return s
 
 ################################################################################
 # Qt Connect Dialog class
 ################################################################################
 
-class ConnectDialog(QtGui.QDialog):
+if 'QtGui' in locals():
+  class ConnectDialog(QtGui.QDialog):
 
-  def __init__(self,parent):
+    def __init__(self,parent):
 
-    super(ConnectDialog,self).__init__(parent)
-    self.initUI()
+      super(ConnectDialog,self).__init__(parent)
+      self.initUI()
 
-  def initUI(self):
-    """create labels and edit boxes"""
+    def initUI(self):
+      """create labels and edit boxes"""
 
-    # create grid layout
-    grid = QtGui.QGridLayout()
-    grid.setSpacing(10)
-    self.setLayout(grid)
+      # create grid layout
+      grid = QtGui.QGridLayout()
+      grid.setSpacing(10)
+      self.setLayout(grid)
 
-    # add QLabels and QLineEdits
-    grid.addWidget(QtGui.QLabel('Hostname',self),0,0)
-    self.hostbox = QtGui.QLineEdit(self.parent().args.host,self)
-    grid.addWidget(self.hostbox,0,1)
+      # add QLabels and QLineEdits
+      grid.addWidget(QtGui.QLabel('Hostname',self),0,0)
+      self.hostbox = QtGui.QLineEdit(self.parent().args.host,self)
+      grid.addWidget(self.hostbox,0,1)
 
-    grid.addWidget(QtGui.QLabel('Password',self),1,0)
-    self.passbox = QtGui.QLineEdit(self.parent().pword,self)
-    self.passbox.setEchoMode(QtGui.QLineEdit.Password)
-    grid.addWidget(self.passbox,1,1)
+      grid.addWidget(QtGui.QLabel('Password',self),1,0)
+      self.passbox = QtGui.QLineEdit(self.parent().pword,self)
+      self.passbox.setEchoMode(QtGui.QLineEdit.Password)
+      grid.addWidget(self.passbox,1,1)
 
-    grid.addWidget(QtGui.QLabel('Use SSL',self),2,0)
-    self.sslbox = QtGui.QCheckBox(self)
-    self.sslbox.setChecked(self.parent().args.ssl)
-    grid.addWidget(self.sslbox,2,1)
+      grid.addWidget(QtGui.QLabel('Use SSL',self),2,0)
+      self.sslbox = QtGui.QCheckBox(self)
+      self.sslbox.setChecked(self.parent().args.ssl)
+      grid.addWidget(self.sslbox,2,1)
 
-    grid.addWidget(QtGui.QLabel('Verify SSL',self),3,0)
-    self.verifybox = QtGui.QCheckBox(self)
-    self.verifybox.setChecked(not self.parent().args.noverify)
-    grid.addWidget(self.verifybox,3,1)
+      grid.addWidget(QtGui.QLabel('Verify SSL',self),3,0)
+      self.verifybox = QtGui.QCheckBox(self)
+      self.verifybox.setChecked(not self.parent().args.noverify)
+      grid.addWidget(self.verifybox,3,1)
 
-    # add OK and Cancel buttons
-    self.make_button(grid,'OK',4,0,self.accept)
-    self.make_button(grid,'Cancel',4,1,self.reject)
+      # add OK and Cancel buttons
+      self.make_button(grid,'OK',4,0,self.accept)
+      self.make_button(grid,'Cancel',4,1,self.reject)
 
-    # disabled resizing and set name
-    self.setFixedSize(self.sizeHint())
-    self.setWindowTitle('Connect')
+      # disabled resizing and set name
+      self.setFixedSize(self.sizeHint())
+      self.setWindowTitle('Connect')
 
-  def make_button(self,grid,name,x,y,func):
-    """helper function to add a button to the grid"""
+    def make_button(self,grid,name,x,y,func):
+      """helper function to add a button to the grid"""
 
-    button = QtGui.QPushButton(name,self)
-    button.clicked.connect(func)
-    button.resize(button.sizeHint())
-    grid.addWidget(button,x,y)
+      button = QtGui.QPushButton(name,self)
+      button.clicked.connect(func)
+      button.resize(button.sizeHint())
+      grid.addWidget(button,x,y)
 
-  def get(self):
-    return (self.hostbox.text(),self.passbox.text(),
-        self.sslbox.isChecked(),not self.verifybox.isChecked())
+    def get(self):
+      return (self.hostbox.text(),self.passbox.text(),
+          self.sslbox.isChecked(),not self.verifybox.isChecked())
 
 ################################################################################
 # Main
