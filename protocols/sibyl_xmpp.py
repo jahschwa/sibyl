@@ -578,6 +578,8 @@ class XMPP(Protocol):
     if (room in self.__get_current_mucs()
         and jid.getResource()==self.mucs[room]['nick']):
       code = pres.getStatusCode()
+      if not code and typ==self.OFFLINE:
+        code = self.MUC_SHUTDOWN
       if code:
         code = int(code)
         if code in self.MUC_CODES:
