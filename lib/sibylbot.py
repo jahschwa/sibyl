@@ -562,7 +562,7 @@ class SibylBot(object):
       if reply is None:
         reply = default_reply
       if reply:
-        self.__send(reply,frm)
+        self.send(reply,frm)
       return
 
     # check against bw_list
@@ -572,7 +572,7 @@ class SibylBot(object):
     if applied[0]=='b':
       self.log.info('FORBIDDEN: %s.%s from %s:%s with %s'
           % (ns,cmd_name,pname,real,applied))
-      self.__send("You don't have permission to run \"%s\"" % cmd_name,frm)
+      self.send("You don't have permission to run \"%s\"" % cmd_name,frm)
       self.__stats['forbid'] += 1
       return
 
@@ -593,7 +593,7 @@ class SibylBot(object):
     # check for chat_ctrl
     func = self.hooks['chat'][cmd_name]
     if not self.opt('chat_ctrl') and func._sibylbot_dec_chat_ctrl:
-      self.__send('chat_ctrl is disabled',frm)
+      self.send('chat_ctrl is disabled',frm)
       return
 
     # execute the command and catch exceptions
@@ -615,12 +615,13 @@ class SibylBot(object):
       if self.opt('except_reply'):
         reply = traceback.format_exc(e).split('\n')[-2]
     if reply:
-      self.__send(reply,frm)
+      self.send(reply,frm)
 
   # @param room (str) the room we successfully joined
   def _cb_join_room_success(self,room):
     """execute callbacks on successfull MUC join"""
 
+    self.log.info('Success joining room "%s"' % room)
     self.__run_hooks('rooms',room)
 
   # @param room (str) the room we failed to join
@@ -628,6 +629,7 @@ class SibylBot(object):
   def _cb_join_room_failure(self,room,error):
     """execute callbacks on successfull MUC join"""
 
+    self.log.error('Error joining room "%s" (%s)' % (room,error))
     self.__run_hooks('roomf',room,error)
 
 ################################################################################
@@ -700,25 +702,30 @@ class SibylBot(object):
     filename = os.path.basename(inspect.getfile(func))
     return os.path.extsep.join(filename.split(os.path.extsep)[:-1])
 
-  def __send(self,text,to,bcast=False,frm=None,users=None,hook=True):
+  def __send(self,msg):
     """actually send a message"""
 
+    text = msg.get_text()
     if isinstance(text,str):
       text = text.decode('utf8')
     elif not isinstance(text,unicode):
       text = unicode(text)
 
-    if bcast:
+    to = msg.get_to()
+    if msg.get_broadcast():
       if self.has_plugin('room') and self.opt('room.bridge_broadcast'):
-        users = (users or [])
+        users = msg.get_users()
         for room in self.get_bridged(to):
           nick = room.get_protocol().get_nick(room)
           users += [u for u in room.get_occupants() if u.get_name()!=nick]
+      frm = msg.get_from()
+      if frm==frm.get_protocol().get_user():
+        frm = None
       text = to.get_protocol().broadcast(text,to,frm,users)
     else:
       to.get_protocol().send(text,to)
 
-    if hook:
+    if msg.get_hook():
       self.__run_hooks('send',text,to)
 
   def __match_user(self,mess,rule_str):
@@ -763,16 +770,16 @@ class SibylBot(object):
     d = self.__deferred
     c = self.__deferred_count
 
-    to = msg[1]
+    to = msg.get_to()
     proto = to.get_protocol()
     drop = None
     if len(d)>self.opt('defer_total'):
       drop = lambda m: True
     elif c.get(proto,0)>self.opt('defer_proto'):
-      drop = lambda m: m[1].get_protocol()==proto
+      drop = lambda m: m.get_protocol()==proto
     elif ((isinstance(to,Room) and c.get(to,0)>self.opt('defer_room'))
         or (isinstance(to,User) and c.get(to,0)>self.opt('defer_priv'))):
-      drop = lambda m: m[1]==to
+      drop = lambda m: m.get_to()==to
 
     if drop:
       for i in range(0,len(d)):
@@ -796,7 +803,7 @@ class SibylBot(object):
     re = 0
     while i<len(self.__deferred):
       msg = d[i]
-      to = msg[1]
+      to = msg.get_to()
       proto = to.get_protocol()
       if match(msg):
         self.__pending_send.put(msg)
@@ -1025,7 +1032,7 @@ class SibylBot(object):
       del self.__tell_rooms[self.__tell_rooms.index(room)]
       if self.errors:
         msg = 'Errors during startup: '
-        self.__send(msg+self.run_cmd('errors',['startup']),room,hook=False)
+        self.send(msg+self.run_cmd('errors',['startup']),room,hook=False)
     if not self.__tell_rooms:
       self.del_hook(self.__tell_errors)
 
@@ -1133,17 +1140,22 @@ class SibylBot(object):
     while not self.__pending_send.empty():
       try:
         msg = self.__pending_send.get()
-        if (msg[1].get_protocol().is_connected() and
-            (isinstance(msg[1],User) or msg[1].get_protocol().in_room(msg[1]))):
-          self.__send(*msg)
+        proto = msg.get_protocol()
+        to = msg.get_to()
+        if (proto.is_connected() and
+            (isinstance(to,User) or proto.in_room(to))):
+          self.__send(msg)
         else:
-          self.__defer(msg)
+          if isinstance(to,User) or to in proto.get_rooms(Room.FLAG_ACTIVE):
+            self.__defer(msg)
+          else:
+            self.log.warning('Attempted to send to inactive Room "%s"' % to)
       except ProtocolError as e:
         self.__defer(msg)
-        if msg[1].get_protocol().is_connected():
+        if msg.get_protocol().is_connected():
           raise e
       except Exception as e:
-        self.log_ex(e,'Error sending %s msg' % msg[1].get_protocol().get_name())
+        self.log_ex(e,'Error sending %s msg' % msg.get_protocol().get_name())
 
   @staticmethod
   @botcon
@@ -1213,9 +1225,15 @@ class SibylBot(object):
     """send a message (this function is thread-safe)"""
 
     broadcast = (broadcast and isinstance(to,Room))
-    frm = (frm if broadcast else None)
+    frm = (frm if broadcast else to.get_protocol().get_user())
     users = (users if broadcast else None)
-    self.__pending_send.put((text,to,broadcast,frm,users,hook))
+
+    msg = Message(frm,text,
+                  to=to,
+                  broadcast=broadcast,
+                  users=users,
+                  hook=hook)
+    self.__pending_send.put(msg)
 
   # wrapper method for send() allowing to pass Message objects instead of User
   # @param text (str,unicode) the text to send

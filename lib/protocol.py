@@ -281,10 +281,17 @@ class Message(object):
   # @param status (int) [None] status enum
   # @param msg (str) [None] custom status msg (e.g. "Doing awesome!")
   # @param room (Room) [None] the room that sent the message
-  def __init__(self,user,txt,typ=None,status=None,msg=None,room=None):
+  #
+  #   ===== following used internally by Sibyl=====
+  # @param to (User,Room) [None] the destination for this Message
+  # @param broadcast (bool) [False] highlight all users (only works for Rooms)
+  # @param users (list of User) [[]] additional users to highlight (broadcast)
+  # @param hook (bool) [True] execute @botsend hooks for this message
+  def __init__(self,user,txt,typ=None,status=None,msg=None,room=None,
+      to=None,broadcast=False,users=None,hook=True):
     """create a new Message"""
 
-    self.protocol = user.get_protocol()
+    self.protocol = user.get_protocol() if to is None else to.get_protocol()
 
     self.typ = (Message.PRIVATE if typ is None else typ)
     if self.typ not in range(0,4):
@@ -299,6 +306,11 @@ class Message(object):
     self.txt = txt
     self.msg = msg
     self.room = room
+
+    self.to = to
+    self.broadcast = broadcast
+    self.users = users or []
+    self.hook = hook
 
   # @return (User,Room) the sender of this Message usable for a reply
   def get_from(self):
@@ -339,6 +351,26 @@ class Message(object):
   def get_protocol(self):
     """return the name of the protocol associated with this Message"""
     return self.protocol
+
+  # @return (User,Room) the destination for this Message
+  def get_to(self):
+    """return the destination User or Room for this Message"""
+    return self.to
+
+  # @return (bool) whether this Message should be broadcast
+  def get_broadcast(self):
+    """return True/False for broadcasting this Message"""
+    return self.broadcast
+
+  # @return (list of User) additional users to highlight (broadcast)
+  def get_users(self):
+    """return additional users to highlight when broadcasting"""
+    return self.users
+
+  # @return (bool) whether to run @botsend hooks for this Message
+  def get_hook(self):
+    """return whether to run @botsend hooks for this Message"""
+    return self.hook
 
   # @param typ (int) Message type enum
   # @return (str) human-readable Message type
