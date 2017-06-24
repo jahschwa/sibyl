@@ -495,7 +495,7 @@ def link_echo(bot,mess,cmd):
   except Exception as e:
     log.error('Link echo - '+e.__class__.__name__+' - '+url)
   else:
-    bot.send(reply,mess.get_from())
+    bot.reply(reply,mess)
 
 @botrooms
 def _muc_join_success(bot,room):
@@ -517,7 +517,7 @@ def _send_muc_result(bot,room,msg):
   mess = bot.pending_room[room]
   del bot.pending_room[room]
 
-  bot.send(msg,mess.get_from())
+  bot.reply(msg,mess)
 
 def parse_args(bot,mess,args):
   """parse protocols and rooms out of args"""

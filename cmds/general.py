@@ -136,7 +136,7 @@ def alias_cb(bot,mess,args,name):
       msg = ('Command terminated for exceeding alias_depth with stack: %s'
           % bot.alias_stack)
       log.error(msg)
-      bot.send(msg,mess.get_from())
+      bot.reply(msg,mess)
     return
 
   bot.alias_stack.append(name)
@@ -157,7 +157,7 @@ def alias_cb(bot,mess,args,name):
       else:
         msg = 'Unknown command "%s"' % name
       if msg:
-        bot.send(msg,mess.get_from())
+        bot.reply(msg,mess)
 
   finally:
     del bot.alias_stack[-1]

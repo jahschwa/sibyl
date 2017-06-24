@@ -1217,6 +1217,19 @@ class SibylBot(object):
     users = (users if broadcast else None)
     self.__pending_send.put((text,to,broadcast,frm,users,hook))
 
+  # wrapper method for send() allowing to pass Message objects instead of User
+  # @param text (str,unicode) the text to send
+  # @param mess (Message) the message to reply to
+  # @param broadcast (bool) [False] highlight all users (only works for Rooms)
+  # @param frm (User) [None] the sending user (only relevant for broadcast)
+  # @param users (list of User) [None] additional users to highlight (broadcast)
+  # @param hook (bool) [True] execute @botsend hooks for this message
+  #   NOTE: when @botsend hooks call send(), they MUST set hook=False
+  def reply(self,text,mess,broadcast=False,frm=None,users=None,hook=True):
+    """reply to a message (this function is thread-safe)"""
+
+    self.send(text,mess.get_from(),broadcast,frm,users,hook)
+
   # @param (str) the name of a protocol
   # @return (Protocol) the Protocol object with that name
   def get_protocol(self,name):
