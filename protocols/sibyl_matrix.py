@@ -343,7 +343,7 @@ class MatrixProtocol(Protocol):
   # @param room (Room) the room to query
   # @return (str) the nick name we are using in the specified room
   def get_nick(self,room):
-    return self.opt('nick_name') # TODO: per-room nicknames
+    return self.get_user().get_name() # TODO: per-room nicknames
 
   # @param room (Room) the room to query
   # @param nick (str) the nick to examine
