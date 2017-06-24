@@ -837,19 +837,15 @@ class XMPP(Protocol):
 
     # result is None for timeout
     if not result:
-      self.log.error('Error joining room "%s" (timeout)' % room)
       raise MUCJoinFailure('timeout')
 
     # check for error
     error = result.getError()
     if error:
-      self.log.error('Error joining room "%s" (%s)'
-          % (room,self.MUC_JOIN_ERROR[error]))
       raise MUCJoinFailure(error)
 
     # we joined successfully
     self.mucs[room]['status'] = self.MUC_OK
-    self.log.info('Success joining room "%s"' % room)
 
   def __muc_join_success(self,room):
     """execute callbacks on successfull MUC join"""
