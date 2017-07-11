@@ -47,7 +47,7 @@ def main():
       action='store_true',
       help='include time stamps')
   parser.add_argument('-p','--password',
-      action='store_true',
+      default=None,const='',nargs='?',
       help='prompt for password')
   parser.add_argument('-v','--noverify',
       action='store_true',
@@ -58,12 +58,21 @@ def main():
   parser.add_argument('-r','--noreadline',
       action='store_true',
       help="don't use GNU readline")
+  parser.add_argument('-e','--execute',
+      default=None,const='',nargs='?',
+      help='execute a single command and return')
   parser.add_argument('-g','--gui',
       action='store_true',
       help='start the GUI instead of CLI')
+  parser.add_argument('-d','--debug',
+      action='store_true',
+      help='print debug info (depends -d)')
+  parser.add_argument('-w','--timeout',
+      default=15,type=int,
+      help='timeout in sec (depends -d)')
   args = parser.parse_args()
 
-  if (not args.gui) and (not args.noreadline):
+  if (not args.gui) and (not args.noreadline and (args.execute is None)):
     try:
       import readline as temp
       global readline
@@ -71,13 +80,87 @@ def main():
     except:
       pass
 
-  if args.gui:
+  if args.execute is not None:
+    Shell(args).run()
+  elif args.gui:
     app = QtWidgets.QApplication(sys.argv)
     chat = ChatBox(args)
     chat.log('Ready')
     sys.exit(app.exec_())
   else:
     CLI(args).run()
+
+###############################################################################
+# One-off shell command class
+###############################################################################
+
+class TimeoutError(Exception):
+  pass
+
+class Shell(object):
+
+  def __init__(self,args):
+
+    self.args = args
+    self.send_queue = Queue()
+    self.event_close = Event()
+    self.pword = self.args.password
+    self.delim = 'DONE_%s_%s' % (time.time(),hash(time.time()))
+    self.response = []
+    self.errors = False
+
+  def run(self):
+
+    socket = SocketThread(self)
+    socket.connect()
+    socket.start()
+
+    cmd = self.args.execute or sys.stdin.read()
+    self.send_queue.put(cmd)
+    self.send_queue.put('echo '+self.delim)
+    start = time.time()
+
+    try:
+      while (not self.response
+          or self.delim not in [x[1] for x in self.response]):
+        if time.time()-start>self.args.timeout:
+          raise TimeoutError
+        time.sleep(0.1)
+    except TimeoutError:
+      self.error('Timed out waiting for response.')
+    except KeyboardInterrupt:
+      pass
+    except BaseException as e:
+      print traceback.format_exc(e)
+
+    self.event_close.set()
+    if socket.is_alive():
+      socket.join()
+
+    for (err,s) in self.response:
+      if err:
+        sys.stderr.write(s+'\n')
+        sys.stderr.flush()
+      elif s!=self.delim:
+        print s
+
+    if self.errors:
+      sys.exit(1)
+
+  def say(self,s):
+
+    self.response.append((False,s))
+
+  def log(self,txt):
+
+    if self.args.debug:
+      self.response.append((True,'  --- '+txt))
+
+  def error(self,txt):
+
+    self.response.append((True,'  ### '+txt))
+    self.errors = True
+    self.response.append((False,self.delim))
 
 ################################################################################
 # CLI class
@@ -141,7 +224,7 @@ class CLI(object):
 
   def get_pass(self):
 
-    if not self.args.password:
+    if self.args.password is None:
       return None
     print ''
     pword = getpass.getpass()
