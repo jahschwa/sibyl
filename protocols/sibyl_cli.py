@@ -169,9 +169,6 @@ class CLI(Protocol):
   def is_connected(self):
     return self.connected
 
-  def disconnected(self):
-    pass
-
   def process(self):
 
     if not self.event_data.is_set():

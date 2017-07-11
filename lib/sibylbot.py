@@ -1072,7 +1072,6 @@ class SibylBot(object):
       except (PingTimeout,ConnectFailure,ServerShutdown) as e:
         name = e.protocol
         proto = self.protocols[name]
-        proto.disconnected()
         self.__run_hooks('discon',name,e)
         self.__stats['discon'] += 1
 

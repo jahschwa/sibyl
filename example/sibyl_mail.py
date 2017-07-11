@@ -193,10 +193,6 @@ class MailProtocol(Protocol):
 
     return self.thread.imap is not None
 
-  def disconnected(self):
-
-    pass
-
   def shutdown(self):
 
     pass

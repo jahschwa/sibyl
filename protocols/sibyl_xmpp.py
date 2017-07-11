@@ -247,36 +247,39 @@ class XMPP(Protocol):
       self.log.warning("unable to perform SASL auth on %s. "\
       "Old authentication method used!" % self.jid.getDomain())
 
-    # Connection established - save connection
-    self.conn = conn
-    self.conn.Connection._sock.setblocking(False)
+    # Modify blocking for "connected" tests later
+    conn.Connection._sock.setblocking(False)
 
     # Register handlers
-    self.conn.RegisterHandler('message',self.callback_message)
-    self.conn.RegisterHandler('presence',self.callback_presence)
+    conn.RegisterHandler('message',self.callback_message)
+    conn.RegisterHandler('presence',self.callback_presence)
 
     # Send initial presence stanza
-    self.conn.sendInitPresence()
+    conn.sendInitPresence()
 
     # Save roster and log Items
-    self.roster = self.conn.Roster.getRoster()
+    self.roster = conn.Roster.getRoster()
     self.log.info('*** roster ***')
     for contact in self.roster.getItems():
       self.log.info('  %s' % contact)
     self.log.info('*** roster ***')
+
+    # Connection established - save connection
+    self.conn = conn
 
   def is_connected(self):
     """return True if we are still connected"""
 
     return (self.conn is not None)
 
-  def disconnected(self):
+  def disconnected(self,ex):
     """erase self.conn and set all MUCS to parted"""
 
     self.conn = None
     for muc in self.__get_current_mucs():
       self.mucs[muc]['status'] = self.MUC_PARTED
     self.seen = {}
+    raise ex
 
   def process(self):
     """process messages and __idle_proc"""
@@ -284,10 +287,10 @@ class XMPP(Protocol):
     try:
       self.conn.Process()
     except SystemShutdown:
-      raise ServerShutdown
+      self.disconnected(ServerShutdown)
     except StreamError as e:
       self.log.error(traceback.format_exception_only(type(e),e)[:-1])
-      raise ConnectFailure
+      self.disconnected(ConnectFailure)
 
     self.__idle_proc()
 
@@ -323,7 +326,7 @@ class XMPP(Protocol):
       self.conn.send(mess)
 
     except IOError:
-      raise ConnectFailure
+      self.disconnected(ConnectFailure)
 
   def broadcast(self,text,room,frm=None,users=None):
     """send a message to every user in a room"""
@@ -373,7 +376,7 @@ class XMPP(Protocol):
       try:
         self.conn.send(pres)
       except IOError:
-        raise ConnectFailure
+        self.disconnected(ConnectFailure)
 
     # update mucs dict and log
     self.mucs[name]['status'] = self.MUC_PARTED
@@ -722,7 +725,7 @@ class XMPP(Protocol):
       self.conn.send(xmpp.dispatcher.Presence(show=self.__show,
         status=self.__status))
     except IOError:
-      raise ConnectFailure
+      self.disconnected(ConnectFailure)
 
   def __idle_proc(self):
     """ping, join pending mucs, and try to rejoin mucs we were forced from"""
@@ -746,9 +749,9 @@ class XMPP(Protocol):
         res = self.conn.SendAndWaitForResponse(ping,
             self.opt('xmpp.ping_timeout'))
       except IOError:
-        raise PingTimeout
+        self.disconnected(PingTimeout)
       if res is None:
-        raise PingTimeout
+        self.disconnected(PingTimeout)
 
 ################################################################################
 # XEP-0045 Multi User Chat (MUC)
@@ -833,7 +836,7 @@ class XMPP(Protocol):
     try:
       result = self.conn.SendAndWaitForResponse(pres)
     except IOError:
-      raise ConnectFailure
+      self.disconnected(ConnectFailure)
 
     # result is None for timeout
     if not result:

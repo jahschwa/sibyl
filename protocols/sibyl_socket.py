@@ -378,9 +378,6 @@ class SocketServer(Protocol):
   def is_connected(self):
     return self.connected
 
-  def disconnected(self):
-    self.connected = False
-
   def process(self):
 
     if not self.event_data.is_set():

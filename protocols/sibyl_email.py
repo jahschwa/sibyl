@@ -166,10 +166,6 @@ class MailProtocol(Protocol):
   def is_connected(self):
     return self.thread.imap is not None
 
-  # called whenever the bot detects a disconnect as insurance
-  def disconnected(self):
-    pass
-
   # receive/process messages and call bot._cb_message()
   # must ignore msgs from myself and from users not in any of our rooms
   # @call bot._cb_message(Message) upon receiving a valid status or message
