@@ -837,7 +837,7 @@ class SibylBot(object):
     """redo last command - redo [args]"""
 
     # this is a dummy function so it gets displayed in the help command
-    # the real logic is at the end of callback_message()
+    # the real logic is at the end of _cb_message()
     return
 
   @staticmethod
@@ -845,7 +845,7 @@ class SibylBot(object):
   def __last(self,mess,args):
     """display last command (from any chat)"""
 
-    return self.last_cmd.get(mess.get_from().get_base(),'No past commands')
+    return self.last_cmd.get(mess.get_user().get_base(),'No past commands')
 
   @staticmethod
   @botcmd(name='git')
