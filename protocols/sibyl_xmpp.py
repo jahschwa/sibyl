@@ -464,6 +464,7 @@ class XMPP(Protocol):
     text = mess.getBody()
     username = self.__get_sender_username(mess)
     room = None
+    emote = False
 
     if text is None:
       return
@@ -508,7 +509,12 @@ class XMPP(Protocol):
     if room:
       room = MUC(self,room)
 
-    self.bot._cb_message(Message(user,text,typ=typ,room=room))
+    # handle /me messages
+    if text.startswith('/me '):
+      text = text[3:].strip()
+      emote = True
+
+    self.bot._cb_message(Message(user,text,typ=typ,room=room,emote=emote))
 
   def callback_presence(self,conn,pres):
     """run upon receiving a presence stanza to keep track of subscriptions"""

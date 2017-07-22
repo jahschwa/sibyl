@@ -726,7 +726,7 @@ class SibylBot(object):
       to.get_protocol().send(text,to)
 
     if msg.get_hook():
-      self.__run_hooks('send',text,to)
+      self.__run_hooks('send',msg)
 
   def __match_user(self,mess,rule_str):
     """check if the black/white text matches protocol, user, room"""
@@ -1219,8 +1219,10 @@ class SibylBot(object):
   # @param frm (User) [None] the sending user (only relevant for broadcast)
   # @param users (list of User) [None] additional users to highlight (broadcast)
   # @param hook (bool) [True] execute @botsend hooks for this message
+  # @param emote (bool) [False] whether this is an "emote" message
   #   NOTE: when @botsend hooks call send(), they MUST set hook=False
-  def send(self,text,to,broadcast=False,frm=None,users=None,hook=True):
+  def send(self,text,to,broadcast=False,frm=None,users=None,
+      hook=True,emote=False):
     """send a message (this function is thread-safe)"""
 
     broadcast = (broadcast and isinstance(to,Room))
@@ -1231,7 +1233,8 @@ class SibylBot(object):
                   to=to,
                   broadcast=broadcast,
                   users=users,
-                  hook=hook)
+                  hook=hook,
+                  emote=emote)
     self.__pending_send.put(msg)
 
   # wrapper method for send() allowing to pass Message objects instead of User
@@ -1241,8 +1244,10 @@ class SibylBot(object):
   # @param frm (User) [None] the sending user (only relevant for broadcast)
   # @param users (list of User) [None] additional users to highlight (broadcast)
   # @param hook (bool) [True] execute @botsend hooks for this message
+  # @param emote (bool) [False] whether this is an "emote" message
   #   NOTE: when @botsend hooks call send(), they MUST set hook=False
-  def reply(self,text,mess,broadcast=False,frm=None,users=None,hook=True):
+  def reply(self,text,mess,broadcast=False,frm=None,users=None,
+      hook=True,emote=False):
     """reply to a message (this function is thread-safe)"""
 
     self.send(text,mess.get_from(),broadcast,frm,users,hook)

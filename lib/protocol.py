@@ -281,6 +281,7 @@ class Message(object):
   # @param status (int) [None] status enum
   # @param msg (str) [None] custom status msg (e.g. "Doing awesome!")
   # @param room (Room) [None] the room that sent the message
+  # @param emote (bool) [False] if this is an "emote" message
   #
   #   ===== following used internally by Sibyl=====
   # @param to (User,Room) [None] the destination for this Message
@@ -288,7 +289,7 @@ class Message(object):
   # @param users (list of User) [[]] additional users to highlight (broadcast)
   # @param hook (bool) [True] execute @botsend hooks for this message
   def __init__(self,user,txt,typ=None,status=None,msg=None,room=None,
-      to=None,broadcast=False,users=None,hook=True):
+      to=None,broadcast=False,users=None,hook=True,emote=False):
     """create a new Message"""
 
     self.protocol = user.get_protocol() if to is None else to.get_protocol()
@@ -311,6 +312,7 @@ class Message(object):
     self.broadcast = broadcast
     self.users = users or []
     self.hook = hook
+    self.emote = emote
 
   # @return (User,Room) the sender of this Message usable for a reply
   def get_from(self):
@@ -371,6 +373,11 @@ class Message(object):
   def get_hook(self):
     """return whether to run @botsend hooks for this Message"""
     return self.hook
+
+  # @return (bool) whether this Message is an "emote" message
+  def get_emote(self):
+    """return whether this Message was sent as an "emote" message"""
+    return self.emote
 
   # @param typ (int) Message type enum
   # @return (str) human-readable Message type

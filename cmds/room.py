@@ -565,30 +565,33 @@ def check_args(bot,mess,pname,room,args):
 
 @botgroup
 def bridge_rx(bot,mess,cmd):
-  bridge(bot,mess.get_text(),mess.get_room(),user=mess.get_user())
+  bridge(bot,mess)
 
 @botsend
-def bridge_tx(bot,text,to):
+def bridge_tx(bot,mess):
   if isinstance(to,Room):
-    bridge(bot,text,to)
+    bridge(bot,mess,rx=False)
 
-def bridge(bot,text,room,user=None):
+def bridge(bot,mess,rx=True):
+
+  (text,room) = (mess.get_text(),mess.get_room())
+  (user,emote) = (mess.get_user(),mess.get_emote())
 
   if not bot.opt('room.bridges'):
     return
 
   proto = room.get_protocol()
   pname = proto.get_name()
-  msg = '[ '
+  msg = '*** ' if emote else '[ '
 
-  if user:
+  if rx:
     name = user.get_name()
     if not bot.opt('room.unicode_users'):
       name = name.encode('ascii',errors='ignore').strip()
     msg += name
   else:
     msg += proto.get_nick(room)
-  msg += ' ] '
+  msg += ' ' if emote else ' ] '
 
   for bridge in bot.opt('room.bridges'):
     if (pname,room.get_name()) in bridge:

@@ -222,12 +222,11 @@ def botconf(func):
   setattr(func, '_sibylbot_dec_conf', True)
   return func
 
-# decorated function: func(bot,text,to)
+# decorated function: func(bot,mess)
 # @param bot (SibylBot)
-# @param text (str or unicode) body of the message being sent
-# @param to (User or Room) recipient of the message
+# @param msg (Message) the message being sent
 #
-# NOTE: if you use bot.send() inside here, you must have flag=True
+# NOTE: if you use bot.send() inside here, you must have hook=False
 def botsend(func):
   """Decorator for message sent hooks"""
   

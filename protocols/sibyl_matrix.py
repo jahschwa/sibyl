@@ -234,7 +234,8 @@ class MatrixProtocol(Protocol):
         self.msg_queue.put(m)
 
       elif(msgtype == 'm.emote'):
-        m = Message(u, '* ' + msg['content']['body'], room=r, typ=Message.GROUP)
+        m = Message(u, msg['content']['body'], room=r, typ=Message.GROUP,
+            emote=True)
         self.log.debug('Handling m.emote: ' + msg['content']['body'])
         self.msg_queue.put(m)
         
