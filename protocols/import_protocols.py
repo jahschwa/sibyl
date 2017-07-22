@@ -23,17 +23,19 @@
 
 import os,sys,imp,inspect
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
+par = os.path.abspath(os.path.join(os.path.dirname(__file__),os.path.pardir))
+sys.path.append(par)
 
 from sibyl.lib.util import load_module
 from sibyl.lib.protocol import Protocol
 
 sys.path = sys.path[:-1]
 
-pwd = os.path.abspath(os.path.join(os.path.dirname(__file__),'.'))
-ignore = ['__init__',os.path.basename(__file__).split('.')[0],'skeleton']
-files = [x for x in os.listdir(pwd)
-    if x.endswith('.py') and x.split('.')[0] not in ignore]
+ext = os.path.extsep
+pwd = os.path.abspath(os.path.dirname(__file__))
+ignore = ['__init__',os.path.basename(__file__).split(ext)[0],'skeleton']
+files = [x for x in os.listdir(pwd) if x.startswith('sibyl_') and
+    x.endswith(ext+'py') and x.split(ext)[0] not in ignore]
 
 __all__ = ['PROTOCOLS','FAILED']
 PROTOCOLS = {}
@@ -41,7 +43,7 @@ FAILED = []
 
 for mod in files:
 
-  fname = mod.split('.')[0]
+  fname = mod.split(ext)[0]
   protocol = fname.split('_')[1]
 
   try:
