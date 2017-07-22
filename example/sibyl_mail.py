@@ -212,7 +212,7 @@ class MailProtocol(Protocol):
       self.log.debug('Got mail from "%s"' % frm)
       self.bot._cb_message(msg)
 
-  def send(self,text,to):
+  def send(self,mess):
 
     try:
       status = self.smtp.noop()[0]
@@ -221,13 +221,13 @@ class MailProtocol(Protocol):
     if status!=250:
       self._connect_smtp()
 
-    msg = MIMEText(text)
+    msg = MIMEText(mess.get_text())
     msg['Subject'] = 'Sibyl reply'
     msg['From'] = self.opt('mail.address')
-    msg['To'] = str(to)
+    msg['To'] = str(mess.get_to())
     self.smtp.sendmail(msg['From'],msg['To'],msg.as_string())
 
-  def broadcast(self,text,room,frm=None,users=None):
+  def broadcast(self,mess):
     pass
 
   def join_room(self,room):

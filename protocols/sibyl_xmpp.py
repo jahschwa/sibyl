@@ -300,8 +300,10 @@ class XMPP(Protocol):
     for room in self.get_rooms():
       self.part_room(room)
 
-  def send(self,text,to):
+  def send(self,mess):
     """send a message to the specified recipient"""
+
+    (text,to) = (mess.get_text(),mess.get_to())
 
     mess = self.__build_message(text)
     mess.setType('chat')
@@ -328,13 +330,14 @@ class XMPP(Protocol):
     except IOError:
       self.disconnected(ConnectFailure)
 
-  def broadcast(self,text,room,frm=None,users=None):
+  def broadcast(self,mess):
     """send a message to every user in a room"""
 
-    users = self.get_occupants(room)+(users or [])
+    (text,room,frm) = (mess.get_text(),mess.get_to(),mess.get_user())
+    users = self.get_occupants(room)+(mess.get_users() or [])
 
     # XMPP has no built-in broadcast, so we'll just highlight everyone
-    s = 'All: %s --- ' % text
+    s = 'all: %s --- ' % text
     if frm:
       s += frm.get_name()+' --- '
 
@@ -342,7 +345,7 @@ class XMPP(Protocol):
     names = [u.get_name() for u in users if (u!=me and (not frm or u!=frm))]
     s += ', '.join(set(names))
 
-    self.send(s,room)
+    self.send(Message(self.get_user(),s,to=room))
     return s
 
   def join_room(self,room):

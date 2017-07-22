@@ -569,13 +569,13 @@ def bridge_rx(bot,mess,cmd):
 
 @botsend
 def bridge_tx(bot,mess):
-  if isinstance(to,Room):
+  if isinstance(mess.get_to(),Room):
     bridge(bot,mess,rx=False)
 
 def bridge(bot,mess,rx=True):
 
-  (text,room) = (mess.get_text(),mess.get_room())
-  (user,emote) = (mess.get_user(),mess.get_emote())
+  (text,user,emote) = (mess.get_text(),mess.get_user(),mess.get_emote())
+  room = mess.get_room() if rx else mess.get_to()
 
   if not bot.opt('room.bridges'):
     return

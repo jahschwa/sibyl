@@ -401,10 +401,11 @@ class SocketServer(Protocol):
     if self.thread:
       self.thread.join()
 
-  def send(self,text,to):
+  def send(self,mess):
+    (text,to) = (mess.get_text(),mess.get_to())
     self.thread.send(text,to.address)
 
-  def broadcast(self,text,room,frm=None,users=None):
+  def broadcast(self,mess):
     pass
 
   def join_room(self,room):

@@ -705,12 +705,6 @@ class SibylBot(object):
   def __send(self,msg):
     """actually send a message"""
 
-    text = msg.get_text()
-    if isinstance(text,str):
-      text = text.decode('utf8')
-    elif not isinstance(text,unicode):
-      text = unicode(text)
-
     to = msg.get_to()
     if msg.get_broadcast():
       if self.has_plugin('room') and self.opt('room.bridge_broadcast'):
@@ -718,14 +712,15 @@ class SibylBot(object):
         for room in self.get_bridged(to):
           nick = room.get_protocol().get_nick(room)
           users += [u for u in room.get_occupants() if u.get_name()!=nick]
+        msg.users = users
       frm = msg.get_from()
       if frm==frm.get_protocol().get_user():
-        frm = None
-      text = to.get_protocol().broadcast(text,to,frm,users)
+        msg.user = None
+      msg.set_text(to.get_protocol().broadcast(msg) or '')
     else:
-      to.get_protocol().send(text,to)
+      to.get_protocol().send(msg)
 
-    if msg.get_hook():
+    if msg.get_hook() and msg.get_text():
       self.__run_hooks('send',msg)
 
   def __match_user(self,mess,rule_str):

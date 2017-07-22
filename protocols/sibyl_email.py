@@ -219,10 +219,13 @@ class MailProtocol(Protocol):
     pass
 
   # send a message to a user
-  # @param text (str,unicode) text to send
-  # @param to (User,Room) recipient
+  # @param mess (Message) message to be sent
+  # @raise (ConnectFailure) if failed to send message
+  # Check: get_emote()
   # REF: http://stackoverflow.com/a/14678470
-  def send(self,text,to):
+  def send(self,mess):
+
+    (text,to) = (mess.get_text(),mess.get_to())
 
     # SMTP connections are short-lived, so we might need to reconnect
     try:
@@ -241,12 +244,10 @@ class MailProtocol(Protocol):
 
   # send a message with text to every user in a room
   # optionally note that the broadcast was requested by a specific User
-  # @param text (str,unicode) body of the message
-  # @param room (Room) room to broadcast in
-  # @param frm (User) [None] the User requesting the broadcast
-  # @param users (list of User) [None] extra users to highlight
+  # @param mess (Message) the message to broadcast
   # @return (str,unicode) the text that was actually sent
-  def broadcast(self,text,room,frm=None,users=None):
+  # Check: get_user(), get_users()
+  def broadcast(self,mess):
     pass
 
   # join the specified room using the specified nick and password

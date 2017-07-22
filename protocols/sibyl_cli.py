@@ -194,14 +194,13 @@ class CLI(Protocol):
     if self.thread:
       self.event_close.set()
 
-  def send(self,text,to):
-    if isinstance(text,str):
-      text = text.decode('utf')
+  def send(self,mess):
+    text = '%s: %s\n' % (SIBYL,mess.get_text())
     text = text.encode(sys.__stdout__.encoding,'replace')
-    sys.__stdout__.write(SIBYL+': '+text+'\n')
+    sys.__stdout__.write(text)
 
-  def broadcast(self,text,room,frm=None,users=None):
-    self.send(text,None)
+  def broadcast(self,mess):
+    self.send(mess)
     return text
 
   def join_room(self,room):

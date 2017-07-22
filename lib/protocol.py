@@ -303,8 +303,8 @@ class Message(object):
           + 'AWAY, DND, AVAILABLE')
     self.status = status
 
+    self.set_text(txt)
     self.user = user
-    self.txt = txt
     self.msg = msg
     self.room = room
 
@@ -337,6 +337,11 @@ class Message(object):
   # @param text (str,unicode) the body of this Message to set
   def set_text(self,text):
     """set the body of the message"""
+
+    if isinstance(text,str):
+      text = text.decode('utf8')
+    elif not isinstance(text,unicode):
+      text = unicode(text)
     self.txt = text
 
   # @return (int) the type of this Message (Message class type enum)
@@ -435,22 +440,20 @@ class Protocol(object):
     pass
 
   # send a message to a user
-  # @param text (str,unicode) text to send
-  # @param to (User,Room) recipient
+  # @param mess (Message) message to be sent
   # @raise (ConnectFailure) if failed to send message
+  # Check: get_emote()
   @abstractmethod
-  def send(self,text,to):
+  def send(self,mess):
     pass
 
   # send a message with text to every user in a room
   # optionally note that the broadcast was requested by a specific User
-  # @param text (str,unicode) body of the message
-  # @param room (Room) room to broadcast in
-  # @param frm (User) [None] the User requesting the broadcast
-  # @param users (list of User) [None] extra users to highlight
+  # @param mess (Message) the message to broadcast
   # @return (str,unicode) the text that was actually sent
+  # Check: get_user(), get_users()
   @abstractmethod
-  def broadcast(self,text,room,frm=None,users=None):
+  def broadcast(self,mess):
     pass
 
   # join the specified room using the specified nick and password

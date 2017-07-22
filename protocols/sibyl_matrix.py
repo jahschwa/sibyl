@@ -276,25 +276,26 @@ class MatrixProtocol(Protocol):
     pass
 
   # send a message to a user
-  # @param text (str,unicode) text to send
-  # @param to (User,Room) recipient
-  def send(self,text,to):
+  # @param mess (Message) message to be sent
+  # @raise (ConnectFailure) if failed to send message
+  # Check: get_emote()
+  def send(self,mess):
+    (text,to) = (mess.get_text(),mess.get_to())
     to.room.send_text(text)
 
   # send a message with text to every user in a room
   # optionally note that the broadcast was requested by a specific User
-  # @param text (str,unicode) body of the message
-  # @param room (Room) room to broadcast in
-  # @param frm (User) [None] the User requesting the broadcast
-  # @param users (list of User) [None] extra users to highlight
+  # @param mess (Message) the message to broadcast
   # @return (str,unicode) the text that was actually sent
-  def broadcast(self,text,room,frm=None,users=None):
+  # Check: get_user(), get_users()
+  def broadcast(self,mess):
     """send a message to every user in a room"""
 
-    users = self.get_occupants(room)+(users or [])
+    (text,room,frm) = (mess.get_text(),mess.get_to(),mess.get_user())
+    users = self.get_occupants(room)+(mess.get_users() or [])
 
     # Matrix has no built-in broadcast, so we'll just highlight everyone
-    s = 'All: %s --- ' % text
+    s = 'all: %s --- ' % text
     if frm:
       self.log.debug('Broadcast message from: ' + str(frm))
       s += frm.get_name()+' --- '
@@ -303,7 +304,7 @@ class MatrixProtocol(Protocol):
     names = [u.get_name() for u in users if (u!=me and (not frm or u!=frm))]
     s += ', '.join(set(names))
 
-    self.send(s,room)
+    self.send(Message(self.get_user(),s,to=room))
     return s
 
   # join the specified room using the specified nick and password
