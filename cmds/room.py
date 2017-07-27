@@ -587,7 +587,7 @@ def bridge(bot,mess,rx=True):
   if rx:
     name = user.get_name()
     if not bot.opt('room.unicode_users'):
-      name = name.encode('ascii',errors='ignore').strip()
+      name = name.encode('ascii',errors='ignore').strip() or str(user)
     msg += name
   else:
     msg += proto.get_nick(room)
