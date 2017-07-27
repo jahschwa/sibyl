@@ -207,7 +207,8 @@ def play(bot,mess,args):
     playpause(bot,0)
     return
 
-  path  = library.translate(args[0])
+  if bot.has_plugin('library'):
+    path = bot.library_translate(args[0])
 
   # if args are passed, play the specified file
   # [TODO] make work with samba shares requiring passwords
