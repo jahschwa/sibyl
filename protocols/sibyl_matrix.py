@@ -281,7 +281,10 @@ class MatrixProtocol(Protocol):
   # Check: get_emote()
   def send(self,mess):
     (text,to) = (mess.get_text(),mess.get_to())
-    to.room.send_text(text)
+    if(mess.get_emote()):
+      to.room.send_emote(text)
+    else:
+      to.room.send_text(text)
 
   # send a message with text to every user in a room
   # optionally note that the broadcast was requested by a specific User
