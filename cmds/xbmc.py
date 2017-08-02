@@ -476,11 +476,7 @@ def stream(bot,mess,args):
 
 @botcmd
 def videos(bot,mess,args):
-<<<<<<< HEAD
-  """open folder as a playlist - videos [all] [include -exclude] [#track] [@match]"""
-=======
   """open folder(s) as a playlist - videos [all] [include -exclude] [#track] [@match]"""
->>>>>>> 5318c82a4e6c8a9f6d9da83b9166a79c66c7b0b9
 
   plugin = _check_plugin(bot,'library')
   if plugin:
@@ -688,12 +684,7 @@ def _files(bot,args,dirs,pid):
       return 'Found '+str(len(matches))+' matches'
 
   # translate library path if necessary
-<<<<<<< HEAD
   match = bot.library_translate(matches)
-
-=======
-  #match = bot.library_translate(matches[0]) 
->>>>>>> 5318c82a4e6c8a9f6d9da83b9166a79c66c7b0b9
 
   # if there was 1 match, add the whole directory to a playlist
   # also check for an error opening the directory
@@ -729,17 +720,12 @@ def _files(bot,args,dirs,pid):
   # set last_played for bookmarking
   bot.last_played = (pid,matches[0])
 
-<<<<<<< HEAD
   # get the first item in the playlist
   result = bot.xbmc('Player.GetItem',{'playerid':pid, 'properties':['file']})
   name = result['result']['item']['label']
   filepath = result['result']['item']['file']
-
   
   return msg+'Playlist starting with "'+name+'" from "'+filepath+'"'
-=======
-  return msg+'Playlist starting with #'+str(num+1)
->>>>>>> 5318c82a4e6c8a9f6d9da83b9166a79c66c7b0b9
 
 def _file(bot,args,dirs):
   """helper function for video() and audio()"""
@@ -778,15 +764,11 @@ def _file(bot,args,dirs):
   if bot.has_plugin('bookmark'):
     bot.last_resume = None
 
-<<<<<<< HEAD
   # get the first item in the playlist
   result = bot.xbmc('Player.GetItem',{'playerid':0})
   name = result['result']['item']['label']
 
   return 'Playing "'+name+'" from "'+matches[0]+'"'
-=======
-  return 'Playing "'+match+'"'
->>>>>>> 5318c82a4e6c8a9f6d9da83b9166a79c66c7b0b9
 
 def _check_plugin(bot,args):
   """Helper function to check for needed plugins"""
