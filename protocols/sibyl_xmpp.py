@@ -306,7 +306,7 @@ class XMPP(Protocol):
     (text,to) = (mess.get_text(),mess.get_to())
 
     if mess.get_emote():
-      text = '/me '+mess
+      text = '/me '+mess.get_text()
 
     mess = self.__build_message(text)
     mess.setType('chat')
