@@ -671,7 +671,6 @@ def _files(bot,args,dirs,pid):
 
   # find matches and respond if len(matches)!=1
   matches = util.matches(dirs,args)
-  return args
 
   if len(matches)==0:
     return 'Found 0 matches'
