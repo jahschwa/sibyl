@@ -392,11 +392,11 @@ def config(bot,mess,args):
     return 'Saved opt "'+opt+'" to be "'+value+'"'
   return 'Invalid value for opt "'+opt+'"'
 
-@botcmd
+@botcmd(raw=True)
 def echo(bot,mess,args):
   """echo some text"""
 
-  return ' '.join(args)
+  return args
 
 @botcmd
 def network(bot,mess,args):
@@ -479,16 +479,17 @@ def ups(bot,mess,args):
   except:
     return 'Unknown error accessing UPS website'
 
-@botcmd
+@botcmd(raw=True)
 def wiki(bot,mess,args):
   """return a link and brief from wikipedia - wiki title"""
 
+  args = args.strip()
   if not args:
     return 'You must provide a search term'
 
   # search using wikipedia's opensearch json api
   url = ('http://en.wikipedia.org/w/api.php?action=opensearch&search='
-      + ' '.join(args) + '&format=json')
+      + args + '&format=json')
   response = requests.get(url)
   result = json.loads(response.text)
   title = result[1][0]

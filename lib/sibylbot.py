@@ -599,6 +599,8 @@ class SibylBot(object):
     # execute the command and catch exceptions
     reply = None
     self.__stats['cmds'] += 1
+    if func._sibylbot_dec_chat_raw:
+      args = cmd[cmd.find(' ')+1:]
     try:
       if func._sibylbot_dec_chat_thread:
         self.log.debug('Spawning new thread for cmd "%s"' % cmd_name)
@@ -1312,13 +1314,18 @@ class SibylBot(object):
     """run a chat command manually"""
 
     check_bw = (check_bw and mess)
+    func = self.hooks['chat'][cmd]
 
     # catch invalid arguments to help developers
-    if (args is not None) and (not isinstance(args,list)):
-      raise ValueError('The args to run_cmd must be list')
-
     if args is None:
-      args = []
+      args = '' if func._sibylbot_dec_chat_raw else []
+    else:
+      if func._sibylbot_dec_chat_raw:
+        if not isinstance(args,str) and not isinstance(args,unicode):
+          raise ValueError('The args to "%s" must be str/unicode' % cmd)
+      else:
+        if not isinstance(args,list):
+          raise ValueError('The args to "%s" must be list' % cmd)
 
     applied = self.match_bw(mess,cmd) if check_bw else '(check_bw=False)'
     ns = self.ns_cmd[cmd]
@@ -1329,7 +1336,7 @@ class SibylBot(object):
 
     self.log.debug('  CMD: %s.%s via run_cmd() with %s' %
         (ns,cmd,applied))
-    return self.hooks['chat'][cmd](self,mess,args)
+    return func(self,mess,args)
 
   # @param msg (str) the message to log
   # @param ns (str) an identifier for the caller (e.g. plugin name)
