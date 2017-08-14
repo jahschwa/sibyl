@@ -143,32 +143,31 @@ def init(bot):
     log.debug("Can't find module lxml; unregistering link_echo hook")
     del bot.hooks['group']['room.link_echo']
 
-@botcmd
+@botcmd(raw=True)
 def all(bot,mess,args):
-  """highlight every user - all [proto room] message"""
+  """highlight every user - all [proto:room] message"""
 
-  (pname,proto,room,args) = parse_args(bot,mess,args)
+  (pname,proto,room,args) = parse_args(bot,mess,args.split())
   error = check_args(bot,mess,pname,room,args)
   if error:
     return error
-  
+
   bot.send(' '.join(args),room,broadcast=True,frm=mess.get_user())
 
-@botcmd
+@botcmd(raw=True)
 def say(bot,mess,args):
-  """if in a room, say this in it - say [proto room] message"""
+  """if in a room, say this in it - say [proto:room] message"""
 
-  (pname,proto,room,args) = parse_args(bot,mess,args)
+  (pname,proto,room,args) = parse_args(bot,mess,args.split())
   error = check_args(bot,mess,pname,room,args)
   if error:
     return error
 
-  text = ' '.join(args)
-  bot.send(text,room)
+  bot.send(' '.join(args),room)
 
 @botcmd(ctrl=True)
 def join(bot,mess,args):
-  """join a room - [proto room nick pass]"""
+  """join a room - [proto:room nick pass]"""
 
   (pname,proto,room,args) = parse_args(bot,mess,args)
 
@@ -217,7 +216,7 @@ def rejoin(bot,mess,args):
 
 @botcmd(ctrl=True)
 def leave(bot,mess,args):
-  """leave the specified room - leave [proto room]"""
+  """leave the specified room - leave [proto:room]"""
 
   (pname,proto,room,args) = parse_args(bot,mess,args)
 
@@ -525,9 +524,10 @@ def parse_args(bot,mess,args):
   pname = mess.get_protocol().get_name()
   room = mess.get_room()
 
-  if args and args[0] in bot.protocols:
-    pname = args[0]
-    del args[0]
+  if args and ':' in args[0]:
+    x = args[0].split(':')
+    if x[0] in bot.protocols:
+      (pname,args[0]) = (x[0],':'.join(x[1:]))
 
   proto = bot.get_protocol(pname)
 
