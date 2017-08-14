@@ -1406,15 +1406,18 @@ class SibylBot(object):
   # @param ctrl (bool) [False] if this function requires chat_ctrl be set
   # @param hidden (bool) [False] whether to hide this function from the help cmd
   # @param thread (bool) [False] if True execute the command in its own thread
+  # @param raw (bool) [False] if True pass raw text instead of list as args
   # @return (bool) False if the command already exists, True if successful
   # @raise (ValueError) if the namd given is invalid
-  def register_cmd(self,func,ns,name=None,ctrl=False,hidden=False,thread=False):
+  def register_cmd(self,func,ns,name=None,ctrl=False,hidden=False,
+      thread=False,raw=False):
     """register a new chat command"""
 
     name = (name or func.__name__).lower()
     func._sibylbot_dec_chat_ctrl = ctrl
     func._sibylbot_dec_chat_hidden = hidden
     func._sibylbot_dec_chat_thread = thread
+    func._sibylbot_dec_chat_raw = raw
 
     if not name.replace('_','').isalnum():
       raise ValueError('Chat commands must be alphanumeric+underscore')
