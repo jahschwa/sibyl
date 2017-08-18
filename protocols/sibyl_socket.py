@@ -66,7 +66,8 @@ def conf(bot):
     {'name':'pubkey','valid':bot.conf.valid_rfile},
     {'name':'privkey','valid':bot.conf.valid_rfile},
     {'name':'key_password'},
-    {'name':'internet','default':False,'parse':bot.conf.parse_bool}
+    {'name':'internet','default':False,'parse':bot.conf.parse_bool},
+    {'name':'debug','default':False,'parse':bot.conf.parse_bool}
   ]
 
 ################################################################################
@@ -75,7 +76,7 @@ def conf(bot):
 
 class ServerThread(Thread):
 
-  def __init__(self,log,q,d,c,pword=None,ssl=None):
+  def __init__(self,log,q,d,c,pword=None,debug=False,ssl=None):
     """create a new thread that handles socket connections"""
 
     super(ServerThread,self).__init__()
@@ -86,6 +87,7 @@ class ServerThread(Thread):
     self.event_data = d
     self.event_close = c
     self.password = pword
+    self.debug = debug
     self.context = ssl
 
     self.dead = Queue()
@@ -206,6 +208,8 @@ class ClientThread(Thread):
     msgs = []
     while self.buffer or not msgs:
       (typ,msg) = self.get_msg()
+      if self.server.debug:
+        self.log.debug('act typ=%s "%s"' % (typ,msg))
       if typ==ClientThread.MSG_AUTH:
         self.do_auth(msg)
         msg = None
@@ -227,6 +231,8 @@ class ClientThread(Thread):
     msg = self.buffer
     while ' ' not in msg:
       s = self.socket.recv(4096)
+      if self.server.debug:
+        self.log.debug('recv "%s"' % s)
       if not s:
         self.log.debug('Received EOS from %s:%s' % self.address)
         raise RuntimeError
@@ -263,6 +269,9 @@ class ClientThread(Thread):
     length_str = str(len(msg))
     msg = (length_str+' '+msg)
     target = len(msg)
+
+    if self.server.debug:
+      self.log.debug('send "%s"' % msg)
 
     sent = 0
     while sent<target:
@@ -358,7 +367,7 @@ class SocketServer(Protocol):
 
     self.thread = ServerThread(self.log,
         self.queue,self.event_data,self.event_close,
-        self.opt('socket.password'),context)
+        self.opt('socket.password'),self.opt('socket.debug'),context)
 
     self.log.info('Attempting to bind to %s:%s' % (hostname,port))
     try:

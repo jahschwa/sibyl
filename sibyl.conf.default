@@ -110,6 +110,9 @@ protocols = cli
 # If True, listen for connections from the internet instead of just localhost
 #socket.internet = False
 
+# Log raw message contents
+#socket.debug = False
+
 ################################################################################
 # XMPP options
 ################################################################################

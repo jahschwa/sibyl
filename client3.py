@@ -23,7 +23,7 @@
 
 import sys,socket,select,argparse,time,traceback,getpass,ssl
 from threading import Thread,Event
-from Queue import Queue
+from queue import Queue
 
 readline = None
 
@@ -131,7 +131,7 @@ class Shell(object):
     except KeyboardInterrupt:
       pass
     except BaseException as e:
-      print traceback.format_exc(e)
+      print(traceback.format_exc(e))
 
     self.event_close.set()
     if socket.is_alive():
@@ -142,7 +142,7 @@ class Shell(object):
         sys.stderr.write(s+'\n')
         sys.stderr.flush()
       elif s!=self.delim:
-        print s
+        print(s)
 
     if self.errors:
       sys.exit(1)
@@ -183,7 +183,7 @@ class CLI(object):
     socket.start()
 
     time.sleep(1)
-    print ''
+    print('')
     BufferThread(self).start()
 
     try:
@@ -192,7 +192,7 @@ class CLI(object):
     except KeyboardInterrupt:
       pass
     except BaseException as e:
-      print traceback.format_exc(e)
+      print(traceback.format_exc(e))
 
     self.event_close.set()
     if socket.is_alive():
@@ -206,7 +206,7 @@ class CLI(object):
     if 'readline' in sys.modules:
       spaces = len(readline.get_line_buffer())+len(prompt)
       sys.stdout.write('\r'+' '*spaces+'\r')
-      print text
+      print(text)
       sys.stdout.write(prompt+readline.get_line_buffer())
     else:
       sys.stdout.write('\n'+text+'\n'+prompt)
@@ -215,20 +215,20 @@ class CLI(object):
 
   def log(self,txt):
 
-    print '  --- '+txt
+    print('  --- '+txt)
 
   def error(self,txt):
 
-    print '  ### '+txt
+    print('  ### '+txt)
     sys.exit(0)
 
   def get_pass(self):
 
     if self.args.password is None:
       return None
-    print ''
+    print('')
     pword = getpass.getpass()
-    print ''
+    print('')
     return pword
 
 ################################################################################
@@ -361,7 +361,7 @@ class SocketThread(Thread):
 
     msg = self.buffer
     while ' ' not in msg:
-      s = self.sock.recv(4096)
+      s = self.sock.recv(4096).decode('utf8')
       if not s:
         self.die('Remote closed connection')
         return (None,None)
@@ -398,10 +398,10 @@ class SocketThread(Thread):
 
   def send_msg(self,msg,typ=None):
 
-    typ = typ or SocketThread.MSG_TEXT
+    typ = SocketThread.MSG_TEXT if typ is None else typ
     msg = typ+' '+msg
     length_str = str(len(msg))
-    msg = unicode(length_str+' '+msg).encode('utf8')
+    msg = str(length_str+' '+msg).encode('utf8')
     target = len(msg)
 
     sent = 0
@@ -428,7 +428,7 @@ class BufferThread(Thread):
     while not self.chat.event_close.is_set():
       s = ((time.asctime()+' | ') if self.chat.args.timestamp else '')+USER+': '
       sys.stdout.write(s)
-      s = raw_input()
+      s = input()
       self.chat.send_queue.put(s)
 
 ################################################################################
@@ -641,7 +641,7 @@ if 'QtGui' in locals():
 
       s = s.replace('&','&amp;')
       chars = { '"':'&quot;', "'":'&#039;', '<':'&lt;', '>':'&gt;'}
-      for (k,v) in chars.items():
+      for (k,v) in list(chars.items()):
         s = s.replace(k,v)
       return s
 
