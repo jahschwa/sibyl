@@ -345,6 +345,8 @@ def config(bot,mess,args):
   if cmd=='set':
     if opt=='*':
       return 'Invalid opt'
+    if opt.endswith('password') and mess.get_type()==Message.GROUP:
+      return 'You may not set passwords in group chat'
     old = bot.opt(opt)
     if bot.conf.set_opt(opt,args[2]):
       bot.conf_diff[opt] = (old,args[2])
