@@ -211,7 +211,7 @@ def rejoin(bot,mess,args):
         proto.join_room(room)
 
   if rejoined:
-    return 'Attempting to join rooms: '+str(rejoined)
+    return 'Attempting to join rooms: '+', '.join(rejoined)
   return 'No rooms to rejoin'
 
 @botcmd(ctrl=True)

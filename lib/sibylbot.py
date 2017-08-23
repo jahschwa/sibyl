@@ -857,11 +857,10 @@ class SibylBot(object):
     """print version and some plug-in info"""
 
     cmds = len(self.hooks['chat'])
-    funcs = self.hooks['chat'].values()
+    protos = ', '.join(sorted(self.opt('protocols').keys()))
     plugins = sorted(self.plugins+['sibylbot'])
-    protos = ','.join(sorted(self.opt('protocols').keys()))
     return ('Sibyl %s (%s) --- %s commands from %s plugins: %s'
-        % (__version__,protos,cmds,len(plugins),plugins))
+        % (__version__,protos,cmds,len(plugins),', '.join(plugins)))
 
   @staticmethod
   @botcmd(name='hello')
@@ -909,18 +908,22 @@ class SibylBot(object):
   @staticmethod
   @botcmd(name='errors')
   def __errors(self,mess,args):
-    """list errors - errors [search1 search2]"""
+    """list errors - errors [*] [search1 search2]"""
 
     if not self.errors:
       return 'No errors'
 
     if not args:
       args = ['-startup']
-    matches = util.matches(self.errors,args,sort=False)
+
+    if '*' in args:
+      matches = self.errors
+    else:
+      matches = util.matches(self.errors,args,sort=False)
 
     if not matches:
       return 'No matching errors'
-    return ', '.join(matches)
+    return util.list2str(matches)
 
   @staticmethod
   @botcmd(name='stats')

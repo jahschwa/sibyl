@@ -58,14 +58,15 @@ def init(bot):
 
 @botcmd
 def remote(bot,mess,args):
-  """execute remote buttons in order - remote (lrudeb)[...]"""
+  """execute remote buttons in order - remote (lrudebc)[...]"""
 
   cmds = {'u':'Input.Up',
           'd':'Input.Down',
           'l':'Input.Left',
           'r':'Input.Right',
           'e':'Input.Select',
-          'b':'Input.Back'}
+          'b':'Input.Back',
+          'c':'Input.ContextMenu'}
 
   raw = ''.join(args)
   cmd = [s for s in raw if s in cmds]

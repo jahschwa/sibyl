@@ -29,6 +29,7 @@ import requests
 from sibyl.lib.decorators import *
 from sibyl.lib.util import getcell,is_int
 from sibyl.lib.protocol import Message
+import sibyl.lib.util as util
 
 import logging
 log = logging.getLogger(__name__)
@@ -290,7 +291,7 @@ def config(bot,mess,args):
       for room in opts['rooms'][proto]:
         if room['pass']:
           room['pass'] = 'REDACTED'
-    return str(opts)
+    return util.list2str(['%s: %s' % (k,opts[k]) for k in sorted(opts.keys())])
   if opt not in bot.opt() and opt!='*':
     return 'Invalid opt'
   if opt.endswith('password'):

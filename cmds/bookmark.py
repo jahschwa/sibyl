@@ -117,7 +117,7 @@ def bookmark(bot,mess,args):
   # if no args are passed return all bookmark names
   matches = bot.bm_store.keys()
   if len(args)==0 or args[0]=='':
-    return 'There are '+str(len(matches))+' bookmarks: '+str(matches)
+    return 'There are '+str(len(matches))+' bookmarks: '+', '.join(matches)
 
   # if a search term was passed find matches and display them
   search = ' '.join(args).lower()
