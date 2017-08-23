@@ -77,7 +77,7 @@ protocols = cli
 ################################################################################
 
 # Account login
-#email.address =
+#email.username =
 #email.password =
 
 # If set, only e-mails containing this string will be executed
@@ -118,7 +118,7 @@ protocols = cli
 ################################################################################
 
 # Login info
-#xmpp.jid =
+#xmpp.username =
 #xmpp.password =
 
 # XMPP resource; default is the class name of the bot.

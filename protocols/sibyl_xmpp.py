@@ -65,7 +65,7 @@ class ServerShutdown(SuperServerShutdown,ProtocolError):
 @botconf
 def conf(bot):
   return [
-    {'name':'jid','req':True},
+    {'name':'username','req':True},
     {'name':'password','req':True},
     {'name':'resource','default':'sibyl'},
     {'name':'server','default':None},
@@ -205,7 +205,7 @@ class XMPP(Protocol):
                     None:Message.AVAILABLE}
 
     self.conn = None
-    self.jid = xmpp.JID(self.opt('xmpp.jid'))
+    self.jid = xmpp.JID(self.opt('xmpp.username'))
 
     self.roster = None
     self.seen = {}
@@ -224,7 +224,8 @@ class XMPP(Protocol):
     if self.conn:
       return
 
-    self.log.debug('Attempting to connect with JID "%s"' % self.opt('xmpp.jid'))
+    self.log.debug('Attempting to connect with JID "%s"'
+        % self.opt('xmpp.username'))
     conn = xmpp.Client(self.jid.getDomain(), debug=self.opt('xmpp.debug'))
 
     # connection attempt
