@@ -317,6 +317,8 @@ class SocketThread(Thread):
       if self.sock in read:
         try:
           msgs = self.get_msgs()
+        except SystemExit:
+          break
         except:
           self.chat.error('EXCEPTION\n\n'+traceback.format_exc())
           break
