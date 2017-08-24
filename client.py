@@ -19,7 +19,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-################################################################################
+###############################################################################
 
 import sys,socket,select,argparse,time,traceback,getpass,ssl
 from threading import Thread,Event
@@ -189,9 +189,9 @@ class CLI(object):
     try:
       while not self.event_close.is_set():
         time.sleep(0.1)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt,SystemExit):
       pass
-    except BaseException as e:
+    except BaseException:
       print traceback.format_exc(e)
 
     self.event_close.set()

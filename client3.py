@@ -189,10 +189,10 @@ class CLI(object):
     try:
       while not self.event_close.is_set():
         time.sleep(0.1)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt,SystemExit):
       pass
-    except BaseException as e:
-      print(traceback.format_exc(e))
+    except BaseException:
+      print(traceback.format_exc())
 
     self.event_close.set()
     if socket.is_alive():
