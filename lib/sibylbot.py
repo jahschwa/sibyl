@@ -1160,14 +1160,16 @@ class SibylBot(object):
   @botcon
   def __requeue_priv(bot,pname):
     """requeue deferred private messages on protocol connect"""
-    bot.__requeue(lambda m: m[1].get_protocol().get_name()==pname
-        and isinstance(m[1],User))
+
+    bot.__requeue(lambda m: m.get_protocol().get_name()==pname
+        and isinstance(m.get_from(),User))
 
   @staticmethod
   @botrooms
   def __requeue_group(bot,room):
     """requeue deferred group messages on room join"""
-    bot.__requeue(lambda m: m[1]==room)
+
+    bot.__requeue(lambda m: m.get_from()==room)
 
 ################################################################################
 # HHH - User-facing functions
