@@ -217,7 +217,7 @@ def play(bot,mess,args):
       or path.startswith('http')):
     result = bot.xbmc('Player.Open',{'item':{'file':path}})
     if 'error' in result:
-      s = 'Unable to open: '+path
+      s = 'Unable to open: %s (%s)' % (path,result['error']['message'])
       log.info(s)
       return s
     return bot.run_cmd('info')

@@ -21,7 +21,7 @@
 #
 ###############################################################################
 
-import sys,socket,select,argparse,time,traceback,getpass,ssl
+import sys,socket,select,argparse,time,traceback,getpass,ssl,random
 from threading import Thread,Event
 from Queue import Queue
 
@@ -105,7 +105,7 @@ class Shell(object):
     self.send_queue = Queue()
     self.event_close = Event()
     self.pword = self.args.password
-    self.delim = 'DONE_%s_%s' % (time.time(),hash(time.time()))
+    self.delim = 'DONE_%s_%s' % (time.time(),hash(random.random()))
     self.response = []
     self.errors = False
 
