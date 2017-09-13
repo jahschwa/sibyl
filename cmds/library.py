@@ -183,16 +183,23 @@ def init(bot):
         '#unicode-considerations')
     bot.error('Unicode file names not supported','library')
 
-# @param path (str) the path to translate
-# @return (str) the translated path
+# @param path (list) the list of paths to translate
+# @return (list) the translated list of paths
 @botfunc
 def library_translate(bot,path):
   """return the specified library paths, translated if requested"""
 
-  for (local,remote) in bot.opt('library.remote').items():
-    if path.startswith(local):
-      return path.replace(local,remote,1)
-
+  newpaths = []
+  if bot.opt('library.remote').items():
+    for (local,remote) in bot.opt('library.remote').items():
+      for strpath in path:
+        if strpath.startswith(local):
+            newpaths.append(strpath.replace(local,remote,1))
+        else:
+          newpaths.append(strpath)
+    return newpaths
+  
+  #if no translation necessary, return the original list
   return path
 
 @botcmd(thread=True)
