@@ -59,15 +59,14 @@ def init(bot):
 
 @botcmd
 def remote(bot,mess,args):
-  """execute remote buttons in order - remote (lrudebc)[...]"""
+  """execute remote buttons in order - remote (lrudeb)[...]"""
 
   cmds = {'u':'Input.Up',
           'd':'Input.Down',
           'l':'Input.Left',
           'r':'Input.Right',
           'e':'Input.Select',
-          'b':'Input.Back',
-          'c':'Input.ContextMenu'}
+          'b':'Input.Back'}
 
   raw = ''.join(args)
   cmd = [s for s in raw if s in cmds]
@@ -209,8 +208,7 @@ def play(bot,mess,args):
     playpause(bot,0)
     return
 
-  if bot.has_plugin('library'):
-    path = bot.library_translate(args[0])
+  path  = library.translate(args[0])
 
   # if args are passed, play the specified file
   # [TODO] make work with samba shares requiring passwords
@@ -218,7 +216,7 @@ def play(bot,mess,args):
       or path.startswith('http')):
     result = bot.xbmc('Player.Open',{'item':{'file':path}})
     if 'error' in result:
-      s = 'Unable to open: %s (%s)' % (path,result['error']['message'])
+      s = 'Unable to open: '+path
       log.info(s)
       return s
     return bot.run_cmd('info')

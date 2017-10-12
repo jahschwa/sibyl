@@ -143,31 +143,32 @@ def init(bot):
     log.debug("Can't find module lxml; unregistering link_echo hook")
     del bot.hooks['group']['room.link_echo']
 
-@botcmd(raw=True)
+@botcmd
 def all(bot,mess,args):
-  """highlight every user - all [proto:room] message"""
+  """highlight every user - all [proto room] message"""
 
-  (pname,proto,room,args) = parse_args(bot,mess,args.split())
+  (pname,proto,room,args) = parse_args(bot,mess,args)
   error = check_args(bot,mess,pname,room,args)
   if error:
     return error
-
+  
   bot.send(' '.join(args),room,broadcast=True,frm=mess.get_user())
 
-@botcmd(raw=True)
+@botcmd
 def say(bot,mess,args):
-  """if in a room, say this in it - say [proto:room] message"""
+  """if in a room, say this in it - say [proto room] message"""
 
-  (pname,proto,room,args) = parse_args(bot,mess,args.split())
+  (pname,proto,room,args) = parse_args(bot,mess,args)
   error = check_args(bot,mess,pname,room,args)
   if error:
     return error
 
-  bot.send(' '.join(args),room)
+  text = ' '.join(args)
+  bot.send(text,room)
 
 @botcmd(ctrl=True)
 def join(bot,mess,args):
-  """join a room - [proto:room nick pass]"""
+  """join a room - [proto room nick pass]"""
 
   (pname,proto,room,args) = parse_args(bot,mess,args)
 
@@ -211,12 +212,12 @@ def rejoin(bot,mess,args):
         proto.join_room(room)
 
   if rejoined:
-    return 'Attempting to join rooms: '+', '.join(rejoined)
+    return 'Attempting to join rooms: '+str(rejoined)
   return 'No rooms to rejoin'
 
 @botcmd(ctrl=True)
 def leave(bot,mess,args):
-  """leave the specified room - leave [proto:room]"""
+  """leave the specified room - leave [proto room]"""
 
   (pname,proto,room,args) = parse_args(bot,mess,args)
 
@@ -482,8 +483,8 @@ def link_echo(bot,mess,cmd):
     if len(urls)==0:
       return
     for url in urls:
-      r = requests.get(url, timeout=5)
-      title = fromstring(r.text).findtext('.//title')
+      r = requests.get(url)
+      title = fromstring(r.content).findtext('.//title')
       titles.append(title.strip())
     linkcount = 1
     reply = ""
@@ -494,7 +495,7 @@ def link_echo(bot,mess,cmd):
   except Exception as e:
     log.error('Link echo - '+e.__class__.__name__+' - '+url)
   else:
-    bot.reply(reply,mess)
+    bot.send(reply,mess.get_from())
 
 @botrooms
 def _muc_join_success(bot,room):
@@ -516,7 +517,7 @@ def _send_muc_result(bot,room,msg):
   mess = bot.pending_room[room]
   del bot.pending_room[room]
 
-  bot.reply(msg,mess)
+  bot.send(msg,mess.get_from())
 
 def parse_args(bot,mess,args):
   """parse protocols and rooms out of args"""
@@ -524,10 +525,9 @@ def parse_args(bot,mess,args):
   pname = mess.get_protocol().get_name()
   room = mess.get_room()
 
-  if args and ':' in args[0]:
-    x = args[0].split(':')
-    if x[0] in bot.protocols:
-      (pname,args[0]) = (x[0],':'.join(x[1:]))
+  if args and args[0] in bot.protocols:
+    pname = args[0]
+    del args[0]
 
   proto = bot.get_protocol(pname)
 
@@ -565,33 +565,30 @@ def check_args(bot,mess,pname,room,args):
 
 @botgroup
 def bridge_rx(bot,mess,cmd):
-  bridge(bot,mess)
+  bridge(bot,mess.get_text(),mess.get_room(),user=mess.get_user())
 
 @botsend
-def bridge_tx(bot,mess):
-  if isinstance(mess.get_to(),Room):
-    bridge(bot,mess,rx=False)
+def bridge_tx(bot,text,to):
+  if isinstance(to,Room):
+    bridge(bot,text,to)
 
-def bridge(bot,mess,rx=True):
-
-  (text,user,emote) = (mess.get_text(),mess.get_user(),mess.get_emote())
-  room = mess.get_room() if rx else mess.get_to()
+def bridge(bot,text,room,user=None):
 
   if not bot.opt('room.bridges'):
     return
 
   proto = room.get_protocol()
   pname = proto.get_name()
-  msg = '*** ' if emote else '[ '
+  msg = '[ '
 
-  if rx:
+  if user:
     name = user.get_name()
     if not bot.opt('room.unicode_users'):
-      name = name.encode('ascii',errors='ignore').strip() or str(user)
+      name = name.encode('ascii',errors='ignore').strip()
     msg += name
   else:
     msg += proto.get_nick(room)
-  msg += ' ' if emote else ' ] '
+  msg += ' ] '
 
   for bridge in bot.opt('room.bridges'):
     if (pname,room.get_name()) in bridge:

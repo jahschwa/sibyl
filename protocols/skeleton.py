@@ -134,6 +134,10 @@ class MYPROTOCOL(Protocol):
   def is_connected(self):
     raise NotImplementedError
 
+  # called whenever the bot detects a disconnect as insurance
+  def disconnected(self):
+    raise NotImplementedError
+
   # receive/process messages and call bot._cb_message()
   # must ignore msgs from myself and from users not in any of our rooms
   # @call bot._cb_message(Message) upon receiving a valid status or message
@@ -148,18 +152,19 @@ class MYPROTOCOL(Protocol):
     raise NotImplementedError
 
   # send a message to a user
-  # @param mess (Message) message to be sent
-  # @raise (ConnectFailure) if failed to send message
-  # Check: get_emote()
-  def send(self,mess):
+  # @param text (str,unicode) text to send
+  # @param to (User,Room) recipient
+  def send(self,text,to):
     raise NotImplementedError
 
   # send a message with text to every user in a room
   # optionally note that the broadcast was requested by a specific User
-  # @param mess (Message) the message to broadcast
+  # @param text (str,unicode) body of the message
+  # @param room (Room) room to broadcast in
+  # @param frm (User) [None] the User requesting the broadcast
+  # @param users (list of User) [None] extra users to highlight
   # @return (str,unicode) the text that was actually sent
-  # Check: get_user(), get_users()
-  def broadcast(self,mess):
+  def broadcast(self,text,room,frm=None,users=None):
     raise NotImplementedError
 
   # join the specified room using the specified nick and password

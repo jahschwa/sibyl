@@ -169,6 +169,9 @@ class CLI(Protocol):
   def is_connected(self):
     return self.connected
 
+  def disconnected(self):
+    pass
+
   def process(self):
 
     if not self.event_data.is_set():
@@ -194,13 +197,14 @@ class CLI(Protocol):
     if self.thread:
       self.event_close.set()
 
-  def send(self,mess):
-    text = '%s: %s\n' % (SIBYL,mess.get_text())
+  def send(self,text,to):
+    if isinstance(text,str):
+      text = text.decode('utf')
     text = text.encode(sys.__stdout__.encoding,'replace')
-    sys.__stdout__.write(text)
+    sys.__stdout__.write(SIBYL+': '+text+'\n')
 
-  def broadcast(self,mess):
-    self.send(mess)
+  def broadcast(self,text,room,frm=None,users=None):
+    self.send(text,None)
     return text
 
   def join_room(self,room):

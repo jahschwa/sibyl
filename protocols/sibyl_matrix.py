@@ -68,8 +68,7 @@ def conf(bot):
   return [
     {"name": "username", "req": True},
     {"name": "password", "req": True},
-    {"name": "server", "req": True},
-    {"name": "debug", "req": False, "default": False}
+    {"name": "server", "req": True}
   ]
 
 ################################################################################
@@ -206,6 +205,10 @@ class MatrixProtocol(Protocol):
   def is_connected(self):
     return self.connected
 
+  # called whenever the bot detects a disconnect as insurance
+  def disconnected(self):
+    raise NotImplementedError
+
   # receive/process messages and call bot._cb_message()
   # must ignore msgs from myself and from users not in any of our rooms
   # @call bot._cb_message(Message) upon receiving a valid status or message
@@ -218,8 +221,7 @@ class MatrixProtocol(Protocol):
 
 
   def messageHandler(self, msg):
-    if(self.opt('matrix.debug')):
-      self.log.debug(str(msg))
+    self.log.debug(str(msg))
 
     try:
       # Create a new Message to send to Sibyl
@@ -234,32 +236,20 @@ class MatrixProtocol(Protocol):
         self.msg_queue.put(m)
 
       elif(msgtype == 'm.emote'):
-        m = Message(u, msg['content']['body'], room=r, typ=Message.GROUP,
-            emote=True)
+        m = Message(u, '* ' + msg['content']['body'], room=r, typ=Message.GROUP)
         self.log.debug('Handling m.emote: ' + msg['content']['body'])
         self.msg_queue.put(m)
         
-      elif(msgtype == 'm.image' or msgtype == 'm.audio' or msgtype == 'm.file' or msgtype == 'm.video'):
+      elif(msgtype == 'm.image' or msgtype == 'm.audio'):
         media_url = urlparse(msg['content']['url'])
         http_url = self.client.api.base_url + "/_matrix/media/r0/download/{0}{1}".format(media_url.netloc, media_url.path)
         if(msgtype == 'm.image'):
-          body = "{0} uploaded {1}: {2}".format(msg['sender'], msg['content'].get('body', 'an image'), http_url)
+          body = "{0} uploaded an image: {1}".format(msg['sender'], http_url)
         elif(msgtype == 'm.audio'):
-          body = "{0} uploaded {1}: {2}".format(msg['sender'], msg['content'].get('body', 'an audio file'), http_url)
-        elif(msgtype == 'm.video'):
-          body = "{0} uploaded {1}: {2}".format(msg['sender'], msg['content'].get('body', 'a video file'), http_url)
-        elif(msgtype == 'm.file'):
-          body = "{0} uploaded {1}: {2}".format(msg['sender'], msg['content'].get('body', 'a file'), http_url)
+          body = "{0} uploaded an audio file: {1}".format(msg['sender'], http_url)
         m = Message(u, body, room=r, typ=Message.GROUP)
         self.log.debug("Handling " + msgtype + ": " + body)
         self.msg_queue.put(m)
-
-      elif(msgtype == 'm.location'):
-        body = "{0} sent a location: {1}".format(msg['sender'], msg['content']['geo_uri'])
-        m = Message(u, body, room=r, typ=Message.GROUP)
-        self.log.debug('Handling m.location: ' + body)
-        self.msg_queue.put(m)
-
 
       else:
         self.log.debug('Not handling message, unknown msgtype')
@@ -276,29 +266,25 @@ class MatrixProtocol(Protocol):
     pass
 
   # send a message to a user
-  # @param mess (Message) message to be sent
-  # @raise (ConnectFailure) if failed to send message
-  # Check: get_emote()
-  def send(self,mess):
-    (text,to) = (mess.get_text(),mess.get_to())
-    if(mess.get_emote()):
-      to.room.send_emote(text)
-    else:
-      to.room.send_text(text)
+  # @param text (str,unicode) text to send
+  # @param to (User,Room) recipient
+  def send(self,text,to):
+    to.room.send_text(text)
 
   # send a message with text to every user in a room
   # optionally note that the broadcast was requested by a specific User
-  # @param mess (Message) the message to broadcast
+  # @param text (str,unicode) body of the message
+  # @param room (Room) room to broadcast in
+  # @param frm (User) [None] the User requesting the broadcast
+  # @param users (list of User) [None] extra users to highlight
   # @return (str,unicode) the text that was actually sent
-  # Check: get_user(), get_users()
-  def broadcast(self,mess):
+  def broadcast(self,text,room,frm=None,users=None):
     """send a message to every user in a room"""
 
-    (text,room,frm) = (mess.get_text(),mess.get_to(),mess.get_user())
-    users = self.get_occupants(room)+(mess.get_users() or [])
+    users = self.get_occupants(room)+(users or [])
 
     # Matrix has no built-in broadcast, so we'll just highlight everyone
-    s = 'all: %s --- ' % text
+    s = 'All: %s --- ' % text
     if frm:
       self.log.debug('Broadcast message from: ' + str(frm))
       s += frm.get_name()+' --- '
@@ -307,7 +293,7 @@ class MatrixProtocol(Protocol):
     names = [u.get_name() for u in users if (u!=me and (not frm or u!=frm))]
     s += ', '.join(set(names))
 
-    self.send(Message(self.get_user(),s,to=room))
+    self.send(s,room)
     return s
 
   # join the specified room using the specified nick and password
@@ -344,7 +330,7 @@ class MatrixProtocol(Protocol):
   # @param room (Room) the room to query
   # @return (str) the nick name we are using in the specified room
   def get_nick(self,room):
-    return self.get_user().get_name() # TODO: per-room nicknames
+    return self.opt('nick_name') # TODO: per-room nicknames
 
   # @param room (Room) the room to query
   # @param nick (str) the nick to examine

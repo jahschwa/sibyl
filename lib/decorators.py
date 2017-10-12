@@ -58,14 +58,12 @@ def botcmd(*args,**kwargs):
   # @param ctrl (bool) [False] whether to restrict the command with "chat_ctrl"
   # @param hidden (bool) [False] whether to hide this command from help output
   # @param thread (bool) [False] whether to thread the command
-  # @param raw (bool) [False] if True don't parse args; pass original text
-  def decorate(func,name=None,ctrl=False,hidden=False,thread=False,raw=False):
+  def decorate(func,name=None,ctrl=False,hidden=False,thread=False):
     setattr(func, '_sibylbot_dec_chat', True)
     setattr(func, '_sibylbot_dec_chat_name', name or func.__name__)
     setattr(func, '_sibylbot_dec_chat_ctrl', ctrl)
     setattr(func, '_sibylbot_dec_chat_hidden', hidden)
     setattr(func, '_sibylbot_dec_chat_thread', thread)
-    setattr(func, '_sibylbot_dec_chat_raw', raw)
     return func
 
   if len(args):
@@ -224,11 +222,12 @@ def botconf(func):
   setattr(func, '_sibylbot_dec_conf', True)
   return func
 
-# decorated function: func(bot,mess)
+# decorated function: func(bot,text,to)
 # @param bot (SibylBot)
-# @param msg (Message) the message being sent
+# @param text (str or unicode) body of the message being sent
+# @param to (User or Room) recipient of the message
 #
-# NOTE: if you use bot.send() inside here, you must have hook=False
+# NOTE: if you use bot.send() inside here, you must have flag=True
 def botsend(func):
   """Decorator for message sent hooks"""
   

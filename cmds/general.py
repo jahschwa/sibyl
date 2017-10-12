@@ -29,7 +29,6 @@ import requests
 from sibyl.lib.decorators import *
 from sibyl.lib.util import getcell,is_int
 from sibyl.lib.protocol import Message
-import sibyl.lib.util as util
 
 import logging
 log = logging.getLogger(__name__)
@@ -137,7 +136,7 @@ def alias_cb(bot,mess,args,name):
       msg = ('Command terminated for exceeding alias_depth with stack: %s'
           % bot.alias_stack)
       log.error(msg)
-      bot.reply(msg,mess)
+      bot.send(msg,mess.get_from())
     return
 
   bot.alias_stack.append(name)
@@ -158,7 +157,7 @@ def alias_cb(bot,mess,args,name):
       else:
         msg = 'Unknown command "%s"' % name
       if msg:
-        bot.reply(msg,mess)
+        bot.send(msg,mess.get_from())
 
   finally:
     del bot.alias_stack[-1]
@@ -291,7 +290,7 @@ def config(bot,mess,args):
       for room in opts['rooms'][proto]:
         if room['pass']:
           room['pass'] = 'REDACTED'
-    return util.list2str(['%s: %s' % (k,opts[k]) for k in sorted(opts.keys())])
+    return str(opts)
   if opt not in bot.opt() and opt!='*':
     return 'Invalid opt'
   if opt.endswith('password'):
@@ -346,8 +345,6 @@ def config(bot,mess,args):
   if cmd=='set':
     if opt=='*':
       return 'Invalid opt'
-    if opt.endswith('password') and mess.get_type()==Message.GROUP:
-      return 'You may not set passwords in group chat'
     old = bot.opt(opt)
     if bot.conf.set_opt(opt,args[2]):
       bot.conf_diff[opt] = (old,args[2])
@@ -395,11 +392,11 @@ def config(bot,mess,args):
     return 'Saved opt "'+opt+'" to be "'+value+'"'
   return 'Invalid value for opt "'+opt+'"'
 
-@botcmd(raw=True)
+@botcmd
 def echo(bot,mess,args):
   """echo some text"""
 
-  return args
+  return ' '.join(args)
 
 @botcmd
 def network(bot,mess,args):
@@ -482,17 +479,16 @@ def ups(bot,mess,args):
   except:
     return 'Unknown error accessing UPS website'
 
-@botcmd(raw=True)
+@botcmd
 def wiki(bot,mess,args):
   """return a link and brief from wikipedia - wiki title"""
 
-  args = args.strip()
   if not args:
     return 'You must provide a search term'
 
   # search using wikipedia's opensearch json api
   url = ('http://en.wikipedia.org/w/api.php?action=opensearch&search='
-      + args + '&format=json')
+      + ' '.join(args) + '&format=json')
   response = requests.get(url)
   result = json.loads(response.text)
   title = result[1][0]

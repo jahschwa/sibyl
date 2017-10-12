@@ -201,7 +201,7 @@ class MailProtocol(Protocol):
 
     pass
 
-  def process(self):
+  def process(self,wait=0):
 
     while not self.thread.msgs.empty():
 
