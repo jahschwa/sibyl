@@ -62,7 +62,7 @@ class ServerShutdown(SuperServerShutdown,ProtocolError):
 @botconf
 def conf(bot):
   return [
-    {'name':'address','req':True},
+    {'name':'username','req':True},
     {'name':'password','req':True},
     {'name':'delete','default':True,'parse':bot.conf.parse_bool},
     {'name':'imap'},
@@ -140,12 +140,8 @@ class MailProtocol(Protocol):
   #   self.log = the logger you should use
   def setup(self):
 
-    server = self.opt('email.address').split('@')[-1]
-    self.imap_serv = (self.opt('email.imap') or ('imap.'+server))
     self.thread = IMAPThread(self)
     self.thread.start()
-    self.smtp_serv = (self.opt('email.smtp') or ('smtp.'+server))
-    self.smtp = None
 
   # @raise (ConnectFailure) if can't connect to server
   # @raise (AuthFailure) if failed to authenticate to server
@@ -165,10 +161,6 @@ class MailProtocol(Protocol):
   # @return (bool) True if we are connected to the server
   def is_connected(self):
     return self.thread.imap is not None
-
-  # called whenever the bot detects a disconnect as insurance
-  def disconnected(self):
-    pass
 
   # receive/process messages and call bot._cb_message()
   # must ignore msgs from myself and from users not in any of our rooms
@@ -199,20 +191,20 @@ class MailProtocol(Protocol):
             body = b.replace('\r','').strip()
       if isinstance(body,list):
         self.log.warning('Ignoring multi-part from "%s"; no plaintext' % frm)
-        self.send('Unable to process multi-part message; no plaintext',user)
+        self._send('Unable to process multi-part message; no plaintext',user)
         return
 
       # check for authentication key if configured
       if self.opt('email.key') and self.opt('email.key').get() not in body:
         self.log.warning('Invalid key from "%s"; dropping message' % user)
-        self.send('Invalid or missing key; commands forbidden',user)
+        self._send('Invalid or missing key; commands forbidden',user)
         continue
 
       # finish parsing the e-mail and send it
       body = body.split('\n')[0].strip()
       msg = Message(user,body)
       ellip = ('...' if len(body)>20 else '')
-      self.log.debug('Mail from "%s" with body "%.20s%s"' % (user,body,ellip))
+      self.log.debug('mail from "%s" with body "%.20s%s"' % (user,body,ellip))
 
       # pass the message on to the bot for command execution
       self.bot._cb_message(msg)
@@ -223,10 +215,13 @@ class MailProtocol(Protocol):
     pass
 
   # send a message to a user
-  # @param text (str,unicode) text to send
-  # @param to (User,Room) recipient
+  # @param mess (Message) message to be sent
+  # @raise (ConnectFailure) if failed to send message
+  # Check: get_emote()
   # REF: http://stackoverflow.com/a/14678470
-  def send(self,text,to):
+  def send(self,mess):
+
+    (text,to) = (mess.get_text(),mess.get_to())
 
     # SMTP connections are short-lived, so we might need to reconnect
     try:
@@ -238,19 +233,17 @@ class MailProtocol(Protocol):
 
     msg = MIMEText(text)
     msg['Subject'] = 'Sibyl reply'
-    msg['From'] = self.opt('email.address')
+    msg['From'] = self.opt('email.username')
     msg['To'] = str(to)
 
     self.smtp.sendmail(msg['From'],msg['To'],msg.as_string())
 
   # send a message with text to every user in a room
   # optionally note that the broadcast was requested by a specific User
-  # @param text (str,unicode) body of the message
-  # @param room (Room) room to broadcast in
-  # @param frm (User) [None] the User requesting the broadcast
-  # @param users (list of User) [None] extra users to highlight
+  # @param mess (Message) the message to broadcast
   # @return (str,unicode) the text that was actually sent
-  def broadcast(self,text,room,frm=None,users=None):
+  # Check: get_user(), get_users()
+  def broadcast(self,mess):
     pass
 
   # join the specified room using the specified nick and password
@@ -290,7 +283,7 @@ class MailProtocol(Protocol):
 
   # @return (User) our username
   def get_user(self):
-    return MailUser(self,self.opt('email.address'))
+    return MailUser(self,self.opt('email.username'))
 
   # @param user (str) a user id to parse
   # @param typ (int) [Message.PRIVATE] either Message.GROUP or Message.PRIVATE
@@ -319,7 +312,7 @@ class MailProtocol(Protocol):
 
     # all major email providers support SSL, so use it
     try:
-      self.smtp = smtplib.SMTP(self.smtp_serv,port=587)
+      self.smtp = smtplib.SMTP(self._get_smtp(),port=587)
       self.smtp.starttls()
       self.smtp.ehlo()
     except:
@@ -327,9 +320,27 @@ class MailProtocol(Protocol):
 
     # if the protocol raises AuthFailure, SibylBot will never try to reconnect
     try:
-      self.smtp.login(self.opt('email.address'),self.opt('email.password'))
+      self.smtp.login(self.opt('email.username'),self.opt('email.password'))
     except:
       raise AuthFailure
+
+  # convenience wrapper for sending stuff
+  def _send(self,text,to):
+
+    msg = Message(self.get_user(),text,to=to)
+    self.bot.send(msg)
+
+  # wrapper for imap server in case config opts get edited
+  def _get_imap(self):
+
+    server = self.opt('email.username').split('@')[-1]
+    return (self.opt('email.imap') or ('imap.'+server))
+
+  # wrapper for smtp server in case config opts get edited
+  def _get_smtp(self):
+
+    server = self.opt('email.username').split('@')[-1]
+    return (self.opt('email.smtp') or ('smtp.'+server))
 
 ################################################################################
 # IMAPThread class
@@ -386,12 +397,12 @@ class IMAPThread(Thread):
   def connect(self):
 
     try:
-      self.imap = imaplib.IMAP4_SSL(self.proto.imap_serv)
+      self.imap = imaplib.IMAP4_SSL(self.proto._get_imap())
     except:
       raise ConnectFailure
 
     try:
-      self.imap.login(self.proto.opt('email.address'),
+      self.imap.login(self.proto.opt('email.username'),
         self.proto.opt('email.password'))
     except:
       raise AuthFailure

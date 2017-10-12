@@ -15,10 +15,10 @@ from sibyl.lib.decorators import botcmd
 import logging
 log = logging.getLogger(__name__)
 
-@botcmd(name='exec',ctrl=True,hidden=True)
+@botcmd(name='exec',ctrl=True,hidden=True,raw=True)
 def _exec(bot,mess,args):
-  exec ' '.join(args)
+  exec args
 
-@botcmd(name='eval',ctrl=True,hidden=True)
+@botcmd(name='eval',ctrl=True,hidden=True,raw=True)
 def _eval(bot,mess,args):
-  return unicode(eval(' '.join(args)))
+  return unicode(eval(args))

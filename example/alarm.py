@@ -43,13 +43,13 @@ def idle(bot):
   not_triggered = []
 
   # iterate over all our stored alarms and trigger those that have passed
-  for alarm in bot.alarms:
-    if alarm[1]<=now:
-      name = alarm[0].get_user().get_name()
-      frm = alarm[0].get_from()
+  for (mess,target) in bot.alarms:
+    if target<=now:
+      name = mess.get_user().get_name()
+      frm = mess.get_from()
       bot.send(name+': ALARM!',frm)
     else:
-      not_triggered.append(alarm)
+      not_triggered.append((mess,target))
 
   # update our stored alarms to remove those that just triggered
   bot.alarms = not_triggered
