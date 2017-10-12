@@ -3,7 +3,6 @@
 #
 # Sibyl: A modular Python chat bot framework
 # Copyright (c) 2015-2017 Joshua Haas <jahschwa.com>
-# Copyright (c) 2017 Tara Crittenden
 #
 # This file is part of Sibyl.
 #
@@ -478,11 +477,10 @@ def stream(bot,mess,args):
 
 @botcmd
 def videos(bot,mess,args):
-  """open folder(s) as a playlist - videos [all] [include -exclude] [#track] [@match]"""
+  """open folder as a playlist - videos [include -exclude] [#track] [@match]"""
 
-  plugin = _check_plugin(bot,'library')
-  if plugin:
-    return plugin
+  if not bot.has_plugin('library'):
+    return 'This command not available because plugin "library" not loaded'
 
   return _files(bot,args,bot.lib_video_dir,1)
 
@@ -490,29 +488,26 @@ def videos(bot,mess,args):
 def video(bot,mess,args):
   """search and play a single video - video [include -exclude]"""
 
-  plugin = _check_plugin(bot,'library')
-  if plugin:
-    return plugin
+  if not bot.has_plugin('library'):
+    return 'This command not available because plugin "library" not loaded'
 
   return _file(bot,args,bot.lib_video_file)
 
 @botcmd
 def audios(bot,mess,args):
-  """open folder(s) as a playlist - audios [all] [include -exclude] [#track] [@match]"""
+  """open folder as a playlist - audios [include -exclude] [#track] [@match]"""
 
-  plugin = _check_plugin(bot,'library')
-  if plugin:
-    return plugin    
- 
+  if not bot.has_plugin('library'):
+    return 'This command not available because plugin "library" not loaded'
+
   return _files(bot,args,bot.lib_audio_dir,0)
 
 @botcmd
 def audio(bot,mess,args):
   """search and play a single audio file - audio [include -exclude]"""
 
-  plugin = _check_plugin(bot,'library')
-  if plugin:
-    return plugin
+  if not bot.has_plugin('library'):
+    return 'This command not available because plugin "library" not loaded'
 
   return _file(bot,args,bot.lib_audio_file)
 
@@ -532,9 +527,8 @@ def fullscreen(bot,mess,args):
 def random_chat(bot,mess,args):
   """play random song - random [include -exclude]"""
 
-  plugin = _check_plugin(bot,'library')
-  if plugin:
-    return plugin
+  if not bot.has_plugin('library'):
+    return 'This command not available because plugin "library" not loaded'
 
   # check if a search term was passed
   if not args:
@@ -643,27 +637,22 @@ def playpause(bot,target):
 def _files(bot,args,dirs,pid):
   """helper function for videos() and audios()"""
 
-  playall = False
-  if not args or args[0]=='all':
-    playall = True
-    try:
-      args.remove('all')
-    except ValueError:
-      pass
+  if not args:
+    return 'You must specify a search term'
   cmd = ' '.join(args)
 
-  # check for item# as last arg and @ for item match string  
+  # check for item# as last arg and @ for item match string
+  last = args[-1]
   num = None
   search = None
-  if args:
-    last = args[-1]
-    if last.startswith('@'):
-      search = util.get_args(last[1:])
-    elif last.startswith('#'):
-      try:
-        num = int(last[1:])-1
-      except ValueError:
-        pass
+
+  if last.startswith('@'):
+    search = util.get_args(last[1:])
+  elif last.startswith('#'):
+    try:
+      num = int(last[1:])-1
+    except ValueError:
+      pass
 
   # default is 0 if not specified
   if (search is not None) or (num is not None):
@@ -677,7 +666,10 @@ def _files(bot,args,dirs,pid):
   if len(matches)==0:
     return 'Found 0 matches'
 
-  if len(matches)>1 and playall==False:
+  # default to top dir if every match is a sub dir
+  matches = util.reducetree(matches)
+
+  if len(matches)>1:
     maxm = bot.opt('library.max_matches')
     if maxm<1 or len(matches)<=maxm:
       return 'Found '+str(len(matches))+' matches: '+util.list2str(matches)
@@ -685,19 +677,18 @@ def _files(bot,args,dirs,pid):
       return 'Found '+str(len(matches))+' matches'
 
   # translate library path if necessary
-  match = bot.library_translate(matches)
+  match = bot.library_translate(matches[0])
 
   # if there was 1 match, add the whole directory to a playlist
   # also check for an error opening the directory
   bot.xbmc('Playlist.Clear',{'playlistid':pid})
 
-  for i in range(len(matches)):
-    result = bot.xbmc('Playlist.Add',{'playlistid':pid,'item':
-      {'directory':matches[i]}},timeout=60)
-    if 'error' in result.keys():
-      s = 'Error trying to add '+matches[i]+ ' to playlist'
-      log.error(s)
-      return s
+  result = bot.xbmc('Playlist.Add',{'playlistid':pid,'item':
+      {'directory':match}},timeout=60)
+  if 'error' in result.keys():
+    s = 'Unable to open: '+match
+    log.error(s)
+    return s
 
   msg = ''
 
@@ -721,12 +712,7 @@ def _files(bot,args,dirs,pid):
   # set last_played for bookmarking
   bot.last_played = (pid,matches[0])
 
-  # get the first item in the playlist
-  result = bot.xbmc('Player.GetItem',{'playerid':pid, 'properties':['file']})
-  name = result['result']['item']['label']
-  filepath = result['result']['item']['file']
-  
-  return msg+'Playlist starting with "'+name+'" from "'+filepath+'"'
+  return msg+'Playlist from "'+match+'" starting with #'+str(num+1)
 
 def _file(bot,args,dirs):
   """helper function for video() and audio()"""
@@ -748,13 +734,12 @@ def _file(bot,args,dirs):
       return 'Found '+str(len(matches))+' matches'
 
   # translate library path if necessary
-  match = bot.library_translate(matches)
-
+  match = bot.library_translate(matches[0])
 
   # if there was 1 match, play the file, and check for not found error
-  result = bot.xbmc('Player.Open',{'item':{'file':match[0]}})
+  result = bot.xbmc('Player.Open',{'item':{'file':match}})
   if 'error' in result.keys():
-    s = 'Unable to open: '+matches[0]
+    s = 'Unable to open: '+match
     log.error(s)
     return s
 
@@ -765,14 +750,4 @@ def _file(bot,args,dirs):
   if bot.has_plugin('bookmark'):
     bot.last_resume = None
 
-  # get the first item in the playlist
-  result = bot.xbmc('Player.GetItem',{'playerid':0})
-  name = result['result']['item']['label']
-
-  return 'Playing "'+name+'" from "'+matches[0]+'"'
-
-def _check_plugin(bot,args):
-  """Helper function to check for needed plugins"""
-  if not bot.has_plugin(args):
-    return 'This command not available because plugin ' +args+ ' not loaded'
-  return ''
+  return 'Playing "'+match+'"'
