@@ -26,7 +26,7 @@ import sys,os,argparse,signal,time
 def main():
 
   # change directories so saving files to relatve paths works correctly
-  current_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'.'))
+  current_dir = os.path.abspath(os.path.dirname(__file__))
   os.chdir(current_dir)
 
   # add our parent directory to the path so we work with github cloning

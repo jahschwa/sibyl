@@ -271,10 +271,7 @@ def list2str(l):
   """return the list on separate lines"""
 
   # makes match lists look much better in chat or pastebin
-  s = '['
-  for x in l:
-    s += ('"'+x+'",\n')
-  return (s[:-2]+']')
+  return '\n'+'\n'.join(l)
 
 # @param paths (list) file paths to reduce
 # @return (list) the input, or a basedir shared by all paths

@@ -281,10 +281,18 @@ class Message(object):
   # @param status (int) [None] status enum
   # @param msg (str) [None] custom status msg (e.g. "Doing awesome!")
   # @param room (Room) [None] the room that sent the message
-  def __init__(self,user,txt,typ=None,status=None,msg=None,room=None):
+  # @param emote (bool) [False] if this is an "emote" message
+  #
+  #   ===== following used internally by Sibyl=====
+  # @param to (User,Room) [None] the destination for this Message
+  # @param broadcast (bool) [False] highlight all users (only works for Rooms)
+  # @param users (list of User) [[]] additional users to highlight (broadcast)
+  # @param hook (bool) [True] execute @botsend hooks for this message
+  def __init__(self,user,txt,typ=None,status=None,msg=None,room=None,
+      to=None,broadcast=False,users=None,hook=True,emote=False):
     """create a new Message"""
 
-    self.protocol = user.get_protocol()
+    self.protocol = user.get_protocol() if to is None else to.get_protocol()
 
     self.typ = (Message.PRIVATE if typ is None else typ)
     if self.typ not in range(0,4):
@@ -295,10 +303,16 @@ class Message(object):
           + 'AWAY, DND, AVAILABLE')
     self.status = status
 
+    self.set_text(txt)
     self.user = user
-    self.txt = txt
     self.msg = msg
     self.room = room
+
+    self.to = to
+    self.broadcast = broadcast
+    self.users = users or []
+    self.hook = hook
+    self.emote = emote
 
   # @return (User,Room) the sender of this Message usable for a reply
   def get_from(self):
@@ -323,6 +337,11 @@ class Message(object):
   # @param text (str,unicode) the body of this Message to set
   def set_text(self,text):
     """set the body of the message"""
+
+    if isinstance(text,str):
+      text = text.decode('utf8')
+    elif not isinstance(text,unicode):
+      text = unicode(text)
     self.txt = text
 
   # @return (int) the type of this Message (Message class type enum)
@@ -339,6 +358,31 @@ class Message(object):
   def get_protocol(self):
     """return the name of the protocol associated with this Message"""
     return self.protocol
+
+  # @return (User,Room) the destination for this Message
+  def get_to(self):
+    """return the destination User or Room for this Message"""
+    return self.to
+
+  # @return (bool) whether this Message should be broadcast
+  def get_broadcast(self):
+    """return True/False for broadcasting this Message"""
+    return self.broadcast
+
+  # @return (list of User) additional users to highlight (broadcast)
+  def get_users(self):
+    """return additional users to highlight when broadcasting"""
+    return self.users
+
+  # @return (bool) whether to run @botsend hooks for this Message
+  def get_hook(self):
+    """return whether to run @botsend hooks for this Message"""
+    return self.hook
+
+  # @return (bool) whether this Message is an "emote" message
+  def get_emote(self):
+    """return whether this Message was sent as an "emote" message"""
+    return self.emote
 
   # @param typ (int) Message type enum
   # @return (str) human-readable Message type
@@ -380,11 +424,6 @@ class Protocol(object):
   def is_connected(self):
     pass
 
-  # called whenever the bot detects a disconnect as insurance
-  @abstractmethod
-  def disconnected(self):
-    pass
-
   # receive/process messages and call bot._cb_message()
   # must ignore msgs from myself and from users not in any of our rooms
   # @call bot._cb_message(Message) upon receiving a valid status or message
@@ -401,21 +440,20 @@ class Protocol(object):
     pass
 
   # send a message to a user
-  # @param text (str,unicode) text to send
-  # @param to (User,Room) recipient
+  # @param mess (Message) message to be sent
+  # @raise (ConnectFailure) if failed to send message
+  # Check: get_emote()
   @abstractmethod
-  def send(self,text,to):
+  def send(self,mess):
     pass
 
   # send a message with text to every user in a room
   # optionally note that the broadcast was requested by a specific User
-  # @param text (str,unicode) body of the message
-  # @param room (Room) room to broadcast in
-  # @param frm (User) [None] the User requesting the broadcast
-  # @param users (list of User) [None] extra users to highlight
+  # @param mess (Message) the message to broadcast
   # @return (str,unicode) the text that was actually sent
+  # Check: get_user(), get_users()
   @abstractmethod
-  def broadcast(self,text,room,frm=None,users=None):
+  def broadcast(self,mess):
     pass
 
   # join the specified room using the specified nick and password
@@ -500,6 +538,10 @@ class Protocol(object):
   # @return (bool) whether self!=other
   def __ne__(self,other):
     return not self==other
+
+  # override hash for use as dict keys
+  def __hash__(self):
+    return hash(self.get_name())
 
   # @param opt (str) name of the option to get
   # @return (object) the value of the option
