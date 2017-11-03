@@ -425,14 +425,10 @@ def stream(bot,mess,args):
     vid = msg[msg.find('watch?v=')+8:]
 
     # retrieve video info from webpage
-    html = requests.get('http://youtube.com/watch?v='+vid,headers=agent).text
-    title = html[html.find('<title>')+7:html.find(' - YouTube</title>')]
-    title = util.cleanhtml(title)
-    channel = html.find('class="yt-user-info"')
-    start = html.find('>',channel+1)
-    start = html.find('>',start+1)+1
-    stop = html.find('<',start+1)
-    channel = html[start:stop]
+    api = 'https://youtube.com/oembed?url=https://www.youtube.com/watch?v=%s&format=json'
+    j = json.loads(requests.get(api % vid,headers=agent).text)
+    title = util.cleanhtml(j['title'])
+    channel = util.cleanhtml(j['author_name'])
 
     # send xbmc request and seek if given custom start time
     bot.xbmc('Player.Open',{'item':{'file':
