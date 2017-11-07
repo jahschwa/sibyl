@@ -31,32 +31,7 @@ import xmpp
 from xmpp.protocol import SystemShutdown,StreamError
 
 from sibyl.lib.protocol import User,Room,Message,Protocol
-from sibyl.lib.protocol import ProtocolError as SuperProtocolError
-from sibyl.lib.protocol import PingTimeout as SuperPingTimeout
-from sibyl.lib.protocol import ConnectFailure as SuperConnectFailure
-from sibyl.lib.protocol import AuthFailure as SuperAuthFailure
-from sibyl.lib.protocol import ServerShutdown as SuperServerShutdown
 from sibyl.lib.decorators import botconf
-
-################################################################################
-# Custom exceptions
-################################################################################
-
-class ProtocolError(SuperProtocolError):
-  def __init__(self):
-    self.protocol = __name__.split('_')[-1]
-
-class PingTimeout(SuperPingTimeout,ProtocolError):
-  pass
-
-class ConnectFailure(SuperConnectFailure,ProtocolError):
-  pass
-
-class AuthFailure(SuperAuthFailure,ProtocolError):
-  pass
-
-class ServerShutdown(SuperServerShutdown,ProtocolError):
-  pass
 
 ################################################################################
 # Config options
@@ -234,7 +209,7 @@ class XMPP(Protocol):
     conres = conn.connect((server,port))
 
     if not conres:
-      raise ConnectFailure
+      raise self.ConnectFailure
     if conres != 'tls':
       self.log.warning('unable to establish secure connection '\
       '- TLS failed!')
@@ -243,7 +218,7 @@ class XMPP(Protocol):
     authres = conn.auth(self.jid.getNode(),
         self.opt('xmpp.password'),self.opt('xmpp.resource'))
     if not authres:
-      raise AuthFailure
+      raise self.AuthFailure
     if authres != 'sasl':
       self.log.warning("unable to perform SASL auth on %s. "\
       "Old authentication method used!" % self.jid.getDomain())
@@ -288,10 +263,10 @@ class XMPP(Protocol):
     try:
       self.conn.Process()
     except SystemShutdown:
-      self.disconnected(ServerShutdown)
+      self.disconnected(self.ServerShutdown)
     except StreamError as e:
       self.log.error(traceback.format_exception_only(type(e),e)[:-1])
-      self.disconnected(ConnectFailure)
+      self.disconnected(self.ConnectFailure)
 
     self.__idle_proc()
 
@@ -332,7 +307,7 @@ class XMPP(Protocol):
       self.conn.send(mess)
 
     except IOError:
-      self.disconnected(ConnectFailure)
+      self.disconnected(self.ConnectFailure)
 
   def broadcast(self,mess):
     """send a message to every user in a room"""
@@ -383,7 +358,7 @@ class XMPP(Protocol):
       try:
         self.conn.send(pres)
       except IOError:
-        self.disconnected(ConnectFailure)
+        self.disconnected(self.ConnectFailure)
 
     # update mucs dict and log
     self.mucs[name]['status'] = self.MUC_PARTED
@@ -738,7 +713,7 @@ class XMPP(Protocol):
       self.conn.send(xmpp.dispatcher.Presence(show=self.__show,
         status=self.__status))
     except IOError:
-      self.disconnected(ConnectFailure)
+      self.disconnected(self.ConnectFailure)
 
   def __idle_proc(self):
     """ping, join pending mucs, and try to rejoin mucs we were forced from"""
@@ -762,9 +737,9 @@ class XMPP(Protocol):
         res = self.conn.SendAndWaitForResponse(ping,
             self.opt('xmpp.ping_timeout'))
       except IOError:
-        self.disconnected(PingTimeout)
+        self.disconnected(self.PingTimeout)
       if res is None:
-        self.disconnected(PingTimeout)
+        self.disconnected(self.PingTimeout)
 
 ################################################################################
 # XEP-0045 Multi User Chat (MUC)
@@ -849,7 +824,7 @@ class XMPP(Protocol):
     try:
       result = self.conn.SendAndWaitForResponse(pres)
     except IOError:
-      self.disconnected(ConnectFailure)
+      self.disconnected(self.ConnectFailure)
 
     # result is None for timeout
     if not result:

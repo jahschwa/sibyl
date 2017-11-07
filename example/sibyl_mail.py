@@ -7,32 +7,6 @@ from sibyl.lib.protocol import User,Room,Protocol,Message
 from sibyl.lib.decorators import botconf
 
 ################################################################################
-# Exceptions Boilerplate
-################################################################################
-
-from sibyl.lib.protocol import ProtocolError as SuperProtocolError
-from sibyl.lib.protocol import PingTimeout as SuperPingTimeout
-from sibyl.lib.protocol import ConnectFailure as SuperConnectFailure
-from sibyl.lib.protocol import AuthFailure as SuperAuthFailure
-from sibyl.lib.protocol import ServerShutdown as SuperServerShutdown
-
-class ProtocolError(SuperProtocolError):
-  def __init__(self):
-    self.protocol = __name__.split('_')[-1]
-
-class PingTimeout(SuperPingTimeout,ProtocolError):
-  pass
-
-class ConnectFailure(SuperConnectFailure,ProtocolError):
-  pass
-
-class AuthFailure(SuperAuthFailure,ProtocolError):
-  pass
-
-class ServerShutdown(SuperServerShutdown,ProtocolError):
-  pass
-
-################################################################################
 # Config Options
 ################################################################################
 
@@ -109,13 +83,13 @@ class IMAPThread(Thread):
     try:
       self.imap = imaplib.IMAP4_SSL(self.proto.imap_serv)
     except:
-      raise ConnectFailure
+      raise self.ConnectFailure('IMAP')
 
     try:
       self.imap.login(self.proto.opt('mail.address'),
           self.proto.opt('mail.password'))
     except:
-      raise AuthFailure
+      raise self.AuthFailure('IMAP')
 
     self.imap.select()
     self.cmd('IDLE')
@@ -182,12 +156,12 @@ class MailProtocol(Protocol):
       self.smtp.starttls()
       self.smtp.ehlo()
     except:
-      raise ConnectFailure
+      raise self.ConnectFailure('SMTP')
 
     try:
       self.smtp.login(self.opt('mail.address'),self.opt('mail.password'))
     except:
-      raise AuthFailure
+      raise self.AuthFailure('SMTP')
 
   def is_connected(self):
 

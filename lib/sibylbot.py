@@ -1086,13 +1086,18 @@ class SibylBot(object):
             reason = reason[r]
             break
         proto.log.error('Connection lost ('+reason+
-            '); retrying in '+str(self.opt('recon_wait'))+' sec')
+            '); reconnecting in '+str(self.opt('recon_wait'))+' sec')
+        if e.message:
+          proto.log.debug('  %s: %s' % (e.__class__.__name__,e.message))
 
         self.__recons[name] = time.time()+self.opt('recon_wait')
 
       except AuthFailure as e:
         name = e.protocol
+        proto = self.protocols[name]
         self.log.error('Disabling protocol "%s" due to AuthFailure' % name)
+        if e.message:
+          proto.log.debug('  %s: %s' % (e.__class__.__name__,e.message))
         del self.protocols[name]
         if not self.protocols:
           self.quit('No active protocols; exiting')

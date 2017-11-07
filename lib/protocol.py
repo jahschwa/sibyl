@@ -524,6 +524,15 @@ class Protocol(object):
 
     self.bot = bot
     self.log = log
+
+    self.ProtocolError = type(
+        'ProtocolError',
+        (ProtocolError,),
+        {'protocol':self.get_name()}
+    )
+    for ex in ['PingTimeout','ConnectFailure','AuthFailure','ServerShutdown']:
+      setattr(self,ex,type(ex,(self.ProtocolError,globals()[ex]),{}))
+
     self.setup()
 
   # @param other (object) another object for comparison

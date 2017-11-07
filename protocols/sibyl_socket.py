@@ -26,33 +26,8 @@ from threading import Thread,Event
 from Queue import Queue
 
 from sibyl.lib.protocol import User,Room,Message,Protocol
-from sibyl.lib.protocol import ProtocolError as SuperProtocolError
-from sibyl.lib.protocol import PingTimeout as SuperPingTimeout
-from sibyl.lib.protocol import ConnectFailure as SuperConnectFailure
-from sibyl.lib.protocol import AuthFailure as SuperAuthFailure
-from sibyl.lib.protocol import ServerShutdown as SuperServerShutdown
 
 from sibyl.lib.decorators import botconf
-
-################################################################################
-# Custom exceptions
-################################################################################
-
-class ProtocolError(SuperProtocolError):
-  def __init__(self):
-    self.protocol = __name__.split('_')[-1]
-
-class PingTimeout(SuperPingTimeout,ProtocolError):
-  pass
-
-class ConnectFailure(SuperConnectFailure,ProtocolError):
-  pass
-
-class AuthFailure(SuperAuthFailure,ProtocolError):
-  pass
-
-class ServerShutdown(SuperServerShutdown,ProtocolError):
-  pass
 
 ################################################################################
 # Config options
@@ -375,11 +350,11 @@ class SocketServer(Protocol):
     except Exception as e:
       if e.errno==errno.EACCES:
         self.log.error('Unable to bind (permission denied)' % (hostname,port))
-        raise AuthFailure
+        raise self.AuthFailure
       else:
         n = e.errno
         self.log.error('Unhandled error %s = %s' % (n,errno.errorcode[n]))
-        raise AuthFailure
+        raise self.AuthFailure
 
     self.thread.start()
     self.connected = True

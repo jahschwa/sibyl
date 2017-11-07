@@ -27,33 +27,8 @@ from threading import Thread
 from Queue import Queue
 
 from sibyl.lib.protocol import User,Room,Message,Protocol
-from sibyl.lib.protocol import ProtocolError as SuperProtocolError
-from sibyl.lib.protocol import PingTimeout as SuperPingTimeout
-from sibyl.lib.protocol import ConnectFailure as SuperConnectFailure
-from sibyl.lib.protocol import AuthFailure as SuperAuthFailure
-from sibyl.lib.protocol import ServerShutdown as SuperServerShutdown
 
 from sibyl.lib.decorators import botconf
-
-################################################################################
-# Custom exceptions
-################################################################################
-
-class ProtocolError(SuperProtocolError):
-  def __init__(self):
-    self.protocol = __name__.split('_')[-1]
-
-class PingTimeout(SuperPingTimeout,ProtocolError):
-  pass
-
-class ConnectFailure(SuperConnectFailure,ProtocolError):
-  pass
-
-class AuthFailure(SuperAuthFailure,ProtocolError):
-  pass
-
-class ServerShutdown(SuperServerShutdown,ProtocolError):
-  pass
 
 ################################################################################
 # Config options
@@ -316,13 +291,13 @@ class MailProtocol(Protocol):
       self.smtp.starttls()
       self.smtp.ehlo()
     except:
-      raise ConnectFailure
+      raise self.ConnectFailure('SMTP')
 
     # if the protocol raises AuthFailure, SibylBot will never try to reconnect
     try:
       self.smtp.login(self.opt('email.username'),self.opt('email.password'))
     except:
-      raise AuthFailure
+      raise self.AuthFailure('SMTP')
 
   # convenience wrapper for sending stuff
   def _send(self,text,to):
@@ -380,7 +355,7 @@ class IMAPThread(Thread):
           self.connect()
 
         # raising exceptions in a Thread is messy, so we'll queue it instead
-        except ProtocolError as e:
+        except self.ProtocolError as e:
           self.imap = None
           self.msgs.put(e)
 
@@ -399,13 +374,13 @@ class IMAPThread(Thread):
     try:
       self.imap = imaplib.IMAP4_SSL(self.proto._get_imap())
     except:
-      raise ConnectFailure
+      raise self.proto.ConnectFailure('IMAP')
 
     try:
       self.imap.login(self.proto.opt('email.username'),
         self.proto.opt('email.password'))
     except:
-      raise AuthFailure
+      raise self.proto.AuthFailure('IMAP')
 
     # we have to specify which Inbox to use, and then enter the IDLE state
     self.imap.select()
