@@ -424,20 +424,25 @@ def stream(bot,mess,args):
       msg = msg[:msg.find('&')]
     vid = msg[msg.find('watch?v=')+8:]
 
-    # retrieve video info from webpage
-    api = 'https://youtube.com/oembed?url=https://www.youtube.com/watch?v=%s&format=json'
-    j = json.loads(requests.get(api % vid,headers=agent).text)
-    title = util.cleanhtml(j['title'])
-    channel = util.cleanhtml(j['author_name'])
-
     # send xbmc request and seek if given custom start time
-    bot.xbmc('Player.Open',{'item':{'file':
+    result = bot.xbmc('Player.Open',{'item':{'file':
         'plugin://plugin.video.youtube/play/?video_id='+vid}})
     if tim:
       bot.run_cmd('seek',[tim])
 
-    # respond to the user with video info
-    s = 'Streaming "'+title+'" by "'+channel+'" from YouTube'
+    try:
+      # retrieve video info from webpage
+      api = 'https://youtube.com/oembed?url=https://www.youtube.com/watch?v=%s&format=json'
+      j = json.loads(requests.get(api % vid,headers=agent).text)
+      title = util.cleanhtml(j['title'])
+      channel = util.cleanhtml(j['author_name'])
+
+      # respond to the user with video info
+      s = 'Streaming "'+title+'" by "'+channel+'" from YouTube'
+
+    except:
+      s = 'Streaming (unable to retrieve title) from YouTube'
+
     if tim:
       s += (' at '+tim)
 
