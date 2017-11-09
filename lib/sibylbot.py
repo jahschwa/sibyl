@@ -41,7 +41,7 @@
 import sys,logging,re,os,imp,inspect,traceback,time,pickle,Queue,collections
 
 from sibyl.lib.config import Config
-from sibyl.lib.protocol import Message,Room,User
+from sibyl.lib.protocol import Protocol,Message,Room,User
 from sibyl.lib.protocol import (ProtocolError,PingTimeout,ConnectFailure,
     AuthFailure,ServerShutdown)
 from sibyl.lib.decorators import botcmd,botrooms,botcon
@@ -1040,18 +1040,25 @@ class SibylBot(object):
     """process loop - connect and process messages"""
 
     for (name,proto) in self.protocols.items():
+
       if proto.is_connected():
         proto.process()
-      else:
-        if (name not in self.__recons) or (self.__recons[name]<time.time()):
-          self.__run_hooks('recon',name)
-          proto.connect()
-          self.__run_hooks('con',name)
-          for room in self.opt('rooms').get(name,[]):
-            pword = room['pass'] and room['pass'].get()
-            proto.join_room(proto.new_room(room['room'],room['nick'],pword))
-          if name in self.__recons:
-            del self.__recons[name]
+
+      elif (proto.status!=Protocol.DEAD and
+          ((name not in self.__recons) or (self.__recons[name]<time.time()))):
+
+        self.__run_hooks('recon',name)
+        proto.status = Protocol.CONNECTING
+        proto.connect()
+        proto.status = Protocol.CONNECTED
+        self.__run_hooks('con',name)
+
+        for room in self.opt('rooms').get(name,[]):
+          pword = room['pass'] and room['pass'].get()
+          proto.join_room(proto.new_room(room['room'],room['nick'],pword))
+
+        if name in self.__recons:
+          del self.__recons[name]
 
   def __run_forever(self):
     """reconnect loop - catch known exceptions"""
@@ -1069,38 +1076,41 @@ class SibylBot(object):
         self.__idle_proc()
         time.sleep(0.1)
 
-      except (PingTimeout,ConnectFailure,ServerShutdown) as e:
+      except (PingTimeout,ConnectFailure,ServerShutdown,AuthFailure) as e:
+
         name = e.protocol
-        proto = self.protocols[name]
+        proto = self.get_protocol(name)
+
+        reason = {PingTimeout:'ping timeout',
+                  ConnectFailure:'unable to connect',
+                  ServerShutdown:'server shutdown',
+                  AuthFailure:'auth failed'}
+        for r in reason:
+          if isinstance(e,r):
+            reason = reason[r]
+            break
+
+        log_msg = 'Connection lost (%s); ' % reason
+
+        if isinstance(e,AuthFailure):
+          proto.status = Protocol.DEAD
+          log_msg += 'disabling protocol'
+          if not self.protocols:
+            self.quit('No active protocols; exiting')
+        else:
+          proto.status = Protocol.DISCONNECTED
+          log_msg += 'reconnecting in %s sec' % self.opt('recon_wait')
+          self.__recons[name] = time.time()+self.opt('recon_wait')
+
+        proto.log.error(log_msg)
+        if e.message:
+          proto.log.debug('  %s: %s' % (e.__class__.__name__,e.message))
+
         self.__run_hooks('discon',name,e)
         self.__stats['discon'] += 1
 
         if not self.opt('catch_except'):
           raise e
-
-        reason = {PingTimeout:'ping timeout',
-                  ConnectFailure:'unable to connect',
-                  ServerShutdown:'server shutdown'}
-        for r in reason:
-          if isinstance(e,r):
-            reason = reason[r]
-            break
-        proto.log.error('Connection lost ('+reason+
-            '); reconnecting in '+str(self.opt('recon_wait'))+' sec')
-        if e.message:
-          proto.log.debug('  %s: %s' % (e.__class__.__name__,e.message))
-
-        self.__recons[name] = time.time()+self.opt('recon_wait')
-
-      except AuthFailure as e:
-        name = e.protocol
-        proto = self.protocols[name]
-        self.log.error('Disabling protocol "%s" due to AuthFailure' % name)
-        if e.message:
-          proto.log.debug('  %s: %s' % (e.__class__.__name__,e.message))
-        del self.protocols[name]
-        if not self.protocols:
-          self.quit('No active protocols; exiting')
 
       except KeyboardInterrupt:
         self.quit('stopped by KeyboardInterrupt')

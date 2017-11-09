@@ -243,11 +243,6 @@ class XMPP(Protocol):
     # Connection established - save connection
     self.conn = conn
 
-  def is_connected(self):
-    """return True if we are still connected"""
-
-    return (self.conn is not None)
-
   def disconnected(self,ex):
     """erase self.conn and set all MUCS to parted"""
 

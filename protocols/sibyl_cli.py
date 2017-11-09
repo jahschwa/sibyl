@@ -123,7 +123,6 @@ class CLI(Protocol):
 
   def setup(self):
 
-    self.connected = False
     self.thread = None
 
   def connect(self):
@@ -139,10 +138,6 @@ class CLI(Protocol):
     self.thread = BufferThread(
         self.queue,self.event_data,self.event_close,self.event_proc)
     self.thread.start()
-    self.connected = True
-
-  def is_connected(self):
-    return self.connected
 
   def process(self):
 

@@ -304,7 +304,6 @@ class SocketServer(Protocol):
 
   def setup(self):
 
-    self.connected = False
     self.thread = None
 
   def connect(self):
@@ -357,10 +356,6 @@ class SocketServer(Protocol):
         raise self.AuthFailure
 
     self.thread.start()
-    self.connected = True
-
-  def is_connected(self):
-    return self.connected
 
   def process(self):
 

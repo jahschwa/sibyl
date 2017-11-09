@@ -127,7 +127,6 @@ class MatrixProtocol(Protocol):
   #   self.bot = SibylBot instance
   #   self.log = the logger you should use
   def setup(self):
-    self.connected = False
     self.rooms = {}
     self.bot.add_var("credentials",persist=True)
 
@@ -167,7 +166,6 @@ class MatrixProtocol(Protocol):
       self.client.add_listener(self.messageHandler)
 
       self.client.start_listener_thread()
-      self.connected = True
 
     except MatrixRequestError as e:
       if(e.code == 403):
@@ -176,10 +174,6 @@ class MatrixProtocol(Protocol):
       else:
         self.log.debug("Failed to connect to homeserver!")
         raise self.ConnectFailure
-
-  # @return (bool) True if we are connected to the server
-  def is_connected(self):
-    return self.connected
 
   # receive/process messages and call bot._cb_message()
   # must ignore msgs from myself and from users not in any of our rooms

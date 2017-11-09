@@ -419,11 +419,6 @@ class Protocol(object):
   def connect(self):
     pass
 
-  # @return (bool) True if we are connected to the server
-  @abstractmethod
-  def is_connected(self):
-    pass
-
   # receive/process messages and call bot._cb_message()
   # must ignore msgs from myself and from users not in any of our rooms
   # @call bot._cb_message(Message) upon receiving a valid status or message
@@ -518,12 +513,20 @@ class Protocol(object):
   def new_room(self,name,nick=None,pword=None):
     pass
 
+  # Protocol state
+  DEAD = -2
+  DISCONNECTED = -1
+  INIT = 0
+  CONNECTING = 1
+  CONNECTED = 2
+
   # @param bot (SibylBot) the sibyl instance
   # @param log (Logger) the logger this protocol should use
   def __init__(self,bot,log):
 
     self.bot = bot
     self.log = log
+    self.status = Protocol.INIT
 
     self.ProtocolError = type(
         'ProtocolError',
@@ -551,6 +554,10 @@ class Protocol(object):
   # override hash for use as dict keys
   def __hash__(self):
     return hash(self.get_name())
+
+  # @return (bool) True if we are connected to the server
+  def is_connected(self):
+    return self.status==Protocol.CONNECTED
 
   # @param opt (str) name of the option to get
   # @return (object) the value of the option
