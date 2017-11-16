@@ -1,5 +1,7 @@
 # sibyl
 
+![Sibyl Logo](sibyl_logo.png)
+
 ## Intro
 
 This is my personal XMPP bot made mostly for controlling XBMC on my Raspberry
