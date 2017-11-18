@@ -1,6 +1,6 @@
 # sibyl
 
-![Sibyl Logo](sibyl_logo.png)
+![Sibyl Logo](sibyl_logo_small.png)
 
 ## Intro
 
