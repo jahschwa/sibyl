@@ -1,8 +1,8 @@
 # sibyl
 
-![Sibyl Logo](sibyl_logo_small.png)
-
 ## Intro
+
+<img align="right" src="sibyl_logo_small.png" />
 
 This is my personal XMPP bot made mostly for controlling XBMC on my Raspberry
 Pi. I find the `videos`, `seek`, `info`, `bookmark`, and `resume` commands to
