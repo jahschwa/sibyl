@@ -15,7 +15,7 @@ other info check out [the wiki][wiki].
 
 ## Dependencies
 
-REQUIERD: You'll need the following installed in order to use sibyl:
+REQUIRED: You'll need the following installed in order to use sibyl:
 
  - [python][python] - currently only python2
  - [requests][req] - HTTP request and wrapper library - `pip install requests`
