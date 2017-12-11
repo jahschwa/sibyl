@@ -24,6 +24,8 @@
 import re,time,os,codecs
 
 import requests
+import eventlet
+eventlet.monkey_patch()
 
 from sibyl.lib.decorators import *
 from sibyl.lib.protocol import Message,Room
@@ -481,7 +483,8 @@ def link_echo(bot,mess,cmd):
     if len(urls)==0:
       return
     for url in urls:
-      r = requests.get(url, timeout=5)
+      with eventlet.Timeout(5):
+        r = requests.get(url, timeout=5)
       title = fromstring(r.text).findtext('.//title')
       titles.append(title.strip())
     linkcount = 1
