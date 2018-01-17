@@ -158,9 +158,9 @@ protocols = cli
 #matrix.debug = False
 
 # Optional: Join rooms on invite
-# True to accept all invites, False to ignore all invites,
+# "accept" to accept all invites, "reject" to ignore all invites,
 # "domain" to only accept invites from users on the same HS
-#matrix.join_on_invite = False
+#matrix.join_on_invite = reject
 
 ################################################################################
 # Plugin options
