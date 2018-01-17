@@ -43,7 +43,12 @@ def conf(bot):
     {"name": "username", "req": True},
     {"name": "password", "req": True},
     {"name": "server", "req": True},
-    {"name": "debug", "req": False, "default": False}
+    {"name": "debug", "req": False, "default": False},
+    # Valid values for join_on_invite are block, allow, domain
+    # False: Don't accept any invites received
+    # True: Join any room when receiving an invite
+    # "domain": Only join rooms on invite if the inviter is on the same HS
+    {"name": "join_on_invite", "req": False, "default": False}
   ]
 
 ################################################################################
@@ -163,6 +168,7 @@ class MatrixProtocol(Protocol):
 
       # Connect to Sibyl's message callback
       self.client.add_listener(self.messageHandler)
+      self.client.add_invite_listener(self.inviteHandler)
 
       self.client.start_listener_thread()
 
@@ -236,6 +242,30 @@ class MatrixProtocol(Protocol):
 
     except KeyError as e:
       self.log.debug("Incoming message did not have all required fields: " + e.message)
+
+
+  def inviteHandler(self, room_id, state):
+    join_on_invite = self.opt('matrix.join_on_invite')
+    if(join_on_invite):
+      invite_events = [x for x in state['events'] if x['type'] == 'm.room.member'
+                       and x['state_key'] == str(self.get_user())
+                       and x['content']['membership'] == 'invite']
+      if(len(invite_events) != 1):
+        raise KeyError("Something's up, found more than one invite state event for " + room_id)
+
+      inviter = invite_events[0]['sender']
+      inviter_domain = inviter.split(':')[1]
+      my_domain = str(self.get_user()).split(':')[1]
+
+      if(join_on_invite == True or (join_on_invite == 'domain' and inviter_domain == my_domain)):
+        self.log.debug('Joining {} on invite'.format(room_id))
+        self.join_room(MatrixRoom(self, room_id))
+
+      elif(join_on_invite == 'domain' and inviter_domain != my_domain):
+        self.log.debug("Received invite for {} but inviter {} is on a different homeserver").format(room_id, inviter)
+
+    else:
+      self.log.debug("Received invite for {} but join_on_invite is disabled".format(room_id))
 
 
   # called when the bot is exiting for whatever reason

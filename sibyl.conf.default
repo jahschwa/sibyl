@@ -157,6 +157,11 @@ protocols = cli
 # Optional: log full Matrix events at DEBUG level
 #matrix.debug = False
 
+# Optional: Join rooms on invite
+# True to accept all invites, False to ignore all invites,
+# "domain" to only accept invites from users on the same HS
+#matrix.join_on_invite = False
+
 ################################################################################
 # Plugin options
 ################################################################################
