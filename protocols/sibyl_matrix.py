@@ -23,6 +23,7 @@
 
 from Queue import Queue
 from urlparse import urlparse
+import traceback
 
 from sibyl.lib.protocol import User,Room,Message,Protocol
 
@@ -173,10 +174,13 @@ class MatrixProtocol(Protocol):
       self.client.start_listener_thread()
 
     except MatrixRequestError as e:
-      if(e.code == 403):
+      if(e.code in [401, 403]):
         self.log.debug("Credentials incorrect! Maybe your access token is outdated?")
         raise self.AuthFailure
       else:
+        if(self.opt('matrix.debug')):
+          tb = traceback.format_exc()
+          self.log.debug(tb)
         self.log.debug("Failed to connect to homeserver!")
         raise self.ConnectFailure
 
