@@ -269,7 +269,7 @@ class MatrixProtocol(Protocol):
       self.log.debug("Received invite for {} but inviter {} is on a different homeserver").format(room_id, inviter)
 
     else:
-      self.log.debug("Received invite for {} but join_on_invite is disabled".format(room_id))
+      self.log.debug("Received invite for {} from {} but join_on_invite is disabled".format(room_id, inviter))
 
 
   # called when the bot is exiting for whatever reason
