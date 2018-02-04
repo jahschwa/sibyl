@@ -45,6 +45,8 @@ class Config(object):
   PARSE = 2
   VALID = 3
   POST = 4
+  WHITE = 5
+  BLACK = 6
 
   # config reload results
   FAIL = 0
@@ -58,41 +60,41 @@ class Config(object):
     # OrderedDict containing full descriptions of options
     self.OPTS = odict([
 
-#option         default               requir  parse_func            validate_func       post_func
-#------------------------------------------------------------------------------------------------
-('protocols',   ({},                  True,   self.parse_protocols, None,               None)),
-('enable',      ([],                  False,  self.parse_plugins,   None,               None)),
-('disable',     ([],                  False,  self.parse_plugins,   None,               None)),
-('rename',      ({},                  False,  self.parse_rename,    None,               None)),
-('cmd_dir',     ('cmds',              False,  None,                 self.valid_dir,     None)),
-('rooms',       ({},                  False,  self.parse_rooms,     None,               self.post_rooms)),
-('nick_name',   ('Sibyl',             False,  None,                 None,               None)),
-('log_level',   (logging.INFO,        False,  self.parse_log,       None,               None)),
-('log_file',    ('data/sibyl.log',    False,  None,                 self.valid_wfile,   None)),
-('log_append',  (True,                False,  self.parse_bool,      None,               None)),
-('log_hooks',   (False,               False,  self.parse_bool,      None,               None)),
-('log_requests',(False,               False,  self.parse_bool,      None,               None)),
-('log_urllib3', (False,               False,  self.parse_bool,      None,               None)),
-('bw_list',     ([('w','*','*')],     False,  self.parse_bw,        None,               None)),
-('chat_ctrl',   (False,               False,  self.parse_bool,      None,               None)),
-('cmd_prefix',  (None,                False,  None,                 None,               None)),
-('except_reply',(False,               False,  self.parse_bool,      None,               None)),
-('only_direct', (True,                False,  self.parse_bool,      None,               None)),
-('catch_except',(True,                False,  self.parse_bool,      None,               None)),
-('help_plugin', (False,               False,  self.parse_bool,      None,               None)),
-('recon_wait',  (60,                  False,  self.parse_int,       None,               None)),
-('kill_stdout', (True,                False,  self.parse_bool,      None,               None)),
-('tell_errors', (True,                False,  self.parse_bool,      None,               None)),
-('admin_protos',(['cli'],             False,  self.parse_admin,     self.valid_admin,   None)),
-('persistence', (True,                False,  self.parse_bool,      None,               None)),
-('state_file',  ('data/state.pickle', False,  None,                 self.valid_wfile,   None)),
-('idle_time',   (0.1,                 False,  self.parse_float,     self.valid_nump,    None)),
-('idle_count',  (5,                   False,  self.parse_int,       self.valid_nump,    None)),
-('idle_freq',   (1,                   False,  self.parse_int,       self.valid_nump,    None)),
-('defer_total', (100,                 False,  self.parse_int,       None,               None)),
-('defer_proto', (100,                 False,  self.parse_int,       None,               None)),
-('defer_room',  (10,                  False,  self.parse_int,       None,               None)),
-('defer_priv',  (10,                  False,  self.parse_int,       None,               None))
+#option         default               requir  parse_func            validate_func       post_func         whitelist blacklist
+#-----------------------------------------------------------------------------------------------------------------------------
+('protocols',   ({},                  True,   self.parse_protocols, None,               None,             None,     None)),
+('enable',      ([],                  False,  self.parse_plugins,   None,               None,             None,     None)),
+('disable',     ([],                  False,  self.parse_plugins,   None,               None,             None,     None)),
+('rename',      ({},                  False,  self.parse_rename,    None,               None,             None,     None)),
+('cmd_dir',     ('cmds',              False,  None,                 self.valid_dir,     None,             None,     None)),
+('rooms',       ({},                  False,  self.parse_rooms,     None,               self.post_rooms,  None,     None)),
+('nick_name',   ('Sibyl',             False,  None,                 None,               None,             None,     None)),
+('log_level',   (logging.INFO,        False,  self.parse_log,       None,               None,             None,     None)),
+('log_file',    ('data/sibyl.log',    False,  None,                 self.valid_wfile,   None,             None,     None)),
+('log_append',  (True,                False,  self.parse_bool,      None,               None,             None,     None)),
+('log_hooks',   (False,               False,  self.parse_bool,      None,               None,             None,     None)),
+('log_requests',(False,               False,  self.parse_bool,      None,               None,             None,     None)),
+('log_urllib3', (False,               False,  self.parse_bool,      None,               None,             None,     None)),
+('bw_list',     ([('w','*','*')],     False,  self.parse_bw,        None,               None,             None,     None)),
+('chat_ctrl',   (False,               False,  self.parse_bool,      None,               None,             None,     None)),
+('cmd_prefix',  (None,                False,  None,                 None,               None,             None,     None)),
+('except_reply',(False,               False,  self.parse_bool,      None,               None,             None,     None)),
+('only_direct', (True,                False,  self.parse_bool,      None,               None,             None,     None)),
+('catch_except',(True,                False,  self.parse_bool,      None,               None,             None,     None)),
+('help_plugin', (False,               False,  self.parse_bool,      None,               None,             None,     None)),
+('recon_wait',  (60,                  False,  self.parse_int,       None,               None,             None,     None)),
+('kill_stdout', (True,                False,  self.parse_bool,      None,               None,             None,     None)),
+('tell_errors', (True,                False,  self.parse_bool,      None,               None,             None,     None)),
+('admin_protos',(['cli'],             False,  self.parse_admin,     self.valid_admin,   None,             None,     None)),
+('persistence', (True,                False,  self.parse_bool,      None,               None,             None,     None)),
+('state_file',  ('data/state.pickle', False,  None,                 self.valid_wfile,   None,             None,     None)),
+('idle_time',   (0.1,                 False,  self.parse_float,     self.valid_nump,    None,             None,     None)),
+('idle_count',  (5,                   False,  self.parse_int,       self.valid_nump,    None,             None,     None)),
+('idle_freq',   (1,                   False,  self.parse_int,       self.valid_nump,    None,             None,     None)),
+('defer_total', (100,                 False,  self.parse_int,       None,               None,             None,     None)),
+('defer_proto', (100,                 False,  self.parse_int,       None,               None,             None,     None)),
+('defer_room',  (10,                  False,  self.parse_int,       None,               None,             None,     None)),
+('defer_priv',  (10,                  False,  self.parse_int,       None,               None,             None,     None))
 
     ])
 
@@ -156,13 +158,18 @@ class Config(object):
     opt['default'] = opt.get('default',None)
     opt['req'] = opt.get('req',False)
 
-    for hook in ('parse','valid','post'):
+    for hook in ('parse','valid','post','white','black'):
       opt[hook] = opt.get(hook,None)
-      if opt[hook]:
-        opt[hook] = opt[hook]
+
+    if opt['black'] and opt['default'] in opt['black']:
+      self.log('warning','Opt "%s.%s" lists default in blacklist'
+          % (ns,name))
 
     self.OPTS[name] = (
-      opt['default'],opt['req'],opt['parse'],opt['valid'],opt['post'])
+      opt['default'],opt['req'],
+      opt['parse'],opt['valid'],opt['post'],
+      opt['white'],opt['black']
+    )
     self.NS[name] = ns
 
   # @param opt (str) the option to set
@@ -170,6 +177,20 @@ class Config(object):
   # @return (bool) True if the option was actually changed
   def set_opt(self,opt,val):
     """parse,validate,set an opt in the bot returning False on failure"""
+
+    default = self.OPTS[opt][self.DEF]
+
+    if val!=default:
+
+      # check whitelist if necessary
+      white = self.OPTS[opt][self.WHITE]
+      if white and val not in white:
+        return False
+
+      # check blacklist if necessary
+      black = self.OPTS[opt][self.BLACK]
+      if black and val in black:
+        return False
 
     # try to parse if necessary
     try:
@@ -211,7 +232,8 @@ class Config(object):
     s = ('### MODIFIED: '+time.asctime())
     if msg:
       s += (' ('+msg+')')
-    s += ('\n'+opt+' = '+val+'\n')
+    if val is not None:
+      s += ('\n'+opt+' = '+val+'\n')
     with open(self.conf_file,'r') as f:
       lines = f.readlines()
 
@@ -224,7 +246,7 @@ class Config(object):
         break
 
     # if the opt was not active in the config file, simply add it to the end
-    if start==-1:
+    if val is not None and start==-1:
       lines.append(s)
 
     # if the opt existed in the file
@@ -241,7 +263,10 @@ class Config(object):
           n += 1
         else:
           del lines[n]
-      lines.insert(start,s)
+
+      # if val is None, we're resetting to default, i.e. just delete it
+      if val is not None:
+        lines.insert(start,s)
 
       # check for and delete an existing "### MODIFIED" line
       if start>0 and lines[start-1].startswith('### MODIFIED: '):
@@ -252,6 +277,7 @@ class Config(object):
     return True
 
   # @param opt (str) the name of the opt to reload
+  # @return msgs (list of tuples) error messages (level,message)
   def reload_opt(self,opt):
     """reload the specified opt from the config file"""
 
@@ -262,6 +288,18 @@ class Config(object):
     self.clear_log()
     self.real_time = old
     return msgs
+
+  # @param opt (str) name of the option to set default value
+  # @return msg (str,None) error message if there was one
+  def default_opt(self,opt):
+    """set the default value for the specified opt"""
+
+    if self.OPTS[opt][self.REQ]:
+      return 'Option "%s" is required and has no default'
+
+    self.opts[opt] = self.OPTS[opt][self.DEF]
+
+    return None
 
   # @param line (str) the line to check
   # @return (bool) True if the line contains an active (uncommented) option
@@ -337,6 +375,9 @@ class Config(object):
         opts = {opt:opts[opt]}
       else:
         opts = {}
+
+    self.__exists(opts)
+    self.__bwfilter(opts)
     self.__parse(opts)
     self.__validate(opts)
     self.__post(opts)
@@ -370,9 +411,9 @@ class Config(object):
     items = config.items(DUMMY)
     return {x:y for (x,y) in items}
 
-  # @param opts (dict) potential opt:value pairs to parse
-  def __parse(self,opts):
-    """parse the opt value strings into objects using their parse function"""
+  # @param opts (dict) potential opt:value paris to check for existence
+  def __exists(self,opts):
+    """only allow options that we know about"""
 
     for opt in opts.keys():
 
@@ -381,16 +422,45 @@ class Config(object):
         self.log('info','Unknown config option "%s"' % opt)
         del opts[opt]
 
+  # @param opts (dict) potential opt:value pairs to black/white filter
+  def __bwfilter(self,opts):
+    """filter the opt value strings based on their black/white lists"""
+
+    for opt in opts.keys():
+
+      default = self.OPTS[opt][self.DEF]
+
+      if opts[opt]!=default:
+
+        white = self.OPTS[opt][self.WHITE]
+        if white and opts[opt] not in white:
+          self.log('error',
+              'Rejected "%s" (not in whitelist); using default=%s' %
+              (opt,default))
+          del opts[opt]
+
+        black = self.OPTS[opt][self.BLACK]
+        if black and opts[opt] in black:
+          self.log('error',
+              'Rejected "%s" (in blacklist); using default=%s' %
+              (opt,default))
+          del opts[opt]
+
+  # @param opts (dict) potential opt:value pairs to parse
+  def __parse(self,opts):
+    """parse the opt value strings into objects using their parse function"""
+
+    for opt in opts.keys():
+
       # parse recognized options and catch parsing exceptions
-      else:
-        func = self.OPTS[opt][self.PARSE]
-        if func:
-          try:
-            opts[opt] = func(self,opt,opts[opt])
-          except Exception as e:
-            self.log('error','Error parsing "%s"; using default=%s' %
-                (opt,self.opts[opt]))
-            del opts[opt]
+      func = self.OPTS[opt][self.PARSE]
+      if func:
+        try:
+          opts[opt] = func(self,opt,opts[opt])
+        except Exception as e:
+          self.log('error','Error parsing "%s"; using default=%s' %
+              (opt,self.opts[opt]))
+          del opts[opt]
 
   # @param opts (dict) opt:value pairs to validate
   def __validate(self,opts):

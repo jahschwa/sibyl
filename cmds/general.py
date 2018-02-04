@@ -268,13 +268,13 @@ def calc(bot,mess,args):
 
 @botcmd(ctrl=True)
 def config(bot,mess,args):
-  """view and edit config - config (show|set|save|diff|reset|reload) (opt|*) [value]"""
+  """view and edit config - config (show|set|save|diff|reset|reload|default) (opt|*) [value]"""
 
   if (not bot.opt('general.config_rooms')) and mess.get_type()==Message.GROUP:
     return 'The config command is disabled in rooms'
 
   # default action is 'show'
-  if not args or args[0] not in ('show','set','save','diff','reset','reload'):
+  if not args or args[0] not in ('show','set','save','diff','reset','reload','default'):
     args.insert(0,'show')
   cmd = args[0]
   opt = '*'
@@ -312,8 +312,6 @@ def config(bot,mess,args):
       return 'No differences between bot and config file'
     if opt in ('','*'):
       return str(bot.conf_diff.keys())
-    if opt not in bot.opt():
-      return 'Invalud opt'
     if opt not in bot.conf_diff:
       return 'Opt "'+opt+'" has not changed from config file'
     return ('Opt "%s" was "%s" but is now "%s"'
@@ -333,8 +331,6 @@ def config(bot,mess,args):
         bot.conf.opts[opt] = bot.conf_diff[opt][0]
       bot.conf_diff = {}
       return 'Reset opts: %s' % opts
-    if opt not in bot.opt():
-      return 'Invalid opt'
     if opt not in bot.conf_diff:
       return 'Opt "%s" has not been changed' % opt
     bot.conf.opts[opt] = bot.conf_diff[opt][0]
@@ -345,19 +341,19 @@ def config(bot,mess,args):
   if cmd=='set':
     if opt=='*':
       return 'Invalid opt'
-    if opt.endswith('password') and mess.get_type()==Message.GROUP:
-      return 'You may not set passwords in group chat'
     old = bot.opt(opt)
     if bot.conf.set_opt(opt,args[2]):
-      bot.conf_diff[opt] = (old,args[2])
-      return 'Set opt "'+opt+'" to "'+args[2]+'"'
+      if old==bot.opt(opt):
+        return 'Value unchanged'
+      else:
+        bot.conf_diff[opt] = (old,args[2])
+        return 'Set opt "'+opt+'" to "'+args[2]+'"'
     else:
       return 'Invalid value for opt "'+opt+'"'
 
   # reload the specified config option
   if cmd=='reload':
-    if opt not in bot.opt():
-      print opt
+    if opt=='*':
       return 'Invalid opt'
     old = bot.opt(opt)
     result = bot.conf.reload_opt(opt)
@@ -370,7 +366,21 @@ def config(bot,mess,args):
     return ('Errors reloading "%s" so nothing changed: %s'
         % (opt,' '.join(['(%s) %s' % (l,m) for (l,m) in result])))
 
-  # logic for 'save' command that also modified the config file
+  # set an option to its default value
+  if cmd=='default':
+    if opt=='*':
+      return 'Invalid opt'
+    old = bot.opt(opt)
+    result = bot.conf.default_opt(opt)
+    if not result:
+      if old==bot.opt(opt):
+        return 'Value unchanged'
+      else:
+        bot.conf_diff[opt] = (old,None)
+        return 'New value = "%s"' % (bot.opt(opt),)
+    return result
+
+  # logic for 'save' command that also modifies the config file
   if len(args)>2:
     value = ' '.join(args[2:])
   elif opt in bot.conf_diff:
