@@ -481,9 +481,12 @@ def link_echo(bot,mess,cmd):
     if len(urls)==0:
       return
     for url in urls:
-      r = requests.get(url, timeout=5)
-      title = fromstring(r.text).findtext('.//title')
-      titles.append(title.strip())
+      head = requests.head(url, timeout=5)
+      if("Content-Type" in head.headers and head.headers['Content-Type'] == "text/html"):
+        r = requests.get(url, timeout=5)
+        if(r.text[0] == '<'):
+          title = fromstring(r.text).findtext('.//title')
+          titles.append(title.strip())
     linkcount = 1
     reply = ""
     for title in titles:
@@ -493,7 +496,8 @@ def link_echo(bot,mess,cmd):
   except Exception as e:
     log.error('Link echo - '+e.__class__.__name__+' - '+url)
   else:
-    bot.reply(reply,mess)
+    if(reply):
+      bot.reply(reply,mess)
 
 @botrooms
 def _muc_join_success(bot,room):
