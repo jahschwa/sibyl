@@ -482,7 +482,7 @@ def link_echo(bot,mess,cmd):
       return
     for url in urls:
       head = requests.head(url, timeout=5)
-      if("Content-Type" in head.headers and head.headers['Content-Type'] == "text/html"):
+      if("Content-Type" in head.headers and head.headers['Content-Type'].startswith("text/html")):
         r = requests.get(url, timeout=5)
         if(r.text[0] == '<'):
           title = fromstring(r.text).findtext('.//title')
