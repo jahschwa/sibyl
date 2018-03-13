@@ -147,7 +147,7 @@ def subtitles(bot,mess,args):
       func = 'next'
 
     for i in range(0,diff):
-      bot.subtitles(None,func)
+      bot.run_cmd('subtitles',[func])
     return
 
   # else return a list of all the subtitles
