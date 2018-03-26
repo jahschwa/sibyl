@@ -129,6 +129,10 @@ class MatrixRoom(Room):
 
 class MatrixProtocol(Protocol):
 
+  # List of occupants in each room
+  # Used to avoid having to re-request the list of members each time
+  room_occupants = {}
+
   # called on bot init; the following are already created by __init__:
   #   self.bot = SibylBot instance
   #   self.log = the logger you should use
@@ -220,45 +224,50 @@ class MatrixProtocol(Protocol):
       u = self.new_user(msg['sender'], Message.GROUP)
       r = self.new_room(msg['room_id'])
 
-      msgtype = msg['content']['msgtype']
+      if('msgtype' in msg['content']):
+        msgtype = msg['content']['msgtype']
 
-      if(msgtype == 'm.text'):
-        m = Message(u, msg['content']['body'], room=r, typ=Message.GROUP)
-        self.log.debug('Handling m.text: ' + msg['content']['body'])
-        self.msg_queue.put(m)
+        if(msgtype == 'm.text'):
+          m = Message(u, msg['content']['body'], room=r, typ=Message.GROUP)
+          self.log.debug('Handling m.text: ' + msg['content']['body'])
+          self.msg_queue.put(m)
 
-      elif(msgtype == 'm.emote'):
-        m = Message(u, msg['content']['body'], room=r, typ=Message.GROUP,
-            emote=True)
-        self.log.debug('Handling m.emote: ' + msg['content']['body'])
-        self.msg_queue.put(m)
+        elif(msgtype == 'm.emote'):
+          m = Message(u, msg['content']['body'], room=r, typ=Message.GROUP,
+          emote=True)
+          self.log.debug('Handling m.emote: ' + msg['content']['body'])
+          self.msg_queue.put(m)
 
-      elif(msgtype == 'm.image' or msgtype == 'm.audio' or msgtype == 'm.file' or msgtype == 'm.video'):
-        media_url = urlparse(msg['content']['url'])
-        http_url = self.client.api.base_url + "/_matrix/media/r0/download/{0}{1}".format(media_url.netloc, media_url.path)
-        if(msgtype == 'm.image'):
-          body = "{0} uploaded {1}: {2}".format(msg['sender'], msg['content'].get('body', 'an image'), http_url)
-        elif(msgtype == 'm.audio'):
-          body = "{0} uploaded {1}: {2}".format(msg['sender'], msg['content'].get('body', 'an audio file'), http_url)
-        elif(msgtype == 'm.video'):
-          body = "{0} uploaded {1}: {2}".format(msg['sender'], msg['content'].get('body', 'a video file'), http_url)
-        elif(msgtype == 'm.file'):
-          body = "{0} uploaded {1}: {2}".format(msg['sender'], msg['content'].get('body', 'a file'), http_url)
-        m = Message(u, body, room=r, typ=Message.GROUP)
-        self.log.debug("Handling " + msgtype + ": " + body)
-        self.msg_queue.put(m)
+        elif(msgtype == 'm.image' or msgtype == 'm.audio' or msgtype == 'm.file' or msgtype == 'm.video'):
+          media_url = urlparse(msg['content']['url'])
+          http_url = self.client.api.base_url + "/_matrix/media/r0/download/{0}{1}".format(media_url.netloc, media_url.path)
+          if(msgtype == 'm.image'):
+            body = "{0} uploaded {1}: {2}".format(msg['sender'], msg['content'].get('body', 'an image'), http_url)
+          elif(msgtype == 'm.audio'):
+            body = "{0} uploaded {1}: {2}".format(msg['sender'], msg['content'].get('body', 'an audio file'), http_url)
+          elif(msgtype == 'm.video'):
+            body = "{0} uploaded {1}: {2}".format(msg['sender'], msg['content'].get('body', 'a video file'), http_url)
+          elif(msgtype == 'm.file'):
+            body = "{0} uploaded {1}: {2}".format(msg['sender'], msg['content'].get('body', 'a file'), http_url)
+          m = Message(u, body, room=r, typ=Message.GROUP)
+          self.log.debug("Handling " + msgtype + ": " + body)
+          self.msg_queue.put(m)
 
-      elif(msgtype == 'm.location'):
-        body = "{0} sent a location: {1}".format(msg['sender'], msg['content']['geo_uri'])
-        m = Message(u, body, room=r, typ=Message.GROUP)
-        self.log.debug('Handling m.location: ' + body)
-        self.msg_queue.put(m)
-
-
-      else:
-        self.log.debug('Not handling message, unknown msgtype')
+        elif(msgtype == 'm.location'):
+          body = "{0} sent a location: {1}".format(msg['sender'], msg['content']['geo_uri'])
+          m = Message(u, body, room=r, typ=Message.GROUP)
+          self.log.debug('Handling m.location: ' + body)
+          self.msg_queue.put(m)
 
 
+        else:
+          self.log.debug('Not handling message, unknown msgtype')
+
+      elif('membership' in msg):
+        if(msg['membership'] == 'join'):
+          self.room_occupants[r].add(self.new_user(msg['state_key'], Message.GROUP))
+        elif(msg['membership'] == 'leave'):
+          self.room_occupants[r].remove(self.new_user(msg['state_key'], Message.GROUP))
 
     except KeyError as e:
       self.log.debug("Incoming message did not have all required fields: " + e.message)
@@ -356,8 +365,13 @@ class MatrixProtocol(Protocol):
   # @param room (Room) the room to query
   # @return (list of User) the Users in the specified room
   def get_occupants(self,room):
-    memberdict = room.room.get_joined_members()
-    return [ self.new_user(x) for x in memberdict ]
+    if(room in self.room_occupants):
+      return list(self.room_occupants[room])
+    else:
+      memberdict = room.room.get_joined_members()
+      users = [ self.new_user(x) for x in memberdict ]
+      self.room_occupants[room] = set(users)
+      return users
 
   # @param room (Room) the room to query
   # @return (str) the nick name we are using in the specified room
