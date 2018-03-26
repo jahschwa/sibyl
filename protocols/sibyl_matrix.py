@@ -31,6 +31,7 @@ from sibyl.lib.decorators import botconf
 
 from matrix_client.client import MatrixClient
 from matrix_client.api import MatrixRequestError, MatrixHttpApi
+from matrix_client.errors import MatrixHttpLibError
 import matrix_client.user as mxUser
 import matrix_client.room as mxRoom
 
@@ -171,7 +172,8 @@ class MatrixProtocol(Protocol):
       self.client.add_listener(self.messageHandler)
       self.client.add_invite_listener(self.inviteHandler)
 
-      self.client.start_listener_thread()
+      self.log.debug("Starting Matrix listener thread")
+      self.client.start_listener_thread(exception_handler=self._matrix_exception_handler)
 
     except MatrixRequestError as e:
       if(e.code in [401, 403]):
@@ -183,6 +185,13 @@ class MatrixProtocol(Protocol):
           self.log.debug(tb)
         self.log.debug("Failed to connect to homeserver!")
         raise self.ConnectFailure
+    except MatrixHttpLibError as e:
+      self.log.error("Failed to connect to homeserver!")
+      self.log.debug("Received error:" + str(e))
+      raise self.ConnectFailure
+
+  def _matrix_exception_handler(self, e):
+    self.msg_queue.put(e)
 
   # receive/process messages and call bot._cb_message()
   # must ignore msgs from myself and from users not in any of our rooms
@@ -192,7 +201,14 @@ class MatrixProtocol(Protocol):
   # @raise (ServerShutdown) if server shutdown
   def process(self):
     while(not self.msg_queue.empty()):
-      self.bot._cb_message(self.msg_queue.get())
+      next = self.msg_queue.get()
+      if(isinstance(next, Message)):
+        self.log.debug("Placing message into queue: " + next.get_text())
+        self.bot._cb_message(next)
+      elif(isinstance(next, MatrixHttpLibError)):
+        self.log.debug("Received error from Matrix SDK, stopping listener thread: " + str(next))
+        self.client.stop_listener_thread()
+        raise self.ConnectFailure("Connection error returned by requests library: " + str(next))
 
 
   def messageHandler(self, msg):
