@@ -23,7 +23,7 @@
 
 from Queue import Queue
 from urlparse import urlparse
-import traceback
+import traceback, datetime, pytz
 
 from sibyl.lib.protocol import User,Room,Message,Protocol
 
@@ -129,6 +129,10 @@ class MatrixRoom(Room):
 
 class MatrixProtocol(Protocol):
 
+  # Keep track of when we joined rooms this session
+  # Used to filter out historical messages after accepting room invites
+  join_timestamps = {}
+
   # called on bot init; the following are already created by __init__:
   #   self.bot = SibylBot instance
   #   self.log = the logger you should use
@@ -202,7 +206,8 @@ class MatrixProtocol(Protocol):
   def process(self):
     while(not self.msg_queue.empty()):
       next = self.msg_queue.get()
-      if(isinstance(next, Message)):
+      if(isinstance(next, Message)
+         and Message):
         self.log.debug("Placing message into queue: " + next.get_text())
         self.bot._cb_message(next)
       elif(isinstance(next, MatrixHttpLibError)):
@@ -219,6 +224,11 @@ class MatrixProtocol(Protocol):
       # Create a new Message to send to Sibyl
       u = self.new_user(msg['sender'], Message.GROUP)
       r = self.new_room(msg['room_id'])
+
+      if(r in self.join_timestamps
+         and datetime.datetime.fromtimestamp(msg['origin_server_ts']/1000, pytz.utc) < self.join_timestamps[r]):
+        self.log.info('Message received in {} from before room join, ignoring'.format(msg['room_id']))
+        return None
 
       msgtype = msg['content']['msgtype']
 
@@ -336,6 +346,7 @@ class MatrixProtocol(Protocol):
     try:
       res = self.client.join_room(room.room.room_id)
       self.bot._cb_join_room_success(room)
+      self.join_timestamps[room] = datetime.datetime.now(pytz.utc)
     except MatrixRequestError as e:
       self.bot._cb_join_room_failure(room, e.message)
 
