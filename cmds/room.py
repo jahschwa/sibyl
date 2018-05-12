@@ -45,7 +45,7 @@ def conf(bot):
     {'name':'link_echo',
      'default':False,
      'parse':bot.conf.parse_bool,
-     'valid':valid
+     'valid':valid_link_echo
     },
     {'name':'cross_proto',
      'default':True,
@@ -57,8 +57,8 @@ def conf(bot):
     },
     {'name':'bridges',
      'default':[],
-     'parse':parse,
-     'post':post
+     'parse':parse_bridges,
+     'post':post_bridges
     },
     {'name':'unicode_users',
      'default':True,
@@ -67,10 +67,14 @@ def conf(bot):
     {'name':'bridge_broadcast',
      'default':True,
      'parse':bot.conf.parse_bool
+    },
+    {'name':'bridge_pm_restricted',
+      'default':True,
+      'parse':bot.conf.parse_bool
     }
   ]
 
-def parse(conf,opt,val):
+def parse_bridges(conf,opt,val):
 
   if val=='all':
     return val
@@ -91,7 +95,7 @@ def parse(conf,opt,val):
 
   return bridges
 
-def post(conf,opts,opt,val):
+def post_bridges(conf,opts,opt,val):
 
   rooms = opts['rooms']
 
@@ -115,7 +119,7 @@ def post(conf,opts,opt,val):
 
   return val
 
-def valid(conf,echo):
+def valid_link_echo(conf,echo):
   """check for lxml"""
 
   if (not echo) or util.has_module('lxml'):
@@ -141,6 +145,8 @@ def init(bot):
   if not util.has_module('lxml'):
     log.debug("Can't find module lxml; unregistering link_echo hook")
     del bot.hooks['group']['room.link_echo']
+
+  bot.add_var('last_bridge_pm',{})
 
 @botcmd(raw=True)
 def all(bot,mess,args):
@@ -619,3 +625,99 @@ def get_bridged(bot,room):
           result.append(r)
       return result
   return result
+
+def parse_user(bot,mess,user):
+  """return a user object based on a string like PROTO:USER"""
+
+  pname = mess.get_protocol().get_name()
+
+  if user and ':' in user:
+    x = user.split(':')
+    if x[0] in bot.protocols:
+      (pname,user) = (x[0],':'.join(x[1:]))
+
+  proto = bot.get_protocol(pname)
+  return proto.new_user(user)
+
+@botfunc
+def get_shared_bridge_rooms(bot,user1,user2):
+  """return the rooms 2 users share in any bridge or (None,None)"""
+
+  for bridge in bot.opt('room.bridges'):
+    (room1,room2) = (None,None)
+    for (p,r) in bridge:
+      room = bot.get_protocol(p).new_room(r)
+      occupants = [user.get_real() for user in room.get_occupants()]
+      for o in occupants:
+        if user1.base_match(o):
+          room1 = room
+        elif to.base_match(o):
+          room2 = room
+    if room1 and room2:
+      return (room1,room2)
+
+  return (None,None)
+
+def send_pm(bot,frm,to,text):
+  """do validation and actually send the PM"""
+
+  if bot.opt('room.bridge_pm_restricted'):
+    (sender,recip) = get_shared_bridge_rooms(frm,to)
+    if not sender or not recip:
+      return 'You may only PM someone if you share a bridge with them'
+
+  bot.send('[%s] %s' % (proto,frm.get_name(),text),to)
+
+  bot.last_bridge_pm[frm] = (to,recip,sender)
+  bot.last_bridge_pm[to] = (frm,sender,recip)
+
+@botcmd(raw=True)
+def msg(bot,mess,text):
+  """send a private message - msg [proto:]user text"""
+
+  frm = mess.get_user().get_real()
+  to = text[:text.index(' ')]
+  try:
+    to = parse_user(bot,mess,to)
+  except:
+    return 'Invalid user "%s"' % to
+  text = text[text.index(' ')+1:]
+
+  return send_pm(bot,frm,to,text)
+
+def get_last_pm(bot,user):
+  """get the details of a user's last bridged PM"""
+
+  other = None
+  for u in bot.last_bridge_pm:
+    if user.base_match(u):
+      (other,their_room,our_room) = bot.last_bridge_pm[u]
+  if not other:
+    return (None,None,None)
+  return (other,their_room,our_room)
+
+@botcmd
+def who(bot,mess,args):
+  """get info on who last PMed you - who"""
+
+  (other,their_room,our_room) = get_last_pm(bot,mess.get_user())
+  if not other:
+    return "You haven't received any bridged PMs"
+
+  return '<%s:%s> aka "%s" is in <%s> bridged to your room <%s>' % (
+      other.get_protocol().get_name(),
+      other,
+      other.get_name(),
+      their_room,
+      our_room
+  )
+
+@botcmd(raw=True)
+def reply(bot,mess,text):
+  """reply to your last private message - reply text"""
+
+  (other,their_room,our_room) = get_last_pm(bot,mess.get_user())
+  if not other:
+    return "You haven't received any bridged PMs"
+
+  return send_pm(bot,mess.get_user(),other,text)

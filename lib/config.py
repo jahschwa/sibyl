@@ -754,6 +754,13 @@ class Config(object):
 
     return bw
 
+  # @return (str)
+  @staticmethod
+  def parse_lower(self,opt,val):
+    """return a lower-cased string"""
+
+    return val.lower()
+
   # @return (bool)
   @staticmethod
   def parse_bool(self,opt,val):

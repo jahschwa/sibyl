@@ -75,6 +75,11 @@ class JID(User):
     else:
       self.jid = xmpp.JID(jid)
 
+    if self.real==self:
+      real = self.protocol.real_jids.get(self.jid)
+      if real:
+        self.real = JID(self.protocol,real)
+
   def get_name(self):
     """return username or nick name"""
 
@@ -783,6 +788,9 @@ class XMPP(Protocol):
         (room,user,pword) = self.__muc_pending[0]
         self.__muc_join(room,user,pword)
         self.__muc_join_success(room)
+        # add ourselves to realjids
+        muc_jid = room+'/'+self.mucs[room]['nick']
+        self.real_jids[xmpp.JID(muc_jid)] = self.jid
 
       # we only rejoin if we were able to rejoin successfully in the past
       except MUCJoinFailure as e:

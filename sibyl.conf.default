@@ -241,6 +241,9 @@ protocols = cli
 # Get occupants from bridged rooms when broadcasting messages to all users
 #room.bridge_broadcast = True
 
+# If true, users must be in a room/bridge with someone to !msg (bridge PM) them
+#room.bridge_pm_restricted = True
+
 # IP address where the XBMC/Kodi/OSMC/etc. web interface is running
 # Format is IP:PORT or just IP (port defaults to 80 if not specified)
 # The default assumes XBMC is running on the same host as Sibyl
