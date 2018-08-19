@@ -1,0 +1,36 @@
+version: '3'
+services:
+  sibyl:
+    image: sibyl:local
+    build: .
+    volumes:
+      - ./docker/sibyl.conf:/config/sibyl.conf
+    command: "python run.py -c /config/sibyl.conf"
+    depends_on:
+      - synapse_register
+  synapse:
+    image: matrixdotorg/synapse:v0.33.2
+    environment:
+      SYNAPSE_SERVER_NAME: synapse
+      SYNAPSE_REPORT_STATS: "no"
+    ports:
+      - "8008"
+    volumes:
+      - synapse-data:/data
+      - synapse-compiled:/compiled
+  synapse_register:
+    image: matrixdotorg/synapse:v0.33.2
+    environment:
+      SYNAPSE_SERVER_NAME: synapse
+      SYNAPSE_REPORT_STATS: "no"
+    volumes:
+      - synapse-data:/data
+      - synapse-compiled:/compiled
+      - ./docker/add-matrix-user.sh:/bin/add-matrix-user.sh
+    entrypoint: "/bin/add-matrix-user.sh"
+    depends_on:
+      - synapse
+
+volumes:
+  synapse-data:
+  synapse-compiled:
