@@ -4,7 +4,7 @@ services:
     image: sibyl:local
     build: .
     volumes:
-      - ./docker/sibyl.conf:/config/sibyl.conf
+      - ./docker/sibyl.conf.local:/config/sibyl.conf
     command: "python run.py -c /config/sibyl.conf"
     depends_on:
       - synapse_register
