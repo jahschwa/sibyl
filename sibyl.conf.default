@@ -288,8 +288,11 @@ protocols = cli
 # Require commands in a chat room to start with nick_name or cmd_prefix
 #only_direct = True
 
-# Number of seconds to wait before trying to reconnect
-#recon_wait = 60
+# Minimum number of seconds to wait before trying to reconnect (increases exponentially)
+#recon_min = 30
+
+# Maximum number of seconds to wait before trying to reconnect
+#recon_max = 300
 
 # Messages to remember when a protocol disconnects and resend when reconnects
 # or we get kicked from a room for whatever reason then rejoin

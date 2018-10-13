@@ -1044,7 +1044,7 @@ class SibylBot(object):
         proto.process()
 
       elif (proto.status!=Protocol.DEAD and
-          ((name not in self.__recons) or (self.__recons[name]<time.time()))):
+          ((name not in self.__recons) or (self.__recons[name]['recon_time'] < time.time()))):
 
         self.__run_hooks('recon',name)
         proto.status = Protocol.CONNECTING
@@ -1098,8 +1098,18 @@ class SibylBot(object):
             self.quit('No active protocols; exiting')
         else:
           proto.status = Protocol.DISCONNECTED
-          log_msg += 'reconnecting in %s sec' % self.opt('recon_wait')
-          self.__recons[name] = time.time()+self.opt('recon_wait')
+
+          if name not in self.__recons:
+            attempt = 0
+          else:
+            attempt = self.__recons[name]['attempt']
+
+          recon_delay = min(self.opt('recon_min') * (2**attempt), self.opt('recon_max'))
+          recon_time = time.time() + recon_delay
+
+          log_msg += 'reconnecting in %s sec' % recon_delay
+          self.__recons[name] = {"recon_time": recon_time,
+                                 "attempt": attempt + 1}
 
         proto.log.error(log_msg)
         if e.message:
