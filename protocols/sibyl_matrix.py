@@ -105,15 +105,28 @@ class MatrixRoom(Room):
   def parse(self,name):
     if(isinstance(name,mxRoom.Room)):
       self.room = room
-    elif(isinstance(name,basestring)):
-      self.room = mxRoom.Room(self.protocol.client,name) # [TODO] Assumes a room ID for now
+    elif(isinstance(name,basestring) and name.startswith("!")):
+      self.room_alias = None
+      self.room = mxRoom.Room(self.protocol.client,name)
+    elif(isinstance(name,basestring) and name.startswith("#")):
+      self.room_alias = name
+      self.room = None
     else:
       raise TypeError("User parameter to parse must be a string")
 
   # the return value must be the same for equal Rooms and unique for different
   # @return (str) the name of this Room
   def get_name(self):
-    return self.room.room_id
+    return self.get_mx_room().room_id
+
+  def get_mx_room(self):
+    if self.room:
+      return self.room
+    # We have a room alias but haven't resolved it yet
+    elif self.room_alias:
+      room_id = self.protocol.client.api.get_room_id(self.room_alias)
+      self.room = mxRoom.Room(self.protocol.client, room_id)
+      return self.room
 
   # @param other (object) you must check for class equivalence
   # @return (bool) true if other is the same room (ignore nick/pword if present)
@@ -129,6 +142,11 @@ class MatrixRoom(Room):
 
 class MatrixProtocol(Protocol):
 
+  # Mapping of room aliases to MatrixRoom objects
+  # Used to avoid re-instantiating MatrixRoom objects in get_room()
+  # when passed a room alias, as this results in an API lookup to
+  # resolve the alias
+  room_aliases = {}
   # List of occupants in each room
   # Used to avoid having to re-request the list of members each time
   room_occupants = {}
@@ -354,7 +372,7 @@ class MatrixProtocol(Protocol):
   # @call bot._cb_join_room_failure(room,error) on failed join
   def join_room(self,room):
     try:
-      res = self.client.join_room(room.room.room_id)
+      res = self.client.join_room(room.get_mx_room().room_id)
       self.bot._cb_join_room_success(room)
       self.join_timestamps[room] = datetime.datetime.now(pytz.utc)
     except MatrixError as e:
@@ -381,7 +399,7 @@ class MatrixProtocol(Protocol):
       return list(self.room_occupants[room])
     else:
       try:
-        memberdict = room.room.get_joined_members()
+        memberdict = room.get_mx_room().get_joined_members()
         users = [ self.new_user(x) for x in memberdict ]
         self.room_occupants[room] = set(users)
         return users
@@ -415,7 +433,15 @@ class MatrixProtocol(Protocol):
   # @param pword (str) [None] the password for joining this Room
   # @return (Room) a new instance of this protocol's Room subclass
   def new_room(self,room_id_or_alias,nick=None,pword=None):
-    return MatrixRoom(self,room_id_or_alias,nick,pword)
+    if room_id_or_alias in self.room_aliases:
+      return self.room_aliases[room_id_or_alias]
+    else:
+      if room_id_or_alias.startswith("#"):
+        room = MatrixRoom(self,room_id_or_alias,nick,pword)
+        self.room_aliases[room_id_or_alias] = room
+        return room
+      else:
+        return MatrixRoom(self,room_id_or_alias,nick,pword)
 
 ################################################################################
 # Helper functions
