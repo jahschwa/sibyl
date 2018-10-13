@@ -30,7 +30,7 @@ from sibyl.lib.protocol import User,Room,Message,Protocol
 from sibyl.lib.decorators import botconf
 
 from matrix_client.client import MatrixClient
-from matrix_client.api import MatrixRequestError, MatrixHttpApi
+from matrix_client.api import MatrixError, MatrixRequestError, MatrixHttpApi
 from matrix_client.errors import MatrixHttpLibError
 import matrix_client.user as mxUser
 import matrix_client.room as mxRoom
@@ -316,10 +316,13 @@ class MatrixProtocol(Protocol):
   # Check: get_emote()
   def send(self,mess):
     (text,to) = (mess.get_text(),mess.get_to())
-    if(mess.get_emote()):
-      to.room.send_emote(text)
-    else:
-      to.room.send_text(text)
+    try:
+      if(mess.get_emote()):
+        to.room.send_emote(text)
+      else:
+        to.room.send_text(text)
+    except MatrixError as e:
+      raise self.ConnectFailure
 
   # send a message with text to every user in a room
   # optionally note that the broadcast was requested by a specific User
@@ -354,7 +357,7 @@ class MatrixProtocol(Protocol):
       res = self.client.join_room(room.room.room_id)
       self.bot._cb_join_room_success(room)
       self.join_timestamps[room] = datetime.datetime.now(pytz.utc)
-    except MatrixRequestError as e:
+    except MatrixError as e:
       self.bot._cb_join_room_failure(room, e.message)
 
   # part the specified room
@@ -377,10 +380,13 @@ class MatrixProtocol(Protocol):
     if(room in self.room_occupants):
       return list(self.room_occupants[room])
     else:
-      memberdict = room.room.get_joined_members()
-      users = [ self.new_user(x) for x in memberdict ]
-      self.room_occupants[room] = set(users)
-      return users
+      try:
+        memberdict = room.room.get_joined_members()
+        users = [ self.new_user(x) for x in memberdict ]
+        self.room_occupants[room] = set(users)
+        return users
+      except MatrixError as e:
+        raise self.ConnectFailure
 
   # @param room (Room) the room to query
   # @return (str) the nick name we are using in the specified room
