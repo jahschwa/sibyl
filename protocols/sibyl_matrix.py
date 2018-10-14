@@ -381,7 +381,10 @@ class MatrixProtocol(Protocol):
   # part the specified room
   # @param room (Room) the room to leave
   def part_room(self,room):
-    raise NotImplementedError
+    try:
+      room.get_mx_room().leave()
+    except MatrixError as e:
+      raise self.ConnectFailure
 
   # helper function for get_rooms() for protocol-specific flags
   # only needs to handle: FLAG_PARTED, FLAG_PENDING, FLAG_IN, FLAG_ALL
@@ -415,7 +418,7 @@ class MatrixProtocol(Protocol):
   # @param nick (str) the nick to examine
   # @return (User) the "real" User behind the specified nick/room
   def get_real(self,room,nick):
-    raise NotImplementedError
+    return self.get_user().get_base()
 
   # @return (User) our username
   def get_user(self):
