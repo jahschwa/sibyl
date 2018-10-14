@@ -2,7 +2,7 @@
 #
 # Sibyl: A modular Python chat bot framework
 # Copyright (c) 2015-2017 Joshua Haas <haas.josh.a@gmail.com>
-# Copyright (c) 2016-2017 Jonathan Frederickson <jonathan@terracrypt.net>
+# Copyright (c) 2016-2018 Jonathan Frederickson <jonathan@terracrypt.net>
 #
 # This file is part of Sibyl.
 #
