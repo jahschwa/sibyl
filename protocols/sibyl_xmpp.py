@@ -573,7 +573,7 @@ class XMPP(Protocol):
           (text,func) = self.MUC_CODES[code]
           func('Forced from room "%s" (%s)' % (room,text))
           self.log.debug('Rejoining room "%s" in %i sec'
-              % (room,self.opt('recon_wait')))
+              % (room,self.opt('recon_min')))
           return
 
     # If subscription is private,
@@ -789,7 +789,7 @@ class XMPP(Protocol):
         self.__muc_join_failure(room,e.message)
         if self.mucs[room]['status'] > self.MUC_OK:
           self.log.debug('Rejoining room "%s" in %i sec'
-              % (room,self.opt('recon_wait')))
+              % (room,self.opt('recon_min')))
         else:
           self.mucs[room]['status'] = self.MUC_PARTED
 
@@ -847,7 +847,7 @@ class XMPP(Protocol):
 
     # don't try too often
     t = time.time()
-    if t-self.opt('recon_wait')<self.last_join:
+    if t-self.opt('recon_min')<self.last_join:
       return
 
     # we'll keep trying until the user tells us to stop via part_room()
