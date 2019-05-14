@@ -135,6 +135,8 @@ class MatrixProtocol(Protocol):
   # Keep track of when we joined rooms this session
   # Used to filter out historical messages after accepting room invites
   join_timestamps = {}
+  # Keep track of bot metadata to avoid re-requesting from Matrix API
+  _bot_metadata = {}
 
   # called on bot init; the following are already created by __init__:
   #   self.bot = SibylBot instance
@@ -391,7 +393,10 @@ class MatrixProtocol(Protocol):
   # @param room (Room) the room to query
   # @return (str) the nick name we are using in the specified room
   def get_nick(self,room):
-    return self.get_user().get_name() # TODO: per-room nicknames
+    if 'nick' in self._bot_metadata:
+      return self._bot_metadata['nick']
+    else:
+      return self.get_user().get_name() # TODO: per-room nicknames
 
   # @param room (Room) the room to query
   # @param nick (str) the nick to examine
