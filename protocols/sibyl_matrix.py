@@ -192,7 +192,7 @@ class MatrixProtocol(Protocol):
           self.log.debug(tb)
         self.log.debug("Failed to connect to homeserver!")
         raise self.ConnectFailure
-    except MatrixHttpLibError as e:
+    except (MatrixHttpLibError, ConnectionError) as e:
       self.log.error("Failed to connect to homeserver!")
       self.log.debug("Received error:" + str(e))
       raise self.ConnectFailure
