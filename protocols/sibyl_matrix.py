@@ -141,7 +141,7 @@ class MatrixProtocol(Protocol):
   #   self.log = the logger you should use
   def setup(self):
     self.rooms = {}
-    self.bot.add_var("credentials",persist=True)
+    self.bot.add_var("matrix_creds",persist=True)
 
     # Incoming message queue - messageHandler puts messages in here and
     # process() looks here periodically to send them to sibyl
@@ -165,12 +165,12 @@ class MatrixProtocol(Protocol):
       self.log.debug("Logging in as %s" % user)
 
       # Log in with the existing access token if we already have a token
-      if(self.bot.credentials and self.bot.credentials[0] == user):
-        self.client = MatrixClient(homeserver, user_id=user, token=self.bot.credentials[1])
+      if(self.bot.matrix_creds and self.bot.matrix_creds[0] == user):
+        self.client = MatrixClient(homeserver, user_id=user, token=self.bot.matrix_creds[1])
       # Otherwise, log in with the configured username and password
       else:
         token = self.client.login_with_password(user,pw)
-        self.bot.credentials = (user, token)
+        self.bot.matrix_creds = (user, token)
 
       self.rooms = self.client.get_rooms()
       self.log.debug("Already in rooms: %s" % self.rooms)
@@ -185,6 +185,7 @@ class MatrixProtocol(Protocol):
     except MatrixRequestError as e:
       if(e.code in [401, 403]):
         self.log.debug("Credentials incorrect! Maybe your access token is outdated?")
+        self.bot.matrix_creds = None
         raise self.AuthFailure
       else:
         if(self.opt('matrix.debug')):
