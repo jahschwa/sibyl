@@ -175,6 +175,8 @@ class MatrixProtocol(Protocol):
       self.rooms = self.client.get_rooms()
       self.log.debug("Already in rooms: %s" % self.rooms)
 
+      self._sync_display_name(self.bot.opt('nick_name'))
+
       # Connect to Sibyl's message callback
       self.client.add_listener(self.messageHandler)
       self.client.add_invite_listener(self.inviteHandler)
@@ -391,7 +393,7 @@ class MatrixProtocol(Protocol):
   # @param room (Room) the room to query
   # @return (str) the nick name we are using in the specified room
   def get_nick(self,room):
-    return self.get_user().get_name() # TODO: per-room nicknames
+    return self.bot.opt('nick_name')
 
   # @param room (Room) the room to query
   # @param nick (str) the nick to examine
@@ -416,6 +418,14 @@ class MatrixProtocol(Protocol):
   # @return (Room) a new instance of this protocol's Room subclass
   def new_room(self,room_id_or_alias,nick=None,pword=None):
     return MatrixRoom(self,room_id_or_alias,nick,pword)
+
+  # Update Matrix user's display name only if currently configured
+  # display name is different
+  def _sync_display_name(self, nick):
+    me = self.get_user()
+    if me.user.get_display_name() != nick:
+      me.user.set_display_name(nick)
+
 
 ################################################################################
 # Helper functions
