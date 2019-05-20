@@ -90,12 +90,12 @@ class Battleship(object):
         if ship == 'carrier':
             if (bow[0] < 'e' and direction == 'w') or \
                 (bow[0] > 'f' and direction == 'e') or \
-                (bow[1] < '5' and direction == 'n') or \
-                (bow[1] > '6' and direction == 's'):
+                (bow[1:] < '5' and direction == 'n') or \
+                (bow[1:] > '6' and direction == 's'):
                 return 'Invalid ship location. Ships must stay on the board.'
 
             if direction == 'n' or 's':
-                idx = self.FILES.index(int(bow[1]))
+                idx = self.FILES.index(int(bow[1:]))
                 if direction == 'n':
                     nodes = [bow[0] + str(f) for f in self.FILES[idx-5:idx]]
                 else:
@@ -103,18 +103,18 @@ class Battleship(object):
             else:
                 idx = self.RANKS.index(bow[0])
                 if direction == 'e':
-                    nodes = [r + bow[1] for r in self.RANKS[idx:idx+5]]
+                    nodes = [r + bow[1:] for r in self.RANKS[idx:idx+5]]
                 else:
-                    nodes = [r + bow[1] for r in self.RANKS[idx-5:idx]]
+                    nodes = [r + bow[1:] for r in self.RANKS[idx-5:idx]]
         elif ship == 'battleship':
             if (bow[0] < 'd' and direction == 'w') or \
                 (bow[0] > 'g' and direction == 'e') or \
-                (bow[1] < '4' and direction == 'n') or \
-                (bow[1] > '7' and direction == 's'):
+                (bow[1:] < '4' and direction == 'n') or \
+                (bow[1:] > '7' and direction == 's'):
                 return 'Invalid ship location. Ships must stay on the board.'
 
             if direction == 'n' or 's':
-                idx = self.FILES.index(int(bow[1]))
+                idx = self.FILES.index(int(bow[1:]))
                 if direction == 'n':
                     nodes = [bow[0] + str(f) for f in self.FILES[idx-4:idx]]
                 else:
@@ -122,18 +122,18 @@ class Battleship(object):
             else:
                 idx = self.RANKS.index(bow[0])
                 if direction == 'e':
-                    nodes = [r + bow[1] for r in self.RANKS[idx:idx+4]]
+                    nodes = [r + bow[1:] for r in self.RANKS[idx:idx+4]]
                 else:
-                    nodes = [r + bow[1] for r in self.RANKS[idx-4:idx]]
+                    nodes = [r + bow[1:] for r in self.RANKS[idx-4:idx]]
         elif ship == 'destroyer' or 'submarine':
             if (bow[0] < 'c' and direction == 'w') or \
                 (bow[0] > 'h' and direction == 'e') or \
-                (bow[1] < '3' and direction == 'n') or \
-                (bow[1] > '8' and direction == 's'):
+                (bow[1:] < '3' and direction == 'n') or \
+                (bow[1:] > '8' and direction == 's'):
                 return 'Invalid ship location. Ships must stay on the board.'
 
             if direction == 'n' or 's':
-                idx = self.FILES.index(int(bow[1]))
+                idx = self.FILES.index(int(bow[1:]))
                 if direction == 'n':
                     nodes = [bow[0] + str(f) for f in self.FILES[idx-3:idx]]
                 else:
@@ -141,18 +141,18 @@ class Battleship(object):
             else:
                 idx = self.RANKS.index(bow[0])
                 if direction == 'e':
-                    nodes = [r + bow[1] for r in self.RANKS[idx:idx+3]]
+                    nodes = [r + bow[1:] for r in self.RANKS[idx:idx+3]]
                 else:
-                    nodes = [r + bow[1] for r in self.RANKS[idx-3:idx]]
+                    nodes = [r + bow[1:] for r in self.RANKS[idx-3:idx]]
         elif ship == 'patrol':
             if (bow[0] < 'c' and direction == 'w') or \
                 (bow[0] > 'j' and direction == 'e') or \
-                (bow[1] < '2' and direction == 'n') or \
-                (bow[1] > '9' and direction == 's'):
+                (bow[1:] < '2' and direction == 'n') or \
+                (bow[1:] > '9' and direction == 's'):
                 return 'Invalid ship location. Ships must stay on the board.'
 
             if direction == 'n' or 's':
-                idx = self.FILES.index(int(bow[1]))
+                idx = self.FILES.index(int(bow[1:]))
                 if direction == 'n':
                     nodes = [bow[0] + str(f) for f in self.FILES[idx-2:idx]]
                 else:
@@ -160,9 +160,9 @@ class Battleship(object):
             else:
                 idx = self.RANKS.index(bow[0])
                 if direction == 'e':
-                    nodes = [r + bow[1] for r in self.RANKS[idx:idx+2]]
+                    nodes = [r + bow[1:] for r in self.RANKS[idx:idx+2]]
                 else:
-                    nodes = [r + bow[1] for r in self.RANKS[idx-2:idx]]
+                    nodes = [r + bow[1:] for r in self.RANKS[idx-2:idx]]
 
         # Check for intersection. Note that a ship cannot intersect with itself
         list_of_nodes = [self.players[player]['ships'][s] for s in self.SHIPS
