@@ -28,7 +28,8 @@ class Battleship(object):
     def start_game(self):
         self.phase = 'placement'
 
-        self.turn_order = random.shuffle(list(self.players.keys()))
+        self.turn_order = list(self.players.keys())
+        random.shuffle(self.turn_order)
         self.current_player = self.turn_order[self.turn % 2]
         for p in self.players:
             self.players[p]['id'] = '2'
