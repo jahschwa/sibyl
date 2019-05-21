@@ -9,12 +9,7 @@ def init(bot):
     
 @botcmd
 def game(bot, mess, args):
-    """
-    A module for playing games.
-    
-    Arguments:
-        0: Name of the game to be played
-    """
+    """A module for playing games - game (title)"""
     # Initialization of Game object
     if bot.Game is not None:
         return 'Game of ' + bot.Game.game + ' already in progress.'
@@ -22,9 +17,9 @@ def game(bot, mess, args):
     games = {'battleship': {'alias': ['battleship'],
                             'class': sibyl_games.Battleship(bot, mess)}}
 
-    for name in games:
-       if args[0] in games[name]['alias']:
-            bot.Game = games[name]['class']
+    for title in games:
+       if args[0].lower() in games[title]['alias']:
+            bot.Game = games[title]['class']
             break
     
     if not bot.Game:
@@ -36,9 +31,7 @@ def game(bot, mess, args):
     
 @botcmd
 def register(bot, mess, args):
-    """
-    Register user for playing Game.
-    """
+    """Register user for playing active Game"""
     if bot.Game is not None:
         if not bot.Game.started:
             if bot.Game.num_players == bot.Game.max_players:
@@ -46,6 +39,9 @@ def register(bot, mess, args):
                        ' already registered.'
 
             player = mess.get_user()
+            if player.get_name() in bot.Game.players:
+                return player.get_name() + ' has already been registered!'
+                
             bot.Game.players[player.get_name()] = {
                     'user': player,
                     'nick': player.get_name()}
@@ -59,15 +55,13 @@ def register(bot, mess, args):
 
 @botcmd
 def unregister(bot, mess, args):
-    """
-    Unregister user from Game.
-    """
+    """Unregister user from active Game"""
     if bot.Game is not None:
         if not bot.Game.started:
             nick = mess.get_user().get_name()
             if nick in bot.Game.players:
                 del bot.Game.players[nick]
-                Game.num_players -= 1
+                bot.Game.num_players -= 1
                 return nick + ' has been successfully unregistered. ' \
                        'Current number of players: ' + str(bot.Game.num_players)
             else:
@@ -79,9 +73,7 @@ def unregister(bot, mess, args):
         
 @botcmd
 def startgame(bot, mess, args):
-    """
-    Start a Game.
-    """
+    """Start a Game."""
     if bot.Game is not None:
         if not bot.Game.started:
             if bot.Game.min_players <= bot.Game.num_players <= \
@@ -102,12 +94,7 @@ def startgame(bot, mess, args):
 
 @botcmd
 def move(bot, mess, args):
-    """
-    Make a move in a Game.
-
-    Arguments:
-        0: The move to be made
-    """
+    """Make a move in an active Game."""
     if bot.Game is not None:
         if bot.Game.pm_only:
             if mess.get_room() is not None:
@@ -118,7 +105,7 @@ def move(bot, mess, args):
             return 'You are not a player in the current game.'
 
         if bot.Game.lock:
-            if mess.get_user() is not bot.Game.current_player:
+            if mess.get_user().get_name() != bot.Game.current_player:
                 return 'It is not your turn. Current player: ' + \
                        str(bot.Game.current_player)
 
@@ -128,9 +115,7 @@ def move(bot, mess, args):
 
 @botcmd
 def quitgame(bot, mess, args):
-    """
-    Quit the current Game.
-    """
+    """Quit the current Game"""
     if bot.Game is not None:
         if not bot.Game.quit_confirm:
             bot.Game.quit_confirm = True
