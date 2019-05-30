@@ -1,30 +1,53 @@
 import random
 
-class Battleship(object):
+class Game(object):
+    """
+    Super class for Game objects.
+    """
+    def __init__(self, bot, mess):
+        self.bot = bot
+        self.room = mess.get_room()
+        self.game = None
+        self.min_players = 1
+        self.max_players = 100
+        self.num_players = 0
+        self.players = {}
+        self.started = False
+        self.pm_only = True
+        self.current_player = None
+        self.lock = False
+        self.quit_confirm = False
+
+    def start_game(self):
+        self.started = True
+        pass
+
+    def move(self, player, move):
+        pass
+
+class Battleship(Game):
     """
     Game object for Battleship.
     """
     def __init__ (self, bot, mess):
-        self.bot = bot
-        self.room = mess.get_room()
+        # Super attributes
+        super(Battleship, self).__init__(bot, mess)
         self.game = 'Battleship'
         self.min_players = 2
         self.max_players = 2
-        self.num_players = 0
-        self.players = {}
         self.turn_order = []
-        self.started = False
-        self.pm_only = True
-        self.current_player = None
-        self.quit_confirm = False
-        self.phase = None
+
+        # Sub attributes
+        self.phase = None  # For controlling self.move()
         self.turn = 2  # Set for integer division
         self.lock = False  # Toggle to True when only one player may move
         self.SHIPS = ['carrier', 'battleship', 'destroyer',
                       'submarine', 'patrol']
         self.RANKS = 'abcdefghjk'
         self.FILES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
     def start_game(self):
+        self.started = True
         self.phase = 'placement'
 
         self.turn_order = list(self.players.keys())
@@ -66,7 +89,8 @@ class Battleship(object):
                 return 'Your fleet has already been deployed!'
         elif self.phase == 'battle':
             if len(move) != 1:
-                return 'Invalid move format. Please use "sibyl move [target coordinates]" to attack.'
+                return 'Invalid move format. Please use "sibyl move ' \
+                       '[target coordinates]" to attack.'
             move = move[0].lower()
             if move in self.players[player]['hits'] or \
                 move in self.players[player]['misses']:
@@ -78,7 +102,8 @@ class Battleship(object):
     def place(self, player, move):
         # move: [ship name] [bow location] [cardinal direction]
         if len(move) != 3:
-            return 'Invalid move format. Please use "sibyl move [ship name] [bow location] [cardinal direction]'
+            return 'Invalid move format. Please use "sibyl move [ship name] ' \
+                   '[bow location] [cardinal direction]'
             
         ship, bow, direction = [m.lower() for m in move]
 
