@@ -62,10 +62,9 @@ def xbmc(ip,method,params=None,user=None,pword=None,timeout=5):
 
   url = 'http://'+ip+'/jsonrpc'
   headers = {'content-type':'application/json'}
-  payload = p
-  params = {'request':json.dumps(payload)}
+  data = json.dumps(p)
   auth = (user,pword)
-  r = requests.get(url,params=params,headers=headers,auth=auth,timeout=timeout)
+  r = requests.post(url,data=data,headers=headers,auth=auth,timeout=timeout)
 
   # return the response from xbmc as a dict
   return json.loads(r.text)
