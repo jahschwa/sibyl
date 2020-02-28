@@ -1063,7 +1063,11 @@ class SibylBot(object):
     """reconnect loop - catch known exceptions"""
 
     if self.opt('tell_errors'):
-      for (pname,rooms) in self.opt('rooms').items():
+      if self.opt('tell_rooms'):
+        conf_rooms = self.opt('tell_rooms')
+      else:
+        conf_rooms = self.opt('rooms')
+      for (pname,rooms) in conf_rooms.items():
         for room in rooms:
           room = self.protocols[pname].new_room(room['room'])
           self.__tell_rooms.append(room)
