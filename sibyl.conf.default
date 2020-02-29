@@ -76,6 +76,10 @@ protocols = cli
 # format is the same as for "rooms" config opt above
 #tell_rooms =
 
+# Only tell errors with at least this log level
+# can be: critical, error, warning, info, debug
+#tell_level = warning
+
 ################################################################################
 # Email options
 ################################################################################

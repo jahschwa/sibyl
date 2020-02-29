@@ -112,7 +112,8 @@ class SibylBot(object):
     self.__log_startup_msg()
 
     # log config errors and check for success
-    self.errors.extend(['(startup.config) '+x[1] for x in self.conf.log_msgs])
+    for (lvl, msg) in self.conf.log_msgs:
+      self.errors.append((lvl, '(startup.config) ' + msg))
     self.conf.process_log()
     self.conf.real_time = True
     if dup_plugins:
@@ -186,7 +187,9 @@ class SibylBot(object):
         success = False
 
     if not success:
-      self.errors.append('(startup.sibyl) Some rename operations failed')
+      self.errors.append(
+        ('error', '(startup.sibyl) Some rename operations failed')
+      )
 
     for (old,new) in self.opt('rename').items():
       self.hooks['chat'][new] = cmds[new]
@@ -290,7 +293,7 @@ class SibylBot(object):
         except Exception as e:
           msg = 'Error loading plugin "%s"' % f
           self.log_ex(e,msg)
-          self.errors.append('(startup.sibyl) '+msg)
+          self.errors.append(('error', '(startup.sibyl) ' + msg))
           continue
 
         mods[f] = mod
@@ -906,8 +909,11 @@ class SibylBot(object):
 
   @staticmethod
   @botcmd(name='errors')
-  def __errors(self,mess,args):
-    """list errors - errors [*] [search1 search2]"""
+  def __errors(self, mess, args):
+    """list errors - errors [*] [minlvl=warning] [search1=-startup search2]"""
+
+    levels = ['debug', 'info', 'warning', 'error', 'critical']
+    min_lvl = levels.index('warning')
 
     if not self.errors:
       return 'No errors'
@@ -915,14 +921,22 @@ class SibylBot(object):
     if not args:
       args = ['-startup']
 
-    if '*' in args:
-      matches = self.errors
+    matches = self.errors
+    if args[0] == '*':
+      min_lvl = levels.index('debug')
     else:
-      matches = util.matches(self.errors,args,sort=False)
+      try:
+        min_lvl = levels.index(args[0].lower())
+        del args[0]
+      except ValueError:
+        pass
+      if args:
+        matches = util.matches(matches, args, sort=False, key=lambda x:x[1])
+    matches = [x for x in matches if levels.index(x[0]) >= min_lvl]
 
     if not matches:
       return 'No matching errors'
-    return util.list2str(matches)
+    return util.list2str(matches, fmt=(lambda x:'[%s] %s' % x))
 
   @staticmethod
   @botcmd(name='stats')
@@ -1024,14 +1038,15 @@ class SibylBot(object):
   # see note in section EEE comment header regarding @staticmethod
   @staticmethod
   @botrooms
-  def __tell_errors(self,room):
+  def __tell_errors(self, room):
     """mention startup errors in rooms we join on init"""
 
     if room in self.__tell_rooms:
       del self.__tell_rooms[self.__tell_rooms.index(room)]
-      if self.errors:
-        msg = 'Errors during startup: '
-        self.send(msg+self.run_cmd('errors',['startup']),room,hook=False)
+      lvl = logging.getLevelName(self.opt('tell_level')).lower()
+      errors = self.run_cmd('errors', [lvl, 'startup'])
+      if errors not in ('No errors', 'No matching errors'):
+        self.send('Errors during startup: ' + errors, room, hook=False)
     if not self.__tell_rooms:
       self.del_hook(self.__tell_errors)
 
@@ -1373,12 +1388,14 @@ class SibylBot(object):
 
   # @param msg (str) the message to log
   # @param ns (str) an identifier for the caller (e.g. plugin name)
-  def error(self,msg,ns):
+  def error(self, msg, ns, lvl='error'):
     """add an error to the bot's list accessible via the error chat cmd"""
 
-    if self.__status==SibylBot.INIT:
-      ns = 'startup.'+ns
-    self.errors.append('(%s) %s' % (ns,msg))
+    if lvl not in ['debug', 'info', 'warning', 'error', 'critical']:
+      raise ValueError('Invalid lvl "%s"' % lvl)
+    if self.__status == SibylBot.INIT:
+      ns = 'startup.' + ns
+    self.errors.append((lvl, '(%s) %s' % (ns,msg)))
 
   # @param ex (Exception) the exception to log
   # @param short_msg (str) text to log at logging.ERROR

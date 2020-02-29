@@ -87,6 +87,7 @@ class Config(object):
 ('kill_stdout', (True,                False,  self.parse_bool,      None,               None,             None,     None)),
 ('tell_errors', (True,                False,  self.parse_bool,      None,               None,             None,     None)),
 ('tell_rooms',  ([],                  False,  self.parse_rooms,     None,               self.post_room_x, None,     None)),
+('tell_level',  (logging.WARNING,     False,  self.parse_log,       None,               None,             None,     None)),
 ('admin_protos',(['cli'],             False,  self.parse_admin,     self.valid_admin,   None,             None,     None)),
 ('persistence', (True,                False,  self.parse_bool,      None,               None,             None,     None)),
 ('state_file',  ('data/state.pickle', False,  None,                 self.valid_wfile,   None,             None,     None)),
