@@ -86,6 +86,8 @@ class Config(object):
 ('recon_max',   (300,                 False,  self.parse_int,       None,               None,             None,     None)),
 ('kill_stdout', (True,                False,  self.parse_bool,      None,               None,             None,     None)),
 ('tell_errors', (True,                False,  self.parse_bool,      None,               None,             None,     None)),
+('tell_rooms',  ([],                  False,  self.parse_rooms,     None,               self.post_room_x, None,     None)),
+('tell_level',  (logging.WARNING,     False,  self.parse_log,       None,               None,             None,     None)),
 ('admin_protos',(['cli'],             False,  self.parse_admin,     self.valid_admin,   None,             None,     None)),
 ('persistence', (True,                False,  self.parse_bool,      None,               None,             None,     None)),
 ('state_file',  ('data/state.pickle', False,  None,                 self.valid_wfile,   None,             None,     None)),
@@ -812,6 +814,27 @@ class Config(object):
           self.log('warning',
               'Ignoring room "%s:%s"; unknown protocol' % (pname,room['room']))
         del val[pname]
+    return val
+
+  @staticmethod
+  def post_room_x(self, opts, opt, val):
+    """make sure all rooms specified in this option exist in 'rooms' opt"""
+
+    for pname in val.keys():
+      if pname not in opts['protocols']:
+        for room in val[pname]:
+          self.log('warning',
+            'Ignoring tell_room "%s:%s"; unknown protocol' % (pname, room['room']))
+        del val[pname]
+      else:
+        new = []
+        for room in val[pname]:
+          if pname not in opts['rooms'] or room not in opts['rooms'][pname]:
+            self.log('warning',
+              'Ignoring tell_room "%s:%s"; unknown room' % (pname, room['room']))
+          else:
+            new.append(room)
+        val[pname] = new
     return val
 
 ################################################################################

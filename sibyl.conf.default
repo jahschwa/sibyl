@@ -72,6 +72,14 @@ protocols = cli
 # If True, upon joining a room during bot startup, send a message listing errors
 #tell_errors = True
 
+# If not set, tell_errors in all rooms; else only tell in specified rooms,
+# format is the same as for "rooms" config opt above
+#tell_rooms =
+
+# Only tell errors with at least this log level
+# can be: critical, error, warning, info, debug
+#tell_level = warning
+
 ################################################################################
 # Email options
 ################################################################################

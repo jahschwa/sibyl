@@ -92,22 +92,24 @@ def xbmc_active_player(ip,user=None,pword=None,timeout=5):
 # @param lib (list) a list of file names to search through
 # @param args (list) a list of search terms to match
 # @param sort (bool) [True] whether to sort the result
+# @param key (func) a function to apply to the items before testing
 # @return (list) a list of matching file names
-def matches(lib,args,sort=True):
+def matches(lib, args, sort=True, key=None):
   """helper function for search(), files(), and file()"""
 
   # find matches
   matches = []
   for entry in lib:
+    x = entry if not key else key(entry)
     try:
-      if checkall(args,entry):
+      if checkall(args, x):
         matches.append(entry)
     except:
       pass
 
   # sort if asked
   if sort:
-    matches = xbmc_sorted(matches)
+    matches = xbmc_sorted(matches, key=key)
   return matches
 
 # @param args (str) a command string
@@ -264,11 +266,14 @@ def getcell(start,page):
   return (' '.join(s.split()),stop)
 
 # @param l (list) the list to convert
+# @param fmt (func) function to apply to each item before stringifying
 # @return (str) the list with each item on a new line
-def list2str(l):
+def list2str(l, fmt=None):
   """return the list on separate lines"""
 
   # makes match lists look much better in chat or pastebin
+  if fmt:
+    l = [str(fmt(x)) for x in l]
   return '\n'+'\n'.join(l)
 
 # @param paths (list) file paths to reduce
@@ -348,11 +353,12 @@ def is_int(s):
     return False
 
 # @param files (list of str) a list of file paths
+# @param key (func) a function to apply to the items before sorting
 # @return (list) the input sorted as XBMC default sort
-def xbmc_sorted(files):
+def xbmc_sorted(files, key=None):
   """sort a list of files as xbmc does (i think) so episodes are correct"""
 
-  return sorted(files,cmp=xbmc_cmp)
+  return sorted(files, cmp=xbmc_cmp, key=None)
 
 # @param a (str) a string to compare
 # @param b (str) a string to compare
