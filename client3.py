@@ -224,8 +224,11 @@ class CLI(object):
 
   def get_pass(self):
 
-    if self.args.password is None:
-      return None
+    # "-p PASSWORD" OR -p not passed
+    if self.args.password is not '':
+      return self.args.password
+
+    # "-p" without a value means get user input
     print('')
     pword = getpass.getpass()
     print('')
