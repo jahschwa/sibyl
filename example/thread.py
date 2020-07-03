@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Very simple threading example where the "connection" is to stdin raw_input
 # and logs to a file in the PWD called "thread.log"
@@ -26,7 +26,7 @@
 import logging,time,traceback
 from threading import enumerate as enum
 from threading import Thread
-from Queue import Queue
+from queue import Queue
 
 DISCONNECT_STR = ''
 
@@ -49,7 +49,7 @@ def main():
 # Bot Class
 ################################################################################
 
-class Bot(object):
+class Bot:
 
   def __init__(self):
 
@@ -73,7 +73,7 @@ class Bot(object):
 
     except BaseException as e:
       self.log.critical('Unhandled: %s' % e.__class__.__name__)
-      self.log.debug(traceback.format_exc(e))
+      self.log.debug(traceback.format_exc())
 
   def serve(self):
 
@@ -116,7 +116,7 @@ class Bot(object):
 # ThreadProtocol Class
 ################################################################################
 
-class ThreadProtocol(object):
+class ThreadProtocol:
 
   def __init__(self,bot):
 
@@ -173,11 +173,11 @@ class BufferThread(Thread):
 
   def run(self):
 
-    print ''
+    print('')
 
     while True:
 
-      s = raw_input('[thread %s] enter text: ' % self.proto.num)
+      s = input('[thread %s] enter text: ' % self.proto.num)
       self.log.info('got text: "%s"' % s)
       self.proto.queue.put(s)
 

@@ -20,7 +20,7 @@
 #
 ################################################################################
 
-class Password(object):
+class Password:
 
   def __init__(self,pword):
     self.password = pword

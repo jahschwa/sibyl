@@ -22,7 +22,7 @@
 
 import sys
 from threading import Thread,Event
-from Queue import Queue
+from queue import Queue
 
 from sibyl.lib.protocol import User,Room,Message,Protocol
 
@@ -66,7 +66,7 @@ class BufferThread(Thread):
       if self.event_close.is_set():
         break
       sys.__stdout__.write(USER+': ')
-      s = raw_input()
+      s = input()
       self.event_proc.clear()
       self.queue.put(s)
       self.event_data.set()
@@ -89,11 +89,6 @@ class Admin(User):
   def get_base(self):
     return self.user
 
-  def __eq__(self,other):
-    if not isinstance(other,Admin):
-      return False
-    return self.user==other.user
-
   def __str__(self):
     return self.user
 
@@ -108,11 +103,6 @@ class FakeRoom(Room):
 
   def get_name(self):
     return self.name
-
-  def __eq__(self,other):
-    if not isinstance(other,FakeRoom):
-      return False
-    return self.name==other.name
 
 ################################################################################
 # Protocol sub-class

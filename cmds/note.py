@@ -80,10 +80,10 @@ def note(bot,mess,args):
     (pid,typ) = active
     params = {'playerid':pid,'properties':['time']}
     result = bot.xbmc('Player.GetProperties',params)
-    t = str(util.time2str(result['result']['time']))
+    t = util.time2str(result['result']['time'])
 
     result = bot.xbmc('Player.GetItem',{'playerid':pid,'properties':['file']})
-    fil = os.path.basename(str(result['result']['item']['file']))
+    fil = os.path.basename(result['result']['item']['file'])
 
     args[1] += ' --- file "'+fil+'" at '+t
 

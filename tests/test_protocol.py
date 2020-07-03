@@ -28,7 +28,7 @@ from lib.config import Config
 from lib.protocol import ConnectFailure,AuthFailure
 import protocols
 
-class Bot(object):
+class Bot:
 
   def __init__(self):
     self.success = 0

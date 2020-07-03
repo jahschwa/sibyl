@@ -21,8 +21,8 @@
 #
 ################################################################################
 
-from Queue import Queue
-from urlparse import urlparse
+from queue import Queue
+from urllib.parse import urlparse
 import traceback, datetime, pytz
 
 from sibyl.lib.protocol import User,Room,Message,Protocol
@@ -67,7 +67,7 @@ class MatrixUser(User):
   def parse(self,user):
     if(isinstance(user,mxUser.User)):
       self.user = user
-    elif(isinstance(user,basestring)):
+    elif(isinstance(user,str)):
       self.user = self.protocol.client.get_user(user)
     else:
       raise TypeError("User parameter to parse must be a string")
@@ -79,13 +79,6 @@ class MatrixUser(User):
   # @return (str) the username without resource identifier
   def get_base(self):
     return self.user.user_id
-
-  # @param other (object) you must check for class equivalence
-  # @return (bool) True if self==other (including resource)
-  def __eq__(self,other):
-    if(not isinstance(other,MatrixUser)):
-      return False
-    return(self.get_base() == other.get_base())
 
   # @return (str) the full username
   def __str__(self):
@@ -104,8 +97,8 @@ class MatrixRoom(Room):
   # @param name (object) a full roomid
   def parse(self,name):
     if(isinstance(name,mxRoom.Room)):
-      self.room = room
-    elif(isinstance(name,basestring)):
+      self.room = name
+    elif(isinstance(name,str)):
       self.room = mxRoom.Room(self.protocol.client,name) # [TODO] Assumes a room ID for now
     else:
       raise TypeError("User parameter to parse must be a string")
@@ -114,14 +107,6 @@ class MatrixRoom(Room):
   # @return (str) the name of this Room
   def get_name(self):
     return self.room.room_id
-
-  # @param other (object) you must check for class equivalence
-  # @return (bool) true if other is the same room (ignore nick/pword if present)
-  def __eq__(self,other):
-    if(isinstance(other,MatrixRoom)):
-      return self.get_name() == other.get_name()
-    else:
-      return False
 
 ################################################################################
 # Protocol sub-class
@@ -210,14 +195,14 @@ class MatrixProtocol(Protocol):
   # @raise (ServerShutdown) if server shutdown
   def process(self):
     while(not self.msg_queue.empty()):
-      next = self.msg_queue.get()
-      if(isinstance(next, Message)):
-        self.log.debug("Placing message into queue: " + next.get_text())
-        self.bot._cb_message(next)
-      elif(isinstance(next, MatrixHttpLibError)):
-        self.log.debug("Received error from Matrix SDK, stopping listener thread: " + str(next))
+      item = self.msg_queue.get()
+      if(isinstance(item, Message)):
+        self.log.debug("Placing message into queue: " + item.get_text())
+        self.bot._cb_message(item)
+      elif(isinstance(item, MatrixHttpLibError)):
+        self.log.debug("Received error from Matrix SDK, stopping listener thread: " + str(item))
         self.client.stop_listener_thread()
-        raise self.ConnectFailure("Connection error returned by requests library: " + str(next))
+        raise self.ConnectFailure("Connection error returned by requests library: " + str(item))
 
 
   def messageHandler(self, msg):
@@ -329,7 +314,7 @@ class MatrixProtocol(Protocol):
   # send a message with text to every user in a room
   # optionally note that the broadcast was requested by a specific User
   # @param mess (Message) the message to broadcast
-  # @return (str,unicode) the text that was actually sent
+  # @return (str) the text that was actually sent
   # Check: get_user(), get_users()
   def broadcast(self,mess):
     """send a message to every user in a room"""

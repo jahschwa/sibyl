@@ -1,7 +1,7 @@
 import imaplib,smtplib,email,time
 from email.mime.text import MIMEText
 from threading import Thread
-from Queue import Queue
+from queue import Queue
 
 from sibyl.lib.protocol import User,Room,Protocol,Message
 from sibyl.lib.decorators import botconf

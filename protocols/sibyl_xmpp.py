@@ -89,18 +89,9 @@ class JID(User):
       return str(self.jid)
     return self.jid.getStripped()
 
-  def __eq__(self,other):
-    """we can just compare our internal xmpp.JID"""
-
-    if not isinstance(other,JID):
-      return False
-    return self.jid==other.jid
-
   def __str__(self):
     """return full JID, including resources if we have one"""
 
-    if self.typ==Message.GROUP:
-      return self.get_base()
     return str(self.jid)
 
 ################################################################################
@@ -114,11 +105,6 @@ class MUC(Room):
 
   def get_name(self):
     return self.name
-
-  def __eq__(self,other):
-    if not isinstance(other,MUC):
-      return False
-    return self.name==other.name
 
 ################################################################################
 # XMPP(Protocol) class
@@ -467,7 +453,7 @@ class XMPP(Protocol):
     if (jid not in self.seen) and (jid.getStripped() not in real):
       self.log.info('Ignoring message from unseen guest: %s' % jid)
       self.log.debug("I've seen: %s" %
-        ["%s" % x for x in self.seen.keys()+real])
+        ["%s" % x for x in list(self.seen.keys())+real])
       return
 
     if len(text)>40:
@@ -543,11 +529,11 @@ class XMPP(Protocol):
       self.__status_type_changed(jid, self.OFFLINE)
 
     try:
-      subscription = self.roster.getSubscription(unicode(jid.__str__()))
-    except KeyError, e:
+      subscription = self.roster.getSubscription(str(jid))
+    except KeyError:
       # User not on our roster
       subscription = None
-    except AttributeError, e:
+    except AttributeError:
       # Recieved presence update before roster built
       return
 
@@ -690,7 +676,7 @@ class XMPP(Protocol):
           "<body xmlns='http://www.w3.org/1999/xhtml'>" + \
           text.encode('utf-8') + "</body>"))
         message.addChild(node=html)
-      except Exception, e:
+      except:
         # Didn't work, incorrect markup or something.
         self.log.debug('An error while building a xhtml message. '\
         'Fallback to normal messagebody')

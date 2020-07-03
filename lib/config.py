@@ -22,7 +22,7 @@
 
 import time,os,socket,copy,logging,inspect,traceback
 from collections import OrderedDict as odict
-import ConfigParser as cp
+import configparser as cp
 
 from sibyl.lib.protocol import Protocol
 import sibyl.lib.util as util
@@ -37,7 +37,7 @@ class DuplicateOptError(Exception):
 # Config class
 ################################################################################
 
-class Config(object):
+class Config:
 
   # indices in option tuple for convenience
   DEF = 0
@@ -124,8 +124,7 @@ class Config(object):
     """return a dict of defaults in the form {opt:value}"""
 
     # populate a dictionary with the default values for all options
-    opts = self.OPTS.iteritems()
-    return odict([(opt,value[self.DEF]) for (opt,value) in opts])
+    return odict([(opt,value[self.DEF]) for (opt,value) in self.OPTS.items()])
 
   # @param opts (list of dict) options to add to defaults
   # @param ns (str) the namespace (e.g. filename) of the option
@@ -339,12 +338,12 @@ class Config(object):
       self.__update(opt)
     except cp.InterpolationError as e:
       self.log('critical','Interpolation error; check for invalid % syntax')
-    except Exception as e:
+    except:
       self.log('critical','Unhandled exception parsing config file')
-      full = traceback.format_exc(e)
+      full = traceback.format_exc()
       short = full.split('\n')[-2]
       self.log('error','  %s' % short)
-      self.log('debug',full)
+      self.log('info',full)
 
     # record missing required options
     for opt in self.opts:
@@ -358,7 +357,10 @@ class Config(object):
     if len(errors):
       return self.FAIL
 
-    warnings = [x for x in self.log_msgs if x[0]>=logging.WARNING]
+    warnings = [
+      x for x in self.log_msgs
+      if self.parse_log(self, None, x[0]) >= logging.WARNING
+    ]
     if len(warnings):
       return self.ERRORS
     else:
@@ -395,9 +397,9 @@ class Config(object):
     # use a SafeConfigParser to read options from the config file
     config = cp.SafeConfigParser()
     try:
-      config.readfp(FakeSecHead(open(self.conf_file)))
-    except Exception as e:
-      full = traceback.format_exc(e)
+      config.read_file(FakeSecHead(open(self.conf_file)))
+    except:
+      full = traceback.format_exc()
       short = full.split('\n')[-2]
       self.log('critical','Unable to read/parse config file')
       self.log('error','  %s' % short)
@@ -418,7 +420,7 @@ class Config(object):
   def __exists(self,opts):
     """only allow options that we know about"""
 
-    for opt in opts.keys():
+    for opt in list(opts.keys()):
 
       # delete unrecognized options
       if opt not in self.OPTS:
@@ -429,7 +431,7 @@ class Config(object):
   def __bwfilter(self,opts):
     """filter the opt value strings based on their black/white lists"""
 
-    for opt in opts.keys():
+    for opt in list(opts.keys()):
 
       default = self.OPTS[opt][self.DEF]
 
@@ -453,14 +455,14 @@ class Config(object):
   def __parse(self,opts):
     """parse the opt value strings into objects using their parse function"""
 
-    for opt in opts.keys():
+    for opt in list(opts.keys()):
 
       # parse recognized options and catch parsing exceptions
       func = self.OPTS[opt][self.PARSE]
       if func:
         try:
           opts[opt] = func(self,opt,opts[opt])
-        except Exception as e:
+        except:
           self.log('error','Error parsing "%s"; using default=%s' %
               (opt,self.opts[opt]))
           del opts[opt]
@@ -470,7 +472,7 @@ class Config(object):
     """delete opts that fail their validation function"""
 
     # delete invalid options
-    for opt in opts.keys():
+    for opt in list(opts.keys()):
       func = self.OPTS[opt][self.VALID]
       if func and not func(self,opts[opt]):
         self.log('error','Invalid value for "%s"; using default=%s' %
@@ -481,12 +483,12 @@ class Config(object):
   def __post(self,opts):
     """allow opts to run code to check the values of other opts"""
 
-    for opt in opts.keys():
+    for opt in list(opts.keys()):
       func = self.OPTS[opt][self.POST]
       if func:
         try:
           opts[opt] = func(self,opts,opt,opts[opt])
-        except Exception as e:
+        except:
           self.log('error','Error running post for "%s"; using default=%s' %
               (opt,self.opts[opt]))
           del opts[opt]
@@ -495,7 +497,7 @@ class Config(object):
     """write a default, completely commented-out config file"""
 
     s = ''
-    for (opt,val) in self.get_default().iteritems():
+    for (opt,val) in self.get_default().items():
       s += ('#%s = %s\n' % (opt,val))
     with open(self.conf_file,'w') as f:
       f.write(s)
@@ -622,8 +624,8 @@ class Config(object):
               'Protocol "%s" does not contain a lib.protocol.Protocol subclass'
               % proto)
 
-      except Exception as e:
-        full = traceback.format_exc(e)
+      except:
+        full = traceback.format_exc()
         short = full.split('\n')[-2]
         self.log('critical','Exception importing protocols/%s:'
             % ('sibyl_'+proto))
@@ -808,7 +810,7 @@ class Config(object):
   def post_rooms(self,opts,opt,val):
     """make sure all rooms have a valid protocol"""
 
-    for pname in val.keys():
+    for pname in list(val.keys()):
       if pname not in opts['protocols']:
         for room in val[pname]:
           self.log('warning',
@@ -820,7 +822,7 @@ class Config(object):
   def post_room_x(self, opts, opt, val):
     """make sure all rooms specified in this option exist in 'rooms' opt"""
 
-    for pname in val.keys():
+    for pname in list(val.keys()):
       if pname not in opts['protocols']:
         for room in val[pname]:
           self.log('warning',
@@ -871,15 +873,20 @@ class Config(object):
 ################################################################################
 
 # insert a dummy section header so SafeConfigParser is happy
-class FakeSecHead(object):
-    def __init__(self, fp):
-        self.fp = fp
-        self.sechead = '[%s]\n' % DUMMY
-    def readline(self):
-        if self.sechead:
-            try:
-                return self.sechead
-            finally:
-                self.sechead = None
-        else:
-            return self.fp.readline()
+class FakeSecHead:
+  def __init__(self, fp):
+    self.fp = fp
+    self.sechead = '[%s]\n' % DUMMY
+  def __next__(self):
+    if self.sechead:
+      try:
+        return self.sechead
+      finally:
+        self.sechead = None
+    else:
+      line = self.fp.readline()
+      if not line:
+        raise StopIteration
+      return line
+  def __iter__(self):
+    return self

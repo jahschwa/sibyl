@@ -22,7 +22,7 @@
 
 import time,logging
 
-class MockLog(object):
+class MockLog:
 
   def __init__(self):
     self.msgs = []

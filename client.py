@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Sibyl: A modular Python chat bot framework
@@ -19,11 +19,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-###############################################################################
+################################################################################
 
-import sys,socket,select,argparse,time,traceback,getpass,ssl,random
+import sys,socket,select,argparse,time,traceback,getpass,ssl
 from threading import Thread,Event
-from Queue import Queue
+from queue import Queue
 
 readline = None
 
@@ -83,7 +83,11 @@ def main():
   if args.execute is not None:
     Shell(args).run()
   elif args.gui:
-    app = QtWidgets.QApplication(sys.argv)
+    try:
+      app = QtWidgets.QApplication(sys.argv)
+    except NameError:
+      print('Unable to import PyQt5')
+      sys.exit(1)
     chat = ChatBox(args)
     chat.log('Ready')
     sys.exit(app.exec_())
@@ -97,7 +101,7 @@ def main():
 class TimeoutError(Exception):
   pass
 
-class Shell(object):
+class Shell:
 
   def __init__(self,args):
 
@@ -105,7 +109,7 @@ class Shell(object):
     self.send_queue = Queue()
     self.event_close = Event()
     self.pword = self.args.password
-    self.delim = 'DONE_%s_%s' % (time.time(),hash(random.random()))
+    self.delim = 'DONE_%s_%s' % (time.time(),hash(time.time()))
     self.response = []
     self.errors = False
 
@@ -130,8 +134,8 @@ class Shell(object):
       self.error('Timed out waiting for response.')
     except KeyboardInterrupt:
       pass
-    except BaseException as e:
-      print traceback.format_exc(e)
+    except BaseException:
+      print(traceback.format_exc())
 
     self.event_close.set()
     if socket.is_alive():
@@ -142,7 +146,7 @@ class Shell(object):
         sys.stderr.write(s+'\n')
         sys.stderr.flush()
       elif s!=self.delim:
-        print s
+        print(s)
 
     if self.errors:
       sys.exit(1)
@@ -166,7 +170,7 @@ class Shell(object):
 # CLI class
 ################################################################################
 
-class CLI(object):
+class CLI:
 
   def __init__(self,args):
 
@@ -183,7 +187,7 @@ class CLI(object):
     socket.start()
 
     time.sleep(1)
-    print ''
+    print('')
     BufferThread(self).start()
 
     try:
@@ -192,7 +196,7 @@ class CLI(object):
     except (KeyboardInterrupt,SystemExit):
       pass
     except BaseException:
-      print traceback.format_exc(e)
+      print(traceback.format_exc())
 
     self.event_close.set()
     if socket.is_alive():
@@ -206,7 +210,7 @@ class CLI(object):
     if 'readline' in sys.modules:
       spaces = len(readline.get_line_buffer())+len(prompt)
       sys.stdout.write('\r'+' '*spaces+'\r')
-      print text
+      print(text)
       sys.stdout.write(prompt+readline.get_line_buffer())
     else:
       sys.stdout.write('\n'+text+'\n'+prompt)
@@ -215,20 +219,23 @@ class CLI(object):
 
   def log(self,txt):
 
-    print '  --- '+txt
+    print('  --- '+txt)
 
   def error(self,txt):
 
-    print '  ### '+txt
+    print('  ### '+txt)
     sys.exit(0)
 
   def get_pass(self):
 
-    if self.args.password is None:
-      return None
-    print ''
+    # "-p PASSWORD" OR -p not passed
+    if self.args.password is not '':
+      return self.args.password
+
+    # "-p" without a value means get user input
+    print('')
     pword = getpass.getpass()
-    print ''
+    print('')
     return pword
 
 ################################################################################
@@ -363,7 +370,7 @@ class SocketThread(Thread):
 
     msg = self.buffer
     while ' ' not in msg:
-      s = self.sock.recv(4096)
+      s = self.sock.recv(4096).decode('utf8')
       if not s:
         self.die('Remote closed connection')
         return (None,None)
@@ -372,7 +379,7 @@ class SocketThread(Thread):
     length_str = msg.split(' ')[0]
     target = len(length_str)+1+int(length_str)
     while len(msg)<target:
-      msg += self.chat.sock.recv(min(target-len(msg),4096))
+      msg += self.sock.recv(min(target-len(msg),4096)).decode('utf8')
 
     (msg,self.buffer) = (msg[:target],msg[target:])
     msg = msg[msg.find(' ')+1:]
@@ -400,10 +407,10 @@ class SocketThread(Thread):
 
   def send_msg(self,msg,typ=None):
 
-    typ = typ or SocketThread.MSG_TEXT
+    typ = SocketThread.MSG_TEXT if typ is None else typ
     msg = typ+' '+msg
     length_str = str(len(msg))
-    msg = unicode(length_str+' '+msg).encode('utf8')
+    msg = (length_str+' '+msg).encode('utf8')
     target = len(msg)
 
     sent = 0
@@ -430,8 +437,9 @@ class BufferThread(Thread):
     while not self.chat.event_close.is_set():
       s = ((time.asctime()+' | ') if self.chat.args.timestamp else '')+USER+': '
       sys.stdout.write(s)
-      s = raw_input()
-      self.chat.send_queue.put(s)
+      s = input()
+      if s.strip():
+        self.chat.send_queue.put(s)
 
 ################################################################################
 # Qt signal bridge class
@@ -481,7 +489,7 @@ if 'QtGui' in locals():
 
       super(ChatBox,self).__init__()
       self.args = args
-      self.pword = ''
+      self.pword = self.args.password
       self.connected = False
 
       self.worker = None
@@ -643,7 +651,7 @@ if 'QtGui' in locals():
 
       s = s.replace('&','&amp;')
       chars = { '"':'&quot;', "'":'&#039;', '<':'&lt;', '>':'&gt;'}
-      for (k,v) in chars.items():
+      for (k,v) in list(chars.items()):
         s = s.replace(k,v)
       return s
 

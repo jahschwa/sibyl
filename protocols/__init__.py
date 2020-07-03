@@ -20,4 +20,4 @@
 #
 ################################################################################
 
-from import_protocols import *
+from .import_protocols import *

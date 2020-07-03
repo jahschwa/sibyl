@@ -20,6 +20,6 @@
 #
 ################################################################################
 
-import lib
-from lib.sibylbot import SibylBot
-import protocols
+from . import lib
+from .lib.sibylbot import SibylBot
+from . import protocols

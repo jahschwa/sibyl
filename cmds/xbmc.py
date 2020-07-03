@@ -20,7 +20,7 @@
 #
 ################################################################################
 
-import random,requests,json,os
+import random,requests,json,os,time
 
 from sibyl.lib.decorators import *
 import sibyl.lib.util as util
@@ -212,9 +212,16 @@ def play(bot,mess,args):
 
   # if args are passed, play the specified file
   # [TODO] make work with samba shares requiring passwords
-  if (path.startswith('smb://') or os.path.isfile(path)
-      or path.startswith('http')):
+  special = any(path.startswith(x + '://') for x in ('http', 'https', 'smb'))
+  if special or os.path.isfile(path):
     result = bot.xbmc('Player.Open',{'item':{'file':path}})
+
+    # unfortunately kodi returns OK for http/samba failures, so test ourselves
+    if special:
+      time.sleep(1)
+      if bot.xbmc_active_player() is None:
+        result['error'] = {'message': 'file not found'}
+
     if 'error' in result:
       s = 'Unable to open: %s (%s)' % (path,result['error']['message'])
       log.info(s)
