@@ -21,6 +21,7 @@
 ################################################################################
 
 import os,requests,json,imp,inspect
+from functools import cmp_to_key
 
 # @param s (str) the string to split
 # @param sep (str) [' '] the string on which to split
@@ -65,6 +66,11 @@ def xbmc(ip,method,params=None,user=None,pword=None,timeout=5):
   data = json.dumps(p)
   auth = (user,pword)
   r = requests.post(url,data=data,headers=headers,auth=auth,timeout=timeout)
+
+  # kodi doesn't return encoding headers, so trying to access r.text procs
+  # the chardet library which spams logs; but it looks like we can force utf8
+  #   https://github.com/xbmc/xbmc/pull/16863
+  r.encoding = 'utf8'
 
   # return the response from xbmc as a dict
   return json.loads(r.text)
@@ -220,7 +226,7 @@ def str2sec(t):
 
   return time2sec(str2time(t))
 
-# @param path (str,unicode) a local directory
+# @param path (str) a local directory
 # @return tuple(list,list) all (dirs,files) in given directory (recursive)
 def rlistdir(path,symlinks=True):
   """list folders recursively"""
@@ -271,10 +277,10 @@ def getcell(start,page):
 def list2str(l, fmt=None):
   """return the list on separate lines"""
 
+  fmt = fmt or (lambda x:x)
+
   # makes match lists look much better in chat or pastebin
-  if fmt:
-    l = [str(fmt(x)) for x in l]
-  return '\n'+'\n'.join(l)
+  return '\n'+'\n'.join(str(fmt(x)) for x in l)
 
 # @param paths (list) file paths to reduce
 # @return (list) the input, or a basedir shared by all paths
@@ -353,12 +359,11 @@ def is_int(s):
     return False
 
 # @param files (list of str) a list of file paths
-# @param key (func) a function to apply to the items before sorting
 # @return (list) the input sorted as XBMC default sort
 def xbmc_sorted(files, key=None):
   """sort a list of files as xbmc does (i think) so episodes are correct"""
 
-  return sorted(files, cmp=xbmc_cmp, key=None)
+  return sorted(files, key=cmp_to_key(xbmc_cmp))
 
 # @param a (str) a string to compare
 # @param b (str) a string to compare
@@ -402,9 +407,9 @@ def get_caller(lvl=2):
 
   return os.path.basename(inspect.stack()[lvl][1]).split('.')[0]
 
-# @param s (str,unicode) the string to convert
+# @param s (str) the string to convert
 # @param esc (bool) if True, escape to html char codes; else unescape
-# @return (str,unicode) the input but safe for html
+# @return (str) the input but safe for html
 def html(s,esc=True):
   """escape characters that break html parsing"""
 

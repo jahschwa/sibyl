@@ -396,11 +396,11 @@ def trigger_read(bot):
       if line.strip():
         (name,text) = line.split('\t')
         triggers[name.lower().strip()] = text.strip()
-    except Exception as e:
+    except:
       raise IOError('Error parsing trigger_file at line %s' % i)
 
   removed = False
-  for name in triggers.keys():
+  for name in list(triggers.keys()):
 
     # without the outer lambda, "name" would all bind to the same literal
     func = (lambda name: lambda bot,mess,args: bot.triggers[name])(name)
@@ -590,7 +590,7 @@ def bridge(bot,mess,rx=True):
   if rx:
     name = user.get_name()
     if not bot.opt('room.unicode_users'):
-      name = name.encode('ascii',errors='ignore').strip() or str(user)
+      name = ''.join(c for c in name if c in string.printable) or name
     msg += name
   else:
     msg += proto.get_nick(room)

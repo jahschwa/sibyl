@@ -57,8 +57,7 @@ class ServerShutdown(ProtocolError):
 # User abstract class
 ################################################################################
 
-class User(object):
-  __metaclass__ = ABCMeta
+class User(metaclass=ABCMeta):
 
   # called on object init; the following are already created by __init__:
   #   self.protocol = (Protocol) name of this User's protocol as a str
@@ -79,19 +78,14 @@ class User(object):
   def get_base(self):
     pass
 
-  # @param other (object) you must check for class equivalence
-  # @return (bool) True if self==other (including resource)
-  @abstractmethod
-  def __eq__(self,other):
-    pass
-
+  # the return value must be the same for equal Rooms and unique for different
   # @return (str) the full username
   @abstractmethod
   def __str__(self):
     pass
 
   def __repr__(self):
-    return '<%s %s>' % (self.__class__.__name__,str(self))
+    return '<%s %s>' % (type(self).__name__, self)
 
   # @param proto (Protocol) the associated protocol
   # @param user (object) a user id to parse
@@ -133,6 +127,15 @@ class User(object):
       return False
     return self.get_base()==other.get_base()
 
+  # @param other (object)
+  # @return (bool) True if self==other (including resource)
+  def __eq__(self,other):
+    if not isinstance(other,User):
+      return False
+    if self.protocol!=other.protocol:
+      return False
+    return str(self)==str(other)
+
   # override the != operator (you don't have to do this in the subclass)
   # @param other (object)
   # @return (bool) whether self!=other
@@ -141,7 +144,7 @@ class User(object):
 
   # override hashing to allow as dict keys
   def __hash__(self):
-    return hash(self.__str__())
+    return hash(str(self))
 
   # don't pickle the protocol; sibylbot will fix it in its persistence code
   def __getstate__(self):
@@ -153,8 +156,7 @@ class User(object):
 # Room class
 ################################################################################
 
-class Room(object):
-  __metaclass__ = ABCMeta
+class Room(metaclass=ABCMeta):
 
   # get_room flags
   FLAG_CONF = 0
@@ -181,12 +183,6 @@ class Room(object):
   # @return (str) the name of this Room
   @abstractmethod
   def get_name(self):
-    pass
-
-  # @param other (object) you must check for class equivalence
-  # @return (bool) true if other is the same room (ignore nick/pword if present)
-  @abstractmethod
-  def __eq__(self,other):
     pass
 
   # @param proto (Protocol) the associated protocol
@@ -234,6 +230,11 @@ class Room(object):
     return '<Room %s>' % self
 
   # @param other (object) another object for comparison
+  # @return (bool) true if other is the same room (ignore nick/pword if present)
+  def __eq__(self,other):
+    return self.get_name() == other.get_name()
+
+  # @param other (object) another object for comparison
   # @return (bool) true if other is not a Room, or has different protocol/name
   def __ne__(self,other):
     return not self==other
@@ -253,7 +254,7 @@ class Room(object):
 # Message class
 ################################################################################
 
-class Message(object):
+class Message:
 
   # Type enums
   STATUS = 0
@@ -275,7 +276,7 @@ class Message(object):
 
   # create a new message object with given info
   # @param user (User) the User who sent the Message
-  # @param txt (str,unicode) the body of the msg
+  # @param txt (str) the body of the msg
   # @param typ (int) [Message.PRIVATE] a Message type enum
   # @param status (int) [None] status enum
   # @param msg (str) [None] custom status msg (e.g. "Doing awesome!")
@@ -328,19 +329,19 @@ class Message(object):
     """return the Room that sent this Message"""
     return self.room
 
-  # @return (str,unicode) the body of this Message
+  # @return (str) the body of this Message
   def get_text(self):
     """return the body of the message"""
     return self.txt
 
-  # @param text (str,unicode) the body of this Message to set
+  # @param text (str) the body of this Message to set
   def set_text(self,text):
     """set the body of the message"""
 
-    if isinstance(text,str):
-      text = text.decode('utf8')
-    elif not isinstance(text,unicode):
-      text = unicode(text)
+    if isinstance(text,bytes):
+      text = text.decode('utf8', errors='replace')
+    elif not isinstance(text,str):
+      text = str(text)
     self.txt = text
 
   # @return (int) the type of this Message (Message class type enum)
@@ -402,8 +403,7 @@ class Message(object):
 # Protocol abstract class
 ################################################################################
 
-class Protocol(object):
-  __metaclass__ = ABCMeta
+class Protocol(metaclass=ABCMeta):
 
   # called on bot init; the following are guaranteed to exist:
   #   self.bot = SibylBot instance
@@ -444,7 +444,7 @@ class Protocol(object):
   # send a message with text to every user in a room
   # optionally note that the broadcast was requested by a specific User
   # @param mess (Message) the message to broadcast
-  # @return (str,unicode) the text that was actually sent
+  # @return (str) the text that was actually sent
   # Check: get_user(), get_users()
   @abstractmethod
   def broadcast(self,mess):

@@ -23,7 +23,7 @@
 import time,smtplib,imaplib,email
 from email.mime.text import MIMEText
 from threading import Thread
-from Queue import Queue
+from queue import Queue
 
 from sibyl.lib.protocol import User,Room,Message,Protocol
 
@@ -66,13 +66,6 @@ class MailUser(User):
   def get_base(self):
     return self.user
 
-  # @param other (object) you must check for class equivalence
-  # @return (bool) True if self==other (including resource)
-  def __eq__(self,other):
-    if not isinstance(other,MailUser):
-      return False
-    return self.user==other.user
-
   # @return (str) the full username
   def __str__(self):
     return self.user
@@ -95,13 +88,6 @@ class MailRoom(Room):
   # @return (str) the name of this Room
   def get_name(self):
     return self.name
-
-  # @param other (object) you must check for class equivalence
-  # @return (bool) true if other is the same room (ignore nick/pword if present)
-  def __eq__(self,other):
-    if not isinstance(other,MailRoom):
-      return False
-    return self.name==other.name
 
 ################################################################################
 # Protocol sub-class
@@ -211,7 +197,7 @@ class MailProtocol(Protocol):
   # send a message with text to every user in a room
   # optionally note that the broadcast was requested by a specific User
   # @param mess (Message) the message to broadcast
-  # @return (str,unicode) the text that was actually sent
+  # @return (str) the text that was actually sent
   # Check: get_user(), get_users()
   def broadcast(self,mess):
     pass

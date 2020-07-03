@@ -75,7 +75,7 @@ def bookmark(bot,mess,args):
     name = bot.last_played[1]
     args = args[1:]
     if len(args)>0:
-      name = str(args[0])
+      name = args[0]
 
     # get info for bookmark
     pid = bot.last_played[0]
@@ -83,10 +83,10 @@ def bookmark(bot,mess,args):
     params = {'playerid':pid,'properties':['position','time']}
     result = bot.xbmc('Player.GetProperties',params)
     pos = result['result']['position']
-    t = str(util.time2str(result['result']['time']))
+    t = util.time2str(result['result']['time'])
     add = time.time()
     result = bot.xbmc('Player.GetItem',{'playerid':pid,'properties':['file']})
-    fil = os.path.basename(str(result['result']['item']['file']))
+    fil = os.path.basename(result['result']['item']['file'])
 
     # note that the position is stored 0-indexed
     bot.bm_store[name] = {'path':path,'add':add,'time':t,
@@ -96,7 +96,7 @@ def bookmark(bot,mess,args):
 
   elif args[0]=='remove':
     if len(args)==1:
-      return 'To remove all bookmarks use "bookmarks remove *"'
+      return 'To remove all bookmarks use "bookmark remove *"'
     if not bm_remove(bot,args[1]):
       return 'Bookmark "'+name+'" not found'
     return 'Removed bookmark "%s"' % args[1]
@@ -114,7 +114,7 @@ def bookmark(bot,mess,args):
     return 'No bookmarks'
 
   # if no args are passed return all bookmark names
-  matches = bot.bm_store.keys()
+  matches = list(bot.bm_store.keys())
   if len(args)==0 or args[0]=='':
     return 'There are '+str(len(matches))+' bookmarks: '+', '.join(matches)
 
@@ -132,7 +132,7 @@ def bookmark(bot,mess,args):
   if len(entries)==0:
     return 'Found 0 bookmarks'
   if len(entries)==1:
-    return 'Found 1 bookmark: '+str(entries[0])
+    return 'Found 1 bookmark: '+entries[0]
   return 'Found '+str(len(entries))+' bookmarks: '+util.list2str(entries)
 
 @botcmd
@@ -161,7 +161,7 @@ def resume(bot,mess,args):
     name = ' '.join(args)
 
   # get info from bookmark
-  if name not in bot.bm_store.keys():
+  if name not in list(bot.bm_store.keys()):
     return 'No bookmark named "'+name+'"'
   item = bot.bm_store[name]
   path = item['path']
@@ -236,7 +236,7 @@ def bm_remove(bot,name):
     return True
 
   # return False if name does not exist
-  if name not in bot.bm_store.keys():
+  if name not in list(bot.bm_store.keys()):
     return False
 
   del bot.bm_store[name]
@@ -257,7 +257,7 @@ def bm_format(name,props):
 
   order = ['path','pid','pos','file','time','add']
   for prop in order:
-    name += ('\t'+unicode(props[prop]))
+    name += ('\t'+str(props[prop]))
   return name
 
 def bm_unformat(line):
@@ -278,7 +278,7 @@ def bm_recent(bot):
 
   name = None
   add = 0
-  for k in bot.bm_store.keys():
+  for k in list(bot.bm_store.keys()):
     t = bot.bm_store[k]['add']
     if t > add:
       name = k

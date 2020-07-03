@@ -24,6 +24,8 @@ NEXT RELEASE:
         ( # ) write protocol
         ( # ) write client
 
+  (jah) [main] reorganize repo
+
   (jef) [main] write setup.py
 
   ( # ) [main] write systemd module
@@ -82,6 +84,15 @@ NEXT RELEASE:
   ( # ) [conf] add kill_stdout option
   ( # ) [conf] add option to overwrite log
 
+  ( # ) [main] move to python3
+
+  (jah) [xmpp] move to slixmpp
+
+  (jah) [main] fix style and formatting everywhere
+        ( ! ) space around commas
+        ( ! ) tabs length
+        ( ! ) multi-line
+
 FUTURE:
 
   (   ) [conf] add custom logging string config option
@@ -94,16 +105,15 @@ FUTURE:
   (   ) [cmds] add remind command (send msg highlighting user at specified time)
   (   ) [cmds] add stalk command (send msg when user changes to avilable)
   ( # ) [cmds] add trigger command (add triggers to say things)
+  ( ! ) [cmds] add repeat command
+  (   ) [cmds] allow @search in jump command
 
   ( ! ) [docs] move to sphinx and/or readthedocs
 
   (   ) [sock] proc hooks over socket protocol (full API?)
-
-  (   ) [xmpp] review and refactor (specifically JabberBot leftovers)
 
 MAYBE:
 
   (   ) [libr] read and search media tags (e.g. title, album, artist)
   (   ) [libr] allow searching xbmc library
   (   ) [main] daemonize inside python
-  (   ) [main] move to python3

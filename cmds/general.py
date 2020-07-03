@@ -20,7 +20,7 @@
 #
 ################################################################################
 
-import sys,os,subprocess,json,socket,re,codecs,math,time
+import sys,os,subprocess,json,socket,re,codecs,math,time,string
 from collections import OrderedDict
 
 import requests
@@ -182,11 +182,11 @@ def alias_read(bot):
       if line.strip():
         (name,text) = line.split('\t')
         aliases[name.lower().strip()] = text.strip()
-    except Exception as e:
+    except:
       raise IOError('Error parsing alias_file at line %s' % i)
 
   removed = False
-  for name in aliases.keys():
+  for name in list(aliases.keys()):
 
     # without the outer lambda, "name" would all bind to the same literal
     func = (lambda name: lambda b,m,a: alias_cb(b,m,a,name))(name)
@@ -254,7 +254,7 @@ def calc(bot,mess,args):
     cleaned = cleaned.replace(func,'')
   for c in cleaned:
     if c not in allowed:
-      return 'Unknown character or function'
+      return 'Unknown character or function starting with "%s"' % c
 
   # execute calculation
   for (old,new) in funcs.items():
@@ -311,7 +311,7 @@ def config(bot,mess,args):
     if len(bot.conf_diff)==0:
       return 'No differences between bot and config file'
     if opt in ('','*'):
-      return str(bot.conf_diff.keys())
+      return str(list(bot.conf_diff.keys()))
     if opt not in bot.conf_diff:
       return 'Opt "'+opt+'" has not changed from config file'
     return ('Opt "%s" was "%s" but is now "%s"'
@@ -326,7 +326,7 @@ def config(bot,mess,args):
     if len(bot.conf_diff)==0:
       return 'No config options to reset'
     if opt in ('','*'):
-      opts = bot.conf_diff.keys()
+      opts = list(bot.conf_diff.keys())
       for opt in opts:
         bot.conf.opts[opt] = bot.conf_diff[opt][0]
       bot.conf_diff = {}
@@ -394,7 +394,7 @@ def config(bot,mess,args):
   if opt=='*':
     for opt in bot.conf_diff:
       bot.conf.save_opt(opt,bot.conf_diff[opt][1],name)
-    opts = bot.conf_diff.keys()
+    opts = list(bot.conf_diff.keys())
     bot.conf_diff = {}
     return 'Saved opts: '+str(opts)
 
@@ -447,7 +447,8 @@ def tv(bot,mess,args):
   args = ''.join([s for s in args[0] if s.isalpha()])
 
   PIPE = subprocess.PIPE
-  p = subprocess.Popen(['cec-client','-s'],stdin=PIPE,stdout=PIPE,stderr=PIPE)
+  p = subprocess.Popen(['cec-client', '-s'],
+      stdin=PIPE, stdout=PIPE, stderr=PIPE, encoding='utf8')
   (out,err) = p.communicate(args+' 0')
 
   # do some basic error checking
@@ -471,29 +472,44 @@ def ups(bot,mess,args):
 
   # account for connectivity issues
   try:
-    url = ('http://wwwapps.ups.com/WebTracking/track?track=yes&trackNums='
-        + args[0] + '&loc=en_us')
-    page = requests.get(url).text
+    url = 'https://www.ups.com/track/api/Track/GetStatus?loc=en_US'
+    j = {'Locale': 'en_US', 'TrackingNumber': [args[0]]}
+    h = {'Content-Type': 'application/json'}
+    r = requests.post(url, headers=h, json=j)
+
+    # check for weird HTTP things
+    if r.status_code != 200:
+      return 'HTTP error {}'.format(r.status_code)
 
     # check for invalid tracking number
-    if 'The number you entered is not a valid tracking number' in page:
-      return 'Invalid tracking number: "'+args[0]+'"'
+    d = json.loads(r.text)
+    if d.get('statusCode') != '200':
+      return 'UPS returned ({}:{}), is your tracking number valid?'.format(
+          d.get('statusCode'), d.get('statusText'))
 
-    # find and return some relevant info
-    start = page.find('Activity')
-    (location,start) = getcell(start+1,page)
-    (newdate,start) = getcell(start+1,page)
-    (newtime,start) = getcell(start+1,page)
-    (activity,start) = getcell(start+1,page)
-    timestamp = newdate + ' ' + newtime
-    return timestamp+' - '+location+' - '+activity
+    # return some relevant info
+    info = d.get('trackDetails', [{}])[0]
+    info = info.get('shipmentProgressActivities', [None])[0]
+    return '{} {} - {} - {}'.format(
+        info.get('date'),
+        info.get('time'),
+        info.get('location'),
+        info.get('activityScan')
+    )
 
   except:
-    return 'Unknown error accessing UPS website'
+    s = 'Unknown error accessing UPS website'
+    bot.log_ex(s)
+    return s
 
 @botcmd(raw=True)
 def wiki(bot,mess,args):
   """return a link and brief from wikipedia - wiki title"""
+
+  try:
+    from lxml.html import fromstring
+  except ImportError:
+    return "Failed to import lxml; install it to use this command"
 
   args = args.strip()
   if not args:
@@ -502,19 +518,36 @@ def wiki(bot,mess,args):
   # search using wikipedia's opensearch json api
   url = ('http://en.wikipedia.org/w/api.php?action=opensearch&search='
       + args + '&format=json')
-  response = requests.get(url)
-  result = json.loads(response.text)
-  title = result[1][0]
-  text = result[2]
-
-  if isinstance(text,list):
-    text = text[0]
-  if not text.strip():
-    text = '(Query returned blank body; possibly a redirect page?)'
-
-  # send a link and brief back to the user
+  result = json.loads(requests.get(url).text)
+  titles = result[1]
+  if len(titles) == 0:
+    return 'No results'
+  elif len(titles) > 1:
+    # we might get multiple results even for a "perfect" match
+    keep = set(string.ascii_lowercase) | set(string.digits)
+    strip = lambda s: ''.join(c for c in s.lower() if c in keep)
+    if strip(args) != strip(titles[0]):
+      return 'Results: ' + ', '.join(result[1])
   url = result[3][0]
-  return title+' - '+url+'\n'+text
+
+  # there isn't a really clean way to check if we got a disambig page
+  text = requests.get(url).text
+  if 'Help:Disambiguation' in text:
+    return 'Results: ' + ', '.join(result[1][1:])
+
+  # pull the title, canonical url, and first paragraph from the article
+  x = fromstring(text)
+  title = x.find(".//title").text_content().rsplit(' - ', maxsplit=1)[0]
+  url = x.find(".//link[@rel='canonical']").get('href')
+  p_tags = x.find(".//div[@id='bodyContent']").findall(".//p")
+  for p in p_tags:
+    if p.get('class') is None:
+      text = p.text_content()
+      break
+  else:
+    return 'Failed to parse page (no matching <p> tag found) - {}'.format(url)
+
+  return '{}: {} - {}'.format(title, text.replace('\n', ' '), url)
 
 @botcmd(name='log',ctrl=True)
 def _log(bot,mess,args):

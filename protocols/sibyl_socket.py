@@ -22,7 +22,7 @@
 
 import socket,select,errno,time,traceback
 from threading import Thread,Event
-from Queue import Queue
+from queue import Queue
 
 from sibyl.lib.protocol import User,Room,Message,Protocol
 
@@ -35,7 +35,7 @@ from sibyl.lib.decorators import botconf
 @botconf
 def conf(bot):
   return [
-    {'name':'port','default':8767},
+    {'name':'port','default':8767,'parse':bot.conf.parse_int},
     {'name':'password'},
     {'name':'pubkey','valid':bot.conf.valid_rfile},
     {'name':'privkey','valid':bot.conf.valid_rfile},
@@ -204,7 +204,7 @@ class ClientThread(Thread):
 
     msg = self.buffer
     while ' ' not in msg:
-      s = self.socket.recv(4096)
+      s = self.socket.recv(4096).decode('utf8')
       if self.server.debug:
         self.log.debug('recv "%s"' % s)
       if not s:
@@ -215,7 +215,7 @@ class ClientThread(Thread):
     length_str = msg.split(' ')[0]
     target = len(length_str)+1+int(length_str)
     while len(msg)<target:
-      msg += self.socket.recv(min(target-len(msg),4096))
+      msg += self.socket.recv(min(target-len(msg),4096)).decode('utf8')
 
     (msg,self.buffer) = (msg[:target],msg[target:])
     msg = msg[msg.find(' ')+1:]
@@ -242,10 +242,12 @@ class ClientThread(Thread):
     msg = typ+' '+msg
     length_str = str(len(msg))
     msg = (length_str+' '+msg)
-    target = len(msg)
 
     if self.server.debug:
       self.log.debug('send "%s"' % msg)
+
+    msg = msg.encode('utf8')
+    target = len(msg)
 
     sent = 0
     while sent<target:
@@ -270,11 +272,6 @@ class Client(User):
   def get_base(self):
     return self.user
 
-  def __eq__(self,other):
-    if not isinstance(other,Client):
-      return False
-    return self.address==other.address
-
   def __str__(self):
     return self.user
 
@@ -289,11 +286,6 @@ class FakeRoom(Room):
 
   def get_name(self):
     return self.name
-
-  def __eq__(self,other):
-    if not isinstance(other,FakeRoom):
-      return False
-    return self.name==other.name
 
 ################################################################################
 # Protocol sub-class
@@ -377,7 +369,11 @@ class SocketServer(Protocol):
     if hasattr(self,'event_close'):
       self.event_close.set()
     if self.thread:
-      self.thread.join()
+      try:
+        self.thread.join()
+      except RuntimeError:
+        # thread was never started
+        pass
 
   def send(self,mess):
     (text,to) = (mess.get_text(),mess.get_to())

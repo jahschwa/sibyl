@@ -131,7 +131,7 @@ class MYPROTOCOL(Protocol):
   # send a message with text to every user in a room
   # optionally note that the broadcast was requested by a specific User
   # @param mess (Message) the message to broadcast
-  # @return (str,unicode) the text that was actually sent
+  # @return (str) the text that was actually sent
   # Check: get_user(), get_users()
   def broadcast(self,mess):
     raise NotImplementedError

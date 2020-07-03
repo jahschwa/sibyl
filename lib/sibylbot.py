@@ -37,7 +37,7 @@
 #
 ################################################################################
 
-import sys,logging,re,os,imp,inspect,traceback,time,pickle,Queue,collections
+import sys,logging,re,os,imp,inspect,traceback,time,pickle,queue,collections
 
 from sibyl.lib.config import Config
 from sibyl.lib.protocol import Protocol,Message,Room,User
@@ -62,7 +62,7 @@ class SigTermInterrupt(Exception):
 # AAA - SibylBot
 ################################################################################
 
-class SibylBot(object):
+class SibylBot:
   """More details: https://github.com/TheSchwa/sibyl/wiki/Commands"""
 
   # UI-messages (overwrite to change content)
@@ -138,10 +138,10 @@ class SibylBot(object):
     self.__reboot = False
     self.__recons = {}
     self.__tell_rooms = []
-    self.__pending_send = Queue.Queue()
+    self.__pending_send = queue.Queue()
     self.__deferred = []
     self.__deferred_count = {}
-    self.__pending_del = Queue.Queue()
+    self.__pending_del = queue.Queue()
     self.__last_idle = 0
     self.__idle_count = {}
     self.__idle_last = {}
@@ -153,8 +153,8 @@ class SibylBot(object):
       if self.opt('persistence') and os.path.isfile(self.opt('state_file')):
         with open(self.opt('state_file'),'rb') as f:
           self.__state = pickle.load(f)
-    except Exception as e:
-      self.log_ex(e,'Unable to load persistent variables',
+    except:
+      self.log_ex('Unable to load persistent variables',
           'Unpickling of "%s" failed' % self.opt('state_file'))
     self.__persist = []
 
@@ -209,10 +209,10 @@ class SibylBot(object):
     """exit due to a fatal error"""
 
     self.log.critical('Fatal error during initialization')
-    print '\n   *** Fatal error: %s (see log) ***\n' % msg
-    print '   Config file: %s' % os.path.abspath(self.conf_file)
-    print '   Cmd dir:     %s' % os.path.abspath(self.opt('cmd_dir'))
-    print '   Log file:    %s\n' % os.path.abspath(self.opt('log_file'))
+    print('\n   *** Fatal error: %s (see log) ***\n' % msg)
+    print('   Config file: %s' % os.path.abspath(self.conf_file))
+    print('   Cmd dir:     %s' % os.path.abspath(self.opt('cmd_dir')))
+    print('   Log file:    %s\n' % os.path.abspath(self.opt('log_file')))
     sys.exit(1)
 
 ################################################################################
@@ -241,7 +241,7 @@ class SibylBot(object):
 
     base_names = [os.path.basename(x) for x in files]
     if len(files)!=len(set(base_names)):
-      dup = set([x for x in base_names if base_names.count(x)>1])
+      dup = {x for x in base_names if base_names.count(x)>1}
       dup_plugins = 'Multiple plugins named %s' % list(dup)
 
     # register config options from plugins
@@ -290,9 +290,9 @@ class SibylBot(object):
 
         try:
           mod = util.load_module(f,d)
-        except Exception as e:
+        except:
           msg = 'Error loading plugin "%s"' % f
-          self.log_ex(e,msg)
+          self.log_ex(msg)
           self.errors.append(('error', '(startup.sibyl) ' + msg))
           continue
 
@@ -409,7 +409,7 @@ class SibylBot(object):
       if obj is x:
         return
     done.append(obj)
-    if isinstance(obj,collections.Iterable) and not isinstance(obj,basestring):
+    if isinstance(obj,collections.Iterable) and not isinstance(obj,str):
       for x in obj:
         self.__fix_state(x,done)
         if isinstance(obj,dict):
@@ -436,7 +436,7 @@ class SibylBot(object):
       try:
         func(self,*args)
       except Exception as e:
-        self.log_ex(e,'Exception running %s hook %s:' % (hook,name))
+        self.log_ex('Exception running %s hook %s:' % (hook,name))
         errors[name] = e
 
     return errors
@@ -473,8 +473,8 @@ class SibylBot(object):
         else:
           counts[name] = max(counts.get(name,0)-1,0)
 
-      except Exception as e:
-        self.log_ex(e,'Exception running idle hook %s:' % name)
+      except:
+        self.log_ex('Exception running idle hook %s:' % name)
         self.log.critical('Deleting idle hook %s' % name)
         del self.hooks['idle'][name]
 
@@ -582,8 +582,8 @@ class SibylBot(object):
     if cmd_name=='redo':
       self.log.debug('Redo cmd; original msg: "'+text+'"')
       cmd = self.last_cmd.get(usr,'echo Nothing to redo')
-      if len(args)>1:
-        cmd += (' '+' '.join(args[1:]))
+      if len(args):
+        cmd += (' '+' '.join(args))
         self.last_cmd[usr] = cmd
       (cmd_name,args) = self.__get_args(cmd)
     elif cmd_name!='last':
@@ -609,15 +609,14 @@ class SibylBot(object):
         SmartThread(self,func,mess,args).start()
       else:
         reply = func(self,mess,args)
-    except Exception as e:
+    except:
       self.__stats['ex'] += 1
-      self.log_ex(e,
-          'Error while executing cmd "%s":' % cmd_name,
+      self.log_ex('Error while executing cmd "%s":' % cmd_name,
           '  Message text: "%s"' % text)
 
       reply = self.MSG_ERROR_OCCURRED
       if self.opt('except_reply'):
-        reply = traceback.format_exc(e).split('\n')[-2]
+        reply = traceback.format_exc().split('\n')[-2]
     if reply:
       self.send(reply,frm)
 
@@ -885,7 +884,7 @@ class SibylBot(object):
       usage = sorted([
         '%s.%s: %s' % (self.__get_plugin(cmd),name,
             (cmd.__doc__ or '(undocumented)').strip().split('\n', 1)[0])
-        for (name, cmd) in self.hooks['chat'].iteritems()
+        for (name, cmd) in self.hooks['chat'].items()
           if not cmd._sibylbot_dec_chat_hidden
       ])
       if not self.opt('help_plugin'):
@@ -1169,7 +1168,7 @@ class SibylBot(object):
 
       for dec in decs:
         hooks = self.hooks[dec]
-        for name in hooks.keys():
+        for name in list(hooks.keys()):
           if hooks[name]==func:
             self.log.debug('Deleting %s hook %s' % (dec,name))
             del hooks[name]
@@ -1196,8 +1195,8 @@ class SibylBot(object):
         self.__defer(msg)
         if msg.get_protocol().is_connected():
           raise e
-      except Exception as e:
-        self.log_ex(e,'Error sending %s msg' % msg.get_protocol().get_name())
+      except:
+        self.log_ex('Error sending %s msg' % msg.get_protocol().get_name())
 
   @staticmethod
   @botcon
@@ -1238,7 +1237,7 @@ class SibylBot(object):
 
     except Exception as e:
       self.log.critical('UNHANDLED: %s\n\n%s' %
-          (e.__class__.__name__,traceback.format_exc(e)))
+          (e.__class__.__name__,traceback.format_exc()))
       self.log.critical(self.MSG_UNHANDLED)
 
     # shutdown cleanly
@@ -1258,7 +1257,7 @@ class SibylBot(object):
     return self.__reboot
 
   # this function is thread-safe
-  # @param text (str,unicode) the text to send
+  # @param text (str) the text to send
   # @param to (User,Room) the recipient
   # @param broadcast (bool) [False] highlight all users (only works for Rooms)
   # @param frm (User) [None] the sending user (only relevant for broadcast)
@@ -1283,7 +1282,7 @@ class SibylBot(object):
     self.__pending_send.put(msg)
 
   # wrapper method for send() allowing to pass Message objects instead of User
-  # @param text (str,unicode) the text to send
+  # @param text (str) the text to send
   # @param mess (Message) the message to reply to
   # @param broadcast (bool) [False] highlight all users (only works for Rooms)
   # @param frm (User) [None] the sending user (only relevant for broadcast)
@@ -1369,8 +1368,8 @@ class SibylBot(object):
       args = '' if func._sibylbot_dec_chat_raw else []
     else:
       if func._sibylbot_dec_chat_raw:
-        if not isinstance(args,str) and not isinstance(args,unicode):
-          raise ValueError('The args to "%s" must be str/unicode' % cmd)
+        if not isinstance(args,str) and not isinstance(args,bytes):
+          raise ValueError('The args to "%s" must be str' % cmd)
       else:
         if not isinstance(args,list):
           raise ValueError('The args to "%s" must be list' % cmd)
@@ -1397,13 +1396,12 @@ class SibylBot(object):
       ns = 'startup.' + ns
     self.errors.append((lvl, '(%s) %s' % (ns,msg)))
 
-  # @param ex (Exception) the exception to log
   # @param short_msg (str) text to log at logging.ERROR
   # @param long_msg (str) [None] text to log at logging.DEBUG
-  def log_ex(self,ex,short_msg,long_msg=None):
+  def log_ex(self,short_msg,long_msg=None):
     """log the exception name (logging.ERROR) and traceback (logging.DEBUG)"""
 
-    full = traceback.format_exc(ex)
+    full = traceback.format_exc()
     short = full.split('\n')[-2]
 
     self.log.error(short_msg)

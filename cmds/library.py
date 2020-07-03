@@ -20,7 +20,7 @@
 #
 ################################################################################
 
-import os,sys,pickle,time,traceback,threading,Queue,multiprocessing
+import os,sys,pickle,time,traceback,threading,queue,multiprocessing
 
 # we import smbc in init(), find(), and rsamba() if needed
 
@@ -127,7 +127,7 @@ def parse_remote(conf,opt,val):
 def valid_remote(conf,replace):
   """return True if the local paths are valid"""
 
-  for local in replace.keys():
+  for local in list(replace.keys()):
     if (not os.path.isdir(local)) and (not local.startswith('smb://')):
       conf.log('warning','path "%s" is not a valid directory' % local)
       del replace[local]
@@ -147,7 +147,7 @@ def init(bot):
 
   bot.add_var('lib_lock',threading.Lock())
   bot.add_var('lib_last_op')
-  bot.add_var('lib_pending_send',Queue.Queue())
+  bot.add_var('lib_pending_send',queue.Queue())
 
   if os.path.isfile(bot.opt('library.file')):
     Library(bot,None,['load']).run()
@@ -175,7 +175,7 @@ def init(bot):
 
   # check for filename unicode support
   enc = sys.getfilesystemencoding()
-  if enc!='UTF-8':
+  if enc.lower().replace('-', '') != 'utf8':
     log.warning('Missing unicode support (filesystemencoding=%s)' % enc)
     log.warning('  more details: '
         'https://github.com/TheSchwa/sibyl/wiki/Library'
@@ -228,7 +228,7 @@ def search(bot,mess,args):
     else:
       return 'Found '+str(len(matches))+' matches'
 
-  return 'Found '+str(len(matches))+' match: '+str(matches[0])
+  return 'Found '+str(len(matches))+' match: '+matches[0]
 
 def find(bot,dirs):
   """helper function for library()"""
@@ -250,12 +250,12 @@ def find(bot,dirs):
   # find all matching directories or files depending on fd parameter
   for path in paths:
     try:
-      (temp_dirs,temp_files) = util.rlistdir(unicode(path))
+      (temp_dirs,temp_files) = util.rlistdir(path)
       dirs.extend(temp_dirs)
       files.extend(temp_files)
-    except Exception as e:
+    except:
       msg = ('Unable to traverse "%s": %s' %
-          (path,traceback.format_exc(e).split('\n')[-2]))
+          (path,traceback.format_exc().split('\n')[-2]))
       errors.append((path,msg))
 
   if smbpaths:
@@ -292,9 +292,9 @@ def find(bot,dirs):
         while not q.empty():
           (typ,name) = q.get()
           if typ==bot.smbc_dir:
-            temp_dirs.append(unicode(name))
+            temp_dirs.append(name)
           elif typ==bot.smbc_file:
-            temp_files.append(unicode(name))
+            temp_files.append(name)
         time.sleep(0.1)
 
       # the child process also reports errors using a Queue
@@ -305,9 +305,9 @@ def find(bot,dirs):
       else:
         raise e.get()
 
-    except Exception as ex:
+    except:
       msg = ('Unable to traverse "%s": %s' %
-          (share,traceback.format_exc(ex).split('\n')[-2]))
+          (share,traceback.format_exc().split('\n')[-2]))
       errors.append((share,msg))
 
   return (dirs,files,errors)
@@ -328,23 +328,21 @@ def rsamba(smbc_dir,smbc_file,q,e,ctx,path,ignore=None):
 
   ignore = (ignore or [])
   allitems = []
-  if isinstance(path,unicode):
-    path.encode('utf8')
   d = ctx.opendir(path)
   contents = d.getdents()
 
   for c in contents:
-    cur_path = path+'/'+c.name.encode('utf8')
+    cur_path = path+'/'+c.name
 
     # handle files
     if c.smbc_type==smbc_file:
-      q.put((smbc_file,cur_path.decode('utf8')))
+      q.put((smbc_file,cur_path))
 
     # handle directories
     elif c.smbc_type==smbc_dir:
       if c.name in ('.','..'):
         continue
-      q.put((smbc_dir,(cur_path+'/').decode('utf8')))
+      q.put((smbc_dir,(cur_path+'/')))
       try:
         if not rsamba(smbc_dir,smbc_file,q,e,ctx,cur_path,ignore):
           return False
@@ -362,7 +360,7 @@ def rsamba(smbc_dir,smbc_file,q,e,ctx,path,ignore=None):
 # LibraryThread class
 ################################################################################
 
-class Library(object):
+class Library:
 
   def __init__(self,bot,mess,args):
 
@@ -398,10 +396,10 @@ class Library(object):
       msg = getattr(self,self.args[0])()
       self.send(msg)
 
-    except Exception as ex:
+    except:
 
       log.error('Error in thread while executing "%s"' % self.args[0])
-      full = traceback.format_exc(ex)
+      full = traceback.format_exc()
       short = full.split('\n')[-2]
 
       log.error('  %s' % short)
