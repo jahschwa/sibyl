@@ -114,7 +114,7 @@ class CLI(Protocol):
 
     self.thread = None
 
-  def connect(self):
+  def _connect(self):
 
     self.queue = Queue()
 

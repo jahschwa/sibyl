@@ -39,7 +39,9 @@ import os,sys,inspect
 ################################################################################
 
 class ProtocolError(Exception):
-  pass
+  def __init__(self, message='unknown'):
+    self.message = message
+    super().__init__()
 
 class PingTimeout(ProtocolError):
   pass
@@ -232,6 +234,9 @@ class Room(metaclass=ABCMeta):
   # @param other (object) another object for comparison
   # @return (bool) true if other is the same room (ignore nick/pword if present)
   def __eq__(self,other):
+
+    if not isinstance(other, Room):
+      return False
     return self.get_name() == other.get_name()
 
   # @param other (object) another object for comparison
@@ -415,7 +420,7 @@ class Protocol(metaclass=ABCMeta):
   # @raise (ConnectFailure) if can't connect to server
   # @raise (AuthFailure) if failed to authenticate to server
   @abstractmethod
-  def connect(self):
+  def _connect(self):
     pass
 
   # receive/process messages and call bot._cb_message()
@@ -553,6 +558,12 @@ class Protocol(metaclass=ABCMeta):
   # override hash for use as dict keys
   def __hash__(self):
     return hash(self.get_name())
+
+  # @raise (ConnectFailure) if can't connect to server
+  # @raise (AuthFailure) if failed to authenticate to server
+  def connect(self):
+    if not self.is_connected():
+      self._connect()
 
   # @return (bool) True if we are connected to the server
   def is_connected(self):

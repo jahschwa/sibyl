@@ -297,7 +297,7 @@ class SocketServer(Protocol):
 
     self.thread = None
 
-  def connect(self):
+  def _connect(self):
 
     q = Queue()
     if hasattr(self,'queue'):

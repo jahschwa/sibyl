@@ -139,7 +139,7 @@ class MatrixProtocol(Protocol):
 
   # @raise (ConnectFailure) if can't connect to server
   # @raise (AuthFailure) if failed to authenticate to server
-  def connect(self):
+  def _connect(self):
     homeserver = self.opt('matrix.server')
     user = self.opt('matrix.username')
     pw = self.opt('matrix.password')

@@ -421,3 +421,31 @@ def html(s,esc=True):
     s = s.replace(k,v)
 
   return s
+
+# @param mess (Message) the message to broadcast
+# @param skip (list of User) don't highlight these
+# @return (str) the text to use
+def broadcast(mess, skip=None):
+
+    if skip is None:
+      skip = {}
+    elif isinstance(skip, list):
+      skip = set(skip)
+    else:
+      skip = {skip}
+
+    s = 'all: {} --- '.format(mess.get_text())
+
+    frm = mess.get_user()
+    if frm:
+      s += '{} --- '.format(frm.get_name())
+
+    users = mess.get_users() or []
+    users.extend(mess.get_protocol().get_occupants(mess.get_to()))
+    names = {
+      u.get_name() for u in users
+      if (u not in skip and (not frm or u != frm))
+    }
+    s += ', '.join(sorted(names))
+
+    return s

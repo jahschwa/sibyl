@@ -105,7 +105,7 @@ class MailProtocol(Protocol):
 
   # @raise (ConnectFailure) if can't connect to server
   # @raise (AuthFailure) if failed to authenticate to server
-  def connect(self):
+  def _connect(self):
 
     # we use IMAP to get new messages from the server
     # it runs in its own thread, appending messages asynchronously to a Queue
