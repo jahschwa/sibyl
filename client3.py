@@ -375,7 +375,7 @@ class SocketThread(Thread):
     length_str = msg.split(' ')[0]
     target = len(length_str)+1+int(length_str)
     while len(msg)<target:
-      msg += self.chat.sock.recv(min(target-len(msg),4096))
+      msg += self.sock.recv(min(target-len(msg),4096)).decode('utf8')
 
     (msg,self.buffer) = (msg[:target],msg[target:])
     msg = msg[msg.find(' ')+1:]
